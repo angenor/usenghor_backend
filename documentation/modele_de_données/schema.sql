@@ -238,6 +238,7 @@ CREATE TABLE services (
     responsable_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
     email VARCHAR(255),
     telephone VARCHAR(30),
+    album_id UUID REFERENCES albums(id) ON DELETE SET NULL,
     ordre_affichage INT DEFAULT 0,
     actif BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -278,6 +279,13 @@ CREATE TABLE service_projets (
     date_fin_prevue DATE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Médiathèque d'un service (plusieurs albums possibles)
+CREATE TABLE service_mediatheque (
+    service_id UUID REFERENCES services(id) ON DELETE CASCADE,
+    album_id UUID REFERENCES albums(id) ON DELETE CASCADE,
+    PRIMARY KEY (service_id, album_id)
 );
 
 -- ============================================================================
@@ -322,6 +330,7 @@ CREATE TABLE campus (
     longitude DECIMAL(11, 8),
     est_siege BOOLEAN DEFAULT FALSE,
     responsable_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    album_id UUID REFERENCES albums(id) ON DELETE SET NULL,
     actif BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -356,7 +365,7 @@ CREATE TABLE campus_equipe (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Médiathèque d'un campus
+-- Médiathèque d'un campus (plusieurs albums possibles)
 CREATE TABLE campus_mediatheque (
     campus_id UUID REFERENCES campus(id) ON DELETE CASCADE,
     album_id UUID REFERENCES albums(id) ON DELETE CASCADE,
@@ -649,13 +658,16 @@ CREATE TABLE evenements (
     nombre_places INT,
     campus_id UUID REFERENCES campus(id) ON DELETE SET NULL,
     departement_id UUID REFERENCES departements(id) ON DELETE SET NULL,
+    projet_id UUID, -- FK ajoutée après création de la table projets
     organisateur_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    album_id UUID REFERENCES albums(id) ON DELETE SET NULL,
     statut statut_publication DEFAULT 'brouillon',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_evenements_date ON evenements(date_debut);
+CREATE INDEX idx_evenements_projet ON evenements(projet_id);
 CREATE INDEX idx_evenements_type ON evenements(type);
 CREATE INDEX idx_evenements_slug ON evenements(slug);
 
@@ -682,7 +694,7 @@ CREATE TABLE evenement_inscriptions (
     UNIQUE (evenement_id, email)
 );
 
--- Médiathèque d'un événement
+-- Médiathèque d'un événement (plusieurs albums possibles)
 CREATE TABLE evenement_mediatheque (
     evenement_id UUID REFERENCES evenements(id) ON DELETE CASCADE,
     album_id UUID REFERENCES albums(id) ON DELETE CASCADE,
@@ -709,6 +721,7 @@ CREATE TABLE actualites (
     departement_id UUID REFERENCES departements(id) ON DELETE SET NULL,
     service_id UUID REFERENCES services(id) ON DELETE SET NULL,
     evenement_id UUID REFERENCES evenements(id) ON DELETE SET NULL,
+    projet_id UUID, -- FK ajoutée après création de la table projets
     auteur_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -717,6 +730,7 @@ CREATE TABLE actualites (
 CREATE INDEX idx_actualites_date ON actualites(date_publication);
 CREATE INDEX idx_actualites_statut ON actualites(statut, statut_mise_en_avant);
 CREATE INDEX idx_actualites_slug ON actualites(slug);
+CREATE INDEX idx_actualites_projet ON actualites(projet_id);
 
 -- Photos d'une actualité
 CREATE TABLE actualite_medias (
@@ -772,6 +786,7 @@ CREATE TABLE projets (
     statut_publication statut_publication DEFAULT 'brouillon',
     departement_id UUID REFERENCES departements(id) ON DELETE SET NULL,
     responsable_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    album_id UUID REFERENCES albums(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -814,6 +829,22 @@ CREATE TABLE projet_appels (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Médiathèque d'un projet (plusieurs albums possibles)
+CREATE TABLE projet_mediatheque (
+    projet_id UUID REFERENCES projets(id) ON DELETE CASCADE,
+    album_id UUID REFERENCES albums(id) ON DELETE CASCADE,
+    PRIMARY KEY (projet_id, album_id)
+);
+
+-- Ajout des FK vers projets pour evenements et actualites
+ALTER TABLE evenements
+ADD CONSTRAINT fk_evenements_projet
+FOREIGN KEY (projet_id) REFERENCES projets(id) ON DELETE SET NULL;
+
+ALTER TABLE actualites
+ADD CONSTRAINT fk_actualites_projet
+FOREIGN KEY (projet_id) REFERENCES projets(id) ON DELETE SET NULL;
 
 -- ============================================================================
 -- CONTENUS ÉDITORIAUX ET CONFIGURATION
