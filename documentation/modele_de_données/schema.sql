@@ -14,114 +14,114 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- ============================================================================
 
 -- Civilités
-CREATE TYPE civilite AS ENUM ('M.', 'Mme', 'Dr', 'Pr');
+CREATE TYPE salutation AS ENUM ('Mr', 'Mrs', 'Dr', 'Pr');
 
 -- Types de formation
-CREATE TYPE type_formation AS ENUM ('master', 'doctorat', 'diplome_universite', 'formation_certifiante');
+CREATE TYPE program_type AS ENUM ('master', 'doctorate', 'university_diploma', 'certificate');
 
 -- Statuts génériques
-CREATE TYPE statut_publication AS ENUM ('brouillon', 'publie', 'archive');
+CREATE TYPE publication_status AS ENUM ('draft', 'published', 'archived');
 
 -- Statuts de candidature
-CREATE TYPE statut_candidature AS ENUM ('ouverte', 'fermee', 'en_evaluation');
+CREATE TYPE application_status AS ENUM ('open', 'closed', 'under_review');
 
 -- Types d'appel à candidature
-CREATE TYPE type_appel AS ENUM ('candidature', 'bourse', 'projet', 'recrutement', 'formation');
+CREATE TYPE call_type AS ENUM ('application', 'scholarship', 'project', 'recruitment', 'training');
 
 -- Statuts d'appel
-CREATE TYPE statut_appel AS ENUM ('en_cours', 'clos', 'a_venir');
+CREATE TYPE call_status AS ENUM ('ongoing', 'closed', 'upcoming');
 
 -- Types d'événement
-CREATE TYPE type_evenement AS ENUM ('conference', 'atelier', 'ceremonie', 'seminaire', 'colloque', 'autre');
+CREATE TYPE event_type AS ENUM ('conference', 'workshop', 'ceremony', 'seminar', 'symposium', 'other');
 
 -- Statuts d'actualité
-CREATE TYPE statut_actualite AS ENUM ('standard', 'a_la_une', 'en_vedette');
+CREATE TYPE news_highlight_status AS ENUM ('standard', 'featured', 'headline');
 
 -- Types de partenaire
-CREATE TYPE type_partenaire AS ENUM ('operateur_charte', 'partenaire_campus', 'partenaire_formation', 'partenaire_projet', 'autre');
+CREATE TYPE partner_type AS ENUM ('charter_operator', 'campus_partner', 'program_partner', 'project_partner', 'other');
 
 -- Situations familiales
-CREATE TYPE situation_familiale AS ENUM ('celibataire', 'marie', 'divorce', 'veuf', 'autre');
+CREATE TYPE marital_status AS ENUM ('single', 'married', 'divorced', 'widowed', 'other');
 
 -- Situations professionnelles
-CREATE TYPE situation_professionnelle AS ENUM ('etudiant', 'enseignant', 'fonctionnaire', 'salarie_prive', 'employe_ong', 'sans_emploi', 'autre');
+CREATE TYPE employment_status AS ENUM ('student', 'teacher', 'civil_servant', 'private_employee', 'ngo_employee', 'unemployed', 'other');
 
 -- Durées d'expérience
-CREATE TYPE duree_experience AS ENUM ('moins_1_an', 'entre_1_3_ans', 'entre_3_5_ans', 'entre_5_10_ans', 'plus_10_ans');
+CREATE TYPE experience_duration AS ENUM ('less_than_1_year', 'between_1_3_years', 'between_3_5_years', 'between_5_10_years', 'more_than_10_years');
 
 -- Types de média
-CREATE TYPE type_media AS ENUM ('image', 'video', 'document', 'audio');
+CREATE TYPE media_type AS ENUM ('image', 'video', 'document', 'audio');
 
 -- Statuts de candidature soumise
-CREATE TYPE statut_candidature_soumise AS ENUM ('soumise', 'en_cours_evaluation', 'acceptee', 'refusee', 'liste_attente', 'incomplete');
+CREATE TYPE submitted_application_status AS ENUM ('submitted', 'under_review', 'accepted', 'rejected', 'waitlisted', 'incomplete');
 
 -- Types de contenu éditorial
-CREATE TYPE type_valeur_editoriale AS ENUM ('texte', 'nombre', 'json', 'html', 'markdown');
+CREATE TYPE editorial_value_type AS ENUM ('text', 'number', 'json', 'html', 'markdown');
 
 -- Statuts de projet
-CREATE TYPE statut_projet AS ENUM ('en_cours', 'termine', 'suspendu', 'planifie');
+CREATE TYPE project_status AS ENUM ('ongoing', 'completed', 'suspended', 'planned');
 
 -- ============================================================================
 -- TABLES DE RÉFÉRENCE
 -- ============================================================================
 
 -- Pays
-CREATE TABLE pays (
+CREATE TABLE countries (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    code_iso CHAR(2) UNIQUE NOT NULL,
-    code_iso3 CHAR(3) UNIQUE,
-    nom_fr VARCHAR(100) NOT NULL,
-    nom_en VARCHAR(100),
-    nom_ar VARCHAR(100),
-    indicatif_tel VARCHAR(10),
-    actif BOOLEAN DEFAULT TRUE,
+    iso_code CHAR(2) UNIQUE NOT NULL,
+    iso_code3 CHAR(3) UNIQUE,
+    name_fr VARCHAR(100) NOT NULL,
+    name_en VARCHAR(100),
+    name_ar VARCHAR(100),
+    phone_code VARCHAR(10),
+    active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_pays_code_iso ON pays(code_iso);
-CREATE INDEX idx_pays_nom_fr ON pays(nom_fr);
+CREATE INDEX idx_countries_iso_code ON countries(iso_code);
+CREATE INDEX idx_countries_name_fr ON countries(name_fr);
 
 -- ============================================================================
 -- MÉDIAS ET FICHIERS
 -- ============================================================================
 
 -- Table centralisée des médias
-CREATE TABLE medias (
+CREATE TABLE media (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nom VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
     description TEXT,
-    type type_media NOT NULL,
+    type media_type NOT NULL,
     url VARCHAR(500) NOT NULL,
-    url_externe BOOLEAN DEFAULT FALSE,
-    taille_octets BIGINT,
+    is_external_url BOOLEAN DEFAULT FALSE,
+    size_bytes BIGINT,
     mime_type VARCHAR(100),
-    largeur INT,
-    hauteur INT,
-    duree_secondes INT,
+    width INT,
+    height INT,
+    duration_seconds INT,
     alt_text VARCHAR(255),
     credits VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_medias_type ON medias(type);
+CREATE INDEX idx_media_type ON media(type);
 
 -- Albums (regroupement de médias)
 CREATE TABLE albums (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    titre VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     description TEXT,
-    statut statut_publication DEFAULT 'brouillon',
+    status publication_status DEFAULT 'draft',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Relation albums <-> médias
-CREATE TABLE album_medias (
+CREATE TABLE album_media (
     album_id UUID REFERENCES albums(id) ON DELETE CASCADE,
-    media_id UUID REFERENCES medias(id) ON DELETE CASCADE,
-    ordre INT DEFAULT 0,
+    media_id UUID REFERENCES media(id) ON DELETE CASCADE,
+    display_order INT DEFAULT 0,
     PRIMARY KEY (album_id, media_id)
 );
 
@@ -133,9 +133,9 @@ CREATE TABLE album_medias (
 CREATE TABLE permissions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code VARCHAR(50) UNIQUE NOT NULL,
-    nom_fr VARCHAR(100) NOT NULL,
+    name_fr VARCHAR(100) NOT NULL,
     description TEXT,
-    categorie VARCHAR(50),
+    category VARCHAR(50),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -143,10 +143,10 @@ CREATE TABLE permissions (
 CREATE TABLE roles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code VARCHAR(50) UNIQUE NOT NULL,
-    nom_fr VARCHAR(100) NOT NULL,
+    name_fr VARCHAR(100) NOT NULL,
     description TEXT,
-    niveau_hierarchie INT DEFAULT 0,
-    actif BOOLEAN DEFAULT TRUE,
+    hierarchy_level INT DEFAULT 0,
+    active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -159,71 +159,71 @@ CREATE TABLE role_permissions (
 );
 
 -- Utilisateurs
-CREATE TABLE utilisateurs (
+CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
-    mot_de_passe_hash VARCHAR(255),
-    nom VARCHAR(100) NOT NULL,
-    prenom VARCHAR(100) NOT NULL,
-    civilite civilite,
-    date_naissance DATE,
-    telephone VARCHAR(30),
-    telephone_whatsapp VARCHAR(30),
+    password_hash VARCHAR(255),
+    last_name VARCHAR(100) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    salutation salutation,
+    birth_date DATE,
+    phone VARCHAR(30),
+    phone_whatsapp VARCHAR(30),
     linkedin VARCHAR(255),
-    photo_id UUID REFERENCES medias(id) ON DELETE SET NULL,
-    nationalite_id UUID REFERENCES pays(id),
-    pays_residence_id UUID REFERENCES pays(id),
-    ville VARCHAR(100),
-    adresse TEXT,
-    actif BOOLEAN DEFAULT TRUE,
-    email_verifie BOOLEAN DEFAULT FALSE,
-    derniere_connexion TIMESTAMPTZ,
+    photo_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    nationality_id UUID REFERENCES countries(id),
+    residence_country_id UUID REFERENCES countries(id),
+    city VARCHAR(100),
+    address TEXT,
+    active BOOLEAN DEFAULT TRUE,
+    email_verified BOOLEAN DEFAULT FALSE,
+    last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_utilisateurs_email ON utilisateurs(email);
-CREATE INDEX idx_utilisateurs_nom ON utilisateurs(nom, prenom);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_name ON users(last_name, first_name);
 
 -- Relation utilisateurs <-> rôles
-CREATE TABLE utilisateur_roles (
-    utilisateur_id UUID REFERENCES utilisateurs(id) ON DELETE CASCADE,
+CREATE TABLE user_roles (
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
-    campus_id UUID, -- Rattachement optionnel à un campus (ajouté après création de la table campus)
-    date_attribution TIMESTAMPTZ DEFAULT NOW(),
-    attribue_par UUID REFERENCES utilisateurs(id),
-    PRIMARY KEY (utilisateur_id, role_id)
+    campus_id UUID, -- Rattachement optionnel à un campus (FK ajoutée après création de la table campus)
+    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+    assigned_by UUID REFERENCES users(id),
+    PRIMARY KEY (user_id, role_id)
 );
 
 -- Tokens de réinitialisation et vérification
-CREATE TABLE tokens_utilisateur (
+CREATE TABLE user_tokens (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    utilisateur_id UUID REFERENCES utilisateurs(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     token VARCHAR(255) UNIQUE NOT NULL,
-    type VARCHAR(50) NOT NULL, -- 'verification_email', 'reset_password'
-    expire_at TIMESTAMPTZ NOT NULL,
-    utilise BOOLEAN DEFAULT FALSE,
+    type VARCHAR(50) NOT NULL, -- 'email_verification', 'password_reset'
+    expires_at TIMESTAMPTZ NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_tokens_token ON tokens_utilisateur(token);
+CREATE INDEX idx_user_tokens_token ON user_tokens(token);
 
 -- ============================================================================
 -- STRUCTURE ORGANISATIONNELLE
 -- ============================================================================
 
 -- Départements / Directions
-CREATE TABLE departements (
+CREATE TABLE departments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code VARCHAR(20) UNIQUE NOT NULL,
-    denomination VARCHAR(255) NOT NULL,
-    presentation TEXT,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
     mission TEXT,
-    icone_id UUID REFERENCES medias(id) ON DELETE SET NULL,
-    image_couverture_id UUID REFERENCES medias(id) ON DELETE SET NULL,
-    responsable_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
-    ordre_affichage INT DEFAULT 0,
-    actif BOOLEAN DEFAULT TRUE,
+    icon_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    cover_image_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    head_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    display_order INT DEFAULT 0,
+    active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -231,58 +231,58 @@ CREATE TABLE departements (
 -- Services de département
 CREATE TABLE services (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    departement_id UUID REFERENCES departements(id) ON DELETE CASCADE,
-    nom VARCHAR(255) NOT NULL,
-    presentation TEXT,
+    department_id UUID REFERENCES departments(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
     mission TEXT,
-    responsable_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    head_id UUID REFERENCES users(id) ON DELETE SET NULL,
     email VARCHAR(255),
-    telephone VARCHAR(30),
+    phone VARCHAR(30),
     album_id UUID REFERENCES albums(id) ON DELETE SET NULL,
-    ordre_affichage INT DEFAULT 0,
-    actif BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0,
+    active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Objectifs d'un service
-CREATE TABLE service_objectifs (
+CREATE TABLE service_objectives (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     service_id UUID REFERENCES services(id) ON DELETE CASCADE,
-    titre VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     description TEXT,
-    ordre INT DEFAULT 0
+    display_order INT DEFAULT 0
 );
 
 -- Réalisations d'un service
-CREATE TABLE service_realisations (
+CREATE TABLE service_achievements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     service_id UUID REFERENCES services(id) ON DELETE CASCADE,
-    titre VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     description TEXT,
     type VARCHAR(100),
-    image_couverture_id UUID REFERENCES medias(id) ON DELETE SET NULL,
-    date TIMESTAMPTZ,
+    cover_image_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    achievement_date TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Projets internes d'un service
-CREATE TABLE service_projets (
+CREATE TABLE service_projects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     service_id UUID REFERENCES services(id) ON DELETE CASCADE,
-    titre VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     description TEXT,
-    image_couverture_id UUID REFERENCES medias(id) ON DELETE SET NULL,
-    progression INT DEFAULT 0 CHECK (progression >= 0 AND progression <= 100),
-    statut statut_projet DEFAULT 'planifie',
-    date_debut DATE,
-    date_fin_prevue DATE,
+    cover_image_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    progress INT DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+    status project_status DEFAULT 'planned',
+    start_date DATE,
+    expected_end_date DATE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Médiathèque d'un service (plusieurs albums possibles)
-CREATE TABLE service_mediatheque (
+CREATE TABLE service_media_library (
     service_id UUID REFERENCES services(id) ON DELETE CASCADE,
     album_id UUID REFERENCES albums(id) ON DELETE CASCADE,
     PRIMARY KEY (service_id, album_id)
@@ -292,82 +292,82 @@ CREATE TABLE service_mediatheque (
 -- PARTENAIRES
 -- ============================================================================
 
-CREATE TABLE partenaires (
+CREATE TABLE partners (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nom VARCHAR(255) NOT NULL,
-    presentation TEXT,
-    logo_id UUID REFERENCES medias(id) ON DELETE SET NULL,
-    site_web VARCHAR(500),
-    type type_partenaire NOT NULL,
-    pays_id UUID REFERENCES pays(id),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    logo_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    website VARCHAR(500),
+    type partner_type NOT NULL,
+    country_id UUID REFERENCES countries(id),
     email VARCHAR(255),
-    telephone VARCHAR(30),
-    ordre_affichage INT DEFAULT 0,
-    actif BOOLEAN DEFAULT TRUE,
+    phone VARCHAR(30),
+    display_order INT DEFAULT 0,
+    active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_partenaires_type ON partenaires(type);
+CREATE INDEX idx_partners_type ON partners(type);
 
 -- ============================================================================
 -- CAMPUS
 -- ============================================================================
 
-CREATE TABLE campus (
+CREATE TABLE campuses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code VARCHAR(20) UNIQUE NOT NULL,
-    nom VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
     description TEXT,
-    image_couverture_id UUID REFERENCES medias(id) ON DELETE SET NULL,
+    cover_image_id UUID REFERENCES media(id) ON DELETE SET NULL,
     email VARCHAR(255),
-    telephone VARCHAR(30),
-    pays_id UUID REFERENCES pays(id),
-    ville VARCHAR(100),
-    adresse TEXT,
-    code_postal VARCHAR(20),
+    phone VARCHAR(30),
+    country_id UUID REFERENCES countries(id),
+    city VARCHAR(100),
+    address TEXT,
+    postal_code VARCHAR(20),
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
-    est_siege BOOLEAN DEFAULT FALSE,
-    responsable_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    is_headquarters BOOLEAN DEFAULT FALSE,
+    head_id UUID REFERENCES users(id) ON DELETE SET NULL,
     album_id UUID REFERENCES albums(id) ON DELETE SET NULL,
-    actif BOOLEAN DEFAULT TRUE,
+    active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_campus_pays ON campus(pays_id);
+CREATE INDEX idx_campuses_country ON campuses(country_id);
 
--- Ajout de la contrainte FK pour utilisateur_roles.campus_id
-ALTER TABLE utilisateur_roles
-ADD CONSTRAINT fk_utilisateur_roles_campus
-FOREIGN KEY (campus_id) REFERENCES campus(id) ON DELETE SET NULL;
+-- Ajout de la contrainte FK pour user_roles.campus_id
+ALTER TABLE user_roles
+ADD CONSTRAINT fk_user_roles_campus
+FOREIGN KEY (campus_id) REFERENCES campuses(id) ON DELETE SET NULL;
 
 -- Relation campus <-> partenaires
-CREATE TABLE campus_partenaires (
-    campus_id UUID REFERENCES campus(id) ON DELETE CASCADE,
-    partenaire_id UUID REFERENCES partenaires(id) ON DELETE CASCADE,
-    date_debut DATE,
-    date_fin DATE,
-    PRIMARY KEY (campus_id, partenaire_id)
+CREATE TABLE campus_partners (
+    campus_id UUID REFERENCES campuses(id) ON DELETE CASCADE,
+    partner_id UUID REFERENCES partners(id) ON DELETE CASCADE,
+    start_date DATE,
+    end_date DATE,
+    PRIMARY KEY (campus_id, partner_id)
 );
 
 -- Équipe d'un campus
-CREATE TABLE campus_equipe (
+CREATE TABLE campus_team (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    campus_id UUID REFERENCES campus(id) ON DELETE CASCADE,
-    utilisateur_id UUID REFERENCES utilisateurs(id) ON DELETE CASCADE,
-    fonction VARCHAR(255) NOT NULL,
-    ordre_affichage INT DEFAULT 0,
-    date_debut DATE,
-    date_fin DATE,
-    actif BOOLEAN DEFAULT TRUE,
+    campus_id UUID REFERENCES campuses(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    position VARCHAR(255) NOT NULL,
+    display_order INT DEFAULT 0,
+    start_date DATE,
+    end_date DATE,
+    active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Médiathèque d'un campus (plusieurs albums possibles)
-CREATE TABLE campus_mediatheque (
-    campus_id UUID REFERENCES campus(id) ON DELETE CASCADE,
+CREATE TABLE campus_media_library (
+    campus_id UUID REFERENCES campuses(id) ON DELETE CASCADE,
     album_id UUID REFERENCES albums(id) ON DELETE CASCADE,
     PRIMARY KEY (campus_id, album_id)
 );
@@ -376,164 +376,164 @@ CREATE TABLE campus_mediatheque (
 -- FORMATIONS
 -- ============================================================================
 
-CREATE TABLE formations (
+CREATE TABLE programs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code VARCHAR(30) UNIQUE NOT NULL,
-    titre VARCHAR(255) NOT NULL,
-    sous_titre VARCHAR(255),
+    title VARCHAR(255) NOT NULL,
+    subtitle VARCHAR(255),
     slug VARCHAR(255) UNIQUE NOT NULL,
     description TEXT,
-    modalites_pedagogiques TEXT,
-    image_couverture_id UUID REFERENCES medias(id) ON DELETE SET NULL,
-    type type_formation NOT NULL,
-    duree_mois INT,
-    nombre_credits INT,
-    diplome_obtenu VARCHAR(255),
-    diplome_requis TEXT,
-    departement_id UUID REFERENCES departements(id) ON DELETE SET NULL,
-    responsable_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
-    statut statut_publication DEFAULT 'brouillon',
-    ordre_affichage INT DEFAULT 0,
+    teaching_methods TEXT,
+    cover_image_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    type program_type NOT NULL,
+    duration_months INT,
+    credits INT,
+    degree_awarded VARCHAR(255),
+    required_degree TEXT,
+    department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
+    coordinator_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    status publication_status DEFAULT 'draft',
+    display_order INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_formations_type ON formations(type);
-CREATE INDEX idx_formations_slug ON formations(slug);
-CREATE INDEX idx_formations_departement ON formations(departement_id);
+CREATE INDEX idx_programs_type ON programs(type);
+CREATE INDEX idx_programs_slug ON programs(slug);
+CREATE INDEX idx_programs_department ON programs(department_id);
 
 -- Campus où se déroule une formation
-CREATE TABLE formation_campus (
-    formation_id UUID REFERENCES formations(id) ON DELETE CASCADE,
-    campus_id UUID REFERENCES campus(id) ON DELETE CASCADE,
-    PRIMARY KEY (formation_id, campus_id)
+CREATE TABLE program_campuses (
+    program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+    campus_id UUID REFERENCES campuses(id) ON DELETE CASCADE,
+    PRIMARY KEY (program_id, campus_id)
 );
 
 -- Partenaires d'une formation
-CREATE TABLE formation_partenaires (
-    formation_id UUID REFERENCES formations(id) ON DELETE CASCADE,
-    partenaire_id UUID REFERENCES partenaires(id) ON DELETE CASCADE,
-    type_partenariat VARCHAR(100),
-    PRIMARY KEY (formation_id, partenaire_id)
+CREATE TABLE program_partners (
+    program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+    partner_id UUID REFERENCES partners(id) ON DELETE CASCADE,
+    partnership_type VARCHAR(100),
+    PRIMARY KEY (program_id, partner_id)
 );
 
 -- Programme de formation (semestres)
-CREATE TABLE formation_semestres (
+CREATE TABLE program_semesters (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    formation_id UUID REFERENCES formations(id) ON DELETE CASCADE,
-    numero INT NOT NULL,
-    titre VARCHAR(255),
+    program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+    number INT NOT NULL,
+    title VARCHAR(255),
     credits INT DEFAULT 1,
-    ordre INT DEFAULT 0,
-    UNIQUE (formation_id, numero)
+    display_order INT DEFAULT 0,
+    UNIQUE (program_id, number)
 );
 
 -- Unités d'enseignement (UE) d'un semestre
-CREATE TABLE formation_ues (
+CREATE TABLE program_courses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    semestre_id UUID REFERENCES formation_semestres(id) ON DELETE CASCADE,
+    semester_id UUID REFERENCES program_semesters(id) ON DELETE CASCADE,
     code VARCHAR(20),
-    titre VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     description TEXT,
     credits INT,
-    heures_cm INT DEFAULT 0,
-    heures_td INT DEFAULT 0,
-    heures_tp INT DEFAULT 0,
+    lecture_hours INT DEFAULT 0,
+    tutorial_hours INT DEFAULT 0,
+    practical_hours INT DEFAULT 0,
     coefficient DECIMAL(4, 2),
-    ordre INT DEFAULT 0
+    display_order INT DEFAULT 0
 );
 
 -- Débouchés d'une formation
-CREATE TABLE formation_debouches (
+CREATE TABLE program_career_opportunities (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    formation_id UUID REFERENCES formations(id) ON DELETE CASCADE,
-    titre VARCHAR(255) NOT NULL,
+    program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
     description TEXT,
-    ordre INT DEFAULT 0
+    display_order INT DEFAULT 0
 );
 
 -- Compétences visées par une formation
-CREATE TABLE formation_competences (
+CREATE TABLE program_skills (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    formation_id UUID REFERENCES formations(id) ON DELETE CASCADE,
-    titre VARCHAR(255) NOT NULL,
+    program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
     description TEXT,
-    ordre INT DEFAULT 0
+    display_order INT DEFAULT 0
 );
 
 -- ============================================================================
 -- APPELS À CANDIDATURE
 -- ============================================================================
 
-CREATE TABLE appels_candidature (
+CREATE TABLE application_calls (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    titre VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
     description TEXT,
-    image_couverture_id UUID REFERENCES medias(id) ON DELETE SET NULL,
-    type type_appel NOT NULL,
-    statut statut_appel DEFAULT 'a_venir',
-    date_ouverture DATE,
-    date_limite TIMESTAMPTZ,
-    formation_id UUID REFERENCES formations(id) ON DELETE SET NULL,
-    campus_id UUID REFERENCES campus(id) ON DELETE SET NULL,
-    date_debut_programme DATE,
-    date_fin_programme DATE,
-    publics_cibles TEXT,
-    frais_inscription DECIMAL(10, 2),
-    devise VARCHAR(10) DEFAULT 'EUR',
-    url_formulaire_externe VARCHAR(500),
-    utiliser_formulaire_interne BOOLEAN DEFAULT TRUE,
-    statut_publication statut_publication DEFAULT 'brouillon',
-    created_by UUID REFERENCES utilisateurs(id),
+    cover_image_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    type call_type NOT NULL,
+    status call_status DEFAULT 'upcoming',
+    opening_date DATE,
+    deadline TIMESTAMPTZ,
+    program_id UUID REFERENCES programs(id) ON DELETE SET NULL,
+    campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
+    program_start_date DATE,
+    program_end_date DATE,
+    target_audience TEXT,
+    registration_fee DECIMAL(10, 2),
+    currency VARCHAR(10) DEFAULT 'EUR',
+    external_form_url VARCHAR(500),
+    use_internal_form BOOLEAN DEFAULT TRUE,
+    publication_status publication_status DEFAULT 'draft',
+    created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_appels_type ON appels_candidature(type);
-CREATE INDEX idx_appels_statut ON appels_candidature(statut);
-CREATE INDEX idx_appels_date_limite ON appels_candidature(date_limite);
-CREATE INDEX idx_appels_slug ON appels_candidature(slug);
+CREATE INDEX idx_application_calls_type ON application_calls(type);
+CREATE INDEX idx_application_calls_status ON application_calls(status);
+CREATE INDEX idx_application_calls_deadline ON application_calls(deadline);
+CREATE INDEX idx_application_calls_slug ON application_calls(slug);
 
 -- Critères d'éligibilité d'un appel
-CREATE TABLE appel_criteres_eligibilite (
+CREATE TABLE call_eligibility_criteria (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    appel_id UUID REFERENCES appels_candidature(id) ON DELETE CASCADE,
-    critere TEXT NOT NULL,
-    obligatoire BOOLEAN DEFAULT TRUE,
-    ordre INT DEFAULT 0
+    call_id UUID REFERENCES application_calls(id) ON DELETE CASCADE,
+    criterion TEXT NOT NULL,
+    is_mandatory BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0
 );
 
 -- Prises en charge d'un appel
-CREATE TABLE appel_prises_en_charge (
+CREATE TABLE call_coverage (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    appel_id UUID REFERENCES appels_candidature(id) ON DELETE CASCADE,
-    element VARCHAR(255) NOT NULL,
+    call_id UUID REFERENCES application_calls(id) ON DELETE CASCADE,
+    item VARCHAR(255) NOT NULL,
     description TEXT,
-    ordre INT DEFAULT 0
+    display_order INT DEFAULT 0
 );
 
 -- Documents requis pour un appel
-CREATE TABLE appel_documents_requis (
+CREATE TABLE call_required_documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    appel_id UUID REFERENCES appels_candidature(id) ON DELETE CASCADE,
-    nom_document VARCHAR(255) NOT NULL,
+    call_id UUID REFERENCES application_calls(id) ON DELETE CASCADE,
+    document_name VARCHAR(255) NOT NULL,
     description TEXT,
-    obligatoire BOOLEAN DEFAULT TRUE,
-    formats_acceptes VARCHAR(100), -- ex: 'pdf,doc,docx'
-    taille_max_mo INT,
-    ordre INT DEFAULT 0
+    is_mandatory BOOLEAN DEFAULT TRUE,
+    accepted_formats VARCHAR(100), -- ex: 'pdf,doc,docx'
+    max_size_mb INT,
+    display_order INT DEFAULT 0
 );
 
 -- Calendrier récapitulatif d'un appel
-CREATE TABLE appel_calendrier (
+CREATE TABLE call_schedule (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    appel_id UUID REFERENCES appels_candidature(id) ON DELETE CASCADE,
-    etape VARCHAR(255) NOT NULL,
-    date_debut DATE,
-    date_fin DATE,
+    call_id UUID REFERENCES application_calls(id) ON DELETE CASCADE,
+    step VARCHAR(255) NOT NULL,
+    start_date DATE,
+    end_date DATE,
     description TEXT,
-    ordre INT DEFAULT 0
+    display_order INT DEFAULT 0
 );
 
 -- ============================================================================
@@ -541,92 +541,92 @@ CREATE TABLE appel_calendrier (
 -- ============================================================================
 
 -- Candidatures formation
-CREATE TABLE candidatures (
+CREATE TABLE applications (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    numero_dossier VARCHAR(50) UNIQUE NOT NULL,
-    appel_id UUID REFERENCES appels_candidature(id) ON DELETE SET NULL,
-    formation_id UUID REFERENCES formations(id) ON DELETE SET NULL,
-    utilisateur_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    reference_number VARCHAR(50) UNIQUE NOT NULL,
+    call_id UUID REFERENCES application_calls(id) ON DELETE SET NULL,
+    program_id UUID REFERENCES programs(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
 
     -- Informations personnelles (peuvent différer du profil utilisateur)
-    civilite civilite,
-    nom VARCHAR(100) NOT NULL,
-    prenom VARCHAR(100) NOT NULL,
-    date_naissance DATE,
-    ville_naissance VARCHAR(100),
-    pays_naissance_id UUID REFERENCES pays(id),
-    nationalite_id UUID REFERENCES pays(id),
-    situation_familiale situation_familiale,
-    situation_professionnelle situation_professionnelle,
-    situation_professionnelle_autre VARCHAR(255),
+    salutation salutation,
+    last_name VARCHAR(100) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    birth_date DATE,
+    birth_city VARCHAR(100),
+    birth_country_id UUID REFERENCES countries(id),
+    nationality_id UUID REFERENCES countries(id),
+    marital_status marital_status,
+    employment_status employment_status,
+    employment_status_other VARCHAR(255),
 
     -- Coordonnées
-    adresse TEXT,
-    ville VARCHAR(100),
-    code_postal VARCHAR(20),
-    pays_id UUID REFERENCES pays(id),
-    telephone VARCHAR(30),
-    telephone_whatsapp VARCHAR(30),
+    address TEXT,
+    city VARCHAR(100),
+    postal_code VARCHAR(20),
+    country_id UUID REFERENCES countries(id),
+    phone VARCHAR(30),
+    phone_whatsapp VARCHAR(30),
     email VARCHAR(255) NOT NULL,
 
     -- Informations professionnelles
-    a_experience_professionnelle BOOLEAN DEFAULT FALSE,
-    emploi_actuel VARCHAR(255),
-    fonction_titre VARCHAR(255),
-    organisme_employeur VARCHAR(255),
-    employeur_adresse TEXT,
-    employeur_ville VARCHAR(100),
-    employeur_pays_id UUID REFERENCES pays(id),
-    employeur_telephone VARCHAR(30),
-    employeur_email VARCHAR(255),
-    duree_experience duree_experience,
+    has_work_experience BOOLEAN DEFAULT FALSE,
+    current_job VARCHAR(255),
+    job_title VARCHAR(255),
+    employer_name VARCHAR(255),
+    employer_address TEXT,
+    employer_city VARCHAR(100),
+    employer_country_id UUID REFERENCES countries(id),
+    employer_phone VARCHAR(30),
+    employer_email VARCHAR(255),
+    experience_duration experience_duration,
 
     -- Formation académique
-    niveau_diplome_eleve VARCHAR(100),
-    intitule_diplome_eleve VARCHAR(255),
-    date_obtention_diplome DATE,
-    lieu_obtention_diplome VARCHAR(255),
+    highest_degree_level VARCHAR(100),
+    highest_degree_title VARCHAR(255),
+    degree_date DATE,
+    degree_location VARCHAR(255),
 
     -- Statut
-    statut statut_candidature_soumise DEFAULT 'soumise',
-    date_soumission TIMESTAMPTZ DEFAULT NOW(),
-    date_evaluation TIMESTAMPTZ,
-    evaluateur_id UUID REFERENCES utilisateurs(id),
-    notes_evaluation TEXT,
-    score_evaluation DECIMAL(5, 2),
+    status submitted_application_status DEFAULT 'submitted',
+    submitted_at TIMESTAMPTZ DEFAULT NOW(),
+    reviewed_at TIMESTAMPTZ,
+    reviewer_id UUID REFERENCES users(id),
+    review_notes TEXT,
+    review_score DECIMAL(5, 2),
 
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_candidatures_numero ON candidatures(numero_dossier);
-CREATE INDEX idx_candidatures_appel ON candidatures(appel_id);
-CREATE INDEX idx_candidatures_statut ON candidatures(statut);
-CREATE INDEX idx_candidatures_utilisateur ON candidatures(utilisateur_id);
+CREATE INDEX idx_applications_reference ON applications(reference_number);
+CREATE INDEX idx_applications_call ON applications(call_id);
+CREATE INDEX idx_applications_status ON applications(status);
+CREATE INDEX idx_applications_user ON applications(user_id);
 
 -- Diplômes du candidat
-CREATE TABLE candidature_diplomes (
+CREATE TABLE application_degrees (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    candidature_id UUID REFERENCES candidatures(id) ON DELETE CASCADE,
-    titre VARCHAR(255) NOT NULL,
-    annee INT,
-    etablissement VARCHAR(255),
-    ville VARCHAR(100),
-    pays_id UUID REFERENCES pays(id),
-    specialite VARCHAR(255),
-    mention VARCHAR(50),
-    ordre INT DEFAULT 0
+    application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    year INT,
+    institution VARCHAR(255),
+    city VARCHAR(100),
+    country_id UUID REFERENCES countries(id),
+    specialization VARCHAR(255),
+    honors VARCHAR(50),
+    display_order INT DEFAULT 0
 );
 
 -- Documents soumis par le candidat
-CREATE TABLE candidature_documents (
+CREATE TABLE application_documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    candidature_id UUID REFERENCES candidatures(id) ON DELETE CASCADE,
-    document_requis_id UUID REFERENCES appel_documents_requis(id) ON DELETE SET NULL,
-    nom_document VARCHAR(255) NOT NULL,
-    media_id UUID REFERENCES medias(id) ON DELETE SET NULL,
-    valide BOOLEAN,
-    commentaire_validation TEXT,
+    application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+    required_document_id UUID REFERENCES call_required_documents(id) ON DELETE SET NULL,
+    document_name VARCHAR(255) NOT NULL,
+    media_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    is_valid BOOLEAN,
+    validation_comment TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -634,126 +634,126 @@ CREATE TABLE candidature_documents (
 -- ÉVÉNEMENTS
 -- ============================================================================
 
-CREATE TABLE evenements (
+CREATE TABLE events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    titre VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
     description TEXT,
-    contenu TEXT, -- Contenu riche
-    image_couverture_id UUID REFERENCES medias(id) ON DELETE SET NULL,
-    type type_evenement NOT NULL,
-    type_autre VARCHAR(100), -- Si type = 'autre'
-    date_debut TIMESTAMPTZ NOT NULL,
-    date_fin TIMESTAMPTZ,
-    lieu VARCHAR(255),
-    adresse TEXT,
-    ville VARCHAR(100),
-    pays_id UUID REFERENCES pays(id),
+    content TEXT, -- Contenu riche
+    cover_image_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    type event_type NOT NULL,
+    type_other VARCHAR(100), -- Si type = 'other'
+    start_date TIMESTAMPTZ NOT NULL,
+    end_date TIMESTAMPTZ,
+    venue VARCHAR(255),
+    address TEXT,
+    city VARCHAR(100),
+    country_id UUID REFERENCES countries(id),
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
-    en_ligne BOOLEAN DEFAULT FALSE,
-    lien_visio VARCHAR(500),
-    inscription_requise BOOLEAN DEFAULT FALSE,
-    lien_inscription VARCHAR(500),
-    nombre_places INT,
-    campus_id UUID REFERENCES campus(id) ON DELETE SET NULL,
-    departement_id UUID REFERENCES departements(id) ON DELETE SET NULL,
-    projet_id UUID, -- FK ajoutée après création de la table projets
-    organisateur_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    is_online BOOLEAN DEFAULT FALSE,
+    video_conference_link VARCHAR(500),
+    registration_required BOOLEAN DEFAULT FALSE,
+    registration_link VARCHAR(500),
+    max_attendees INT,
+    campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
+    department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
+    project_id UUID, -- FK ajoutée après création de la table projects
+    organizer_id UUID REFERENCES users(id) ON DELETE SET NULL,
     album_id UUID REFERENCES albums(id) ON DELETE SET NULL,
-    statut statut_publication DEFAULT 'brouillon',
+    status publication_status DEFAULT 'draft',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_evenements_date ON evenements(date_debut);
-CREATE INDEX idx_evenements_projet ON evenements(projet_id);
-CREATE INDEX idx_evenements_type ON evenements(type);
-CREATE INDEX idx_evenements_slug ON evenements(slug);
+CREATE INDEX idx_events_date ON events(start_date);
+CREATE INDEX idx_events_project ON events(project_id);
+CREATE INDEX idx_events_type ON events(type);
+CREATE INDEX idx_events_slug ON events(slug);
 
 -- Partenaires d'un événement
-CREATE TABLE evenement_partenaires (
-    evenement_id UUID REFERENCES evenements(id) ON DELETE CASCADE,
-    partenaire_id UUID REFERENCES partenaires(id) ON DELETE CASCADE,
-    PRIMARY KEY (evenement_id, partenaire_id)
+CREATE TABLE event_partners (
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+    partner_id UUID REFERENCES partners(id) ON DELETE CASCADE,
+    PRIMARY KEY (event_id, partner_id)
 );
 
 -- Inscriptions à un événement
-CREATE TABLE evenement_inscriptions (
+CREATE TABLE event_registrations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    evenement_id UUID REFERENCES evenements(id) ON DELETE CASCADE,
-    utilisateur_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     -- Pour les non-inscrits
-    nom VARCHAR(100),
-    prenom VARCHAR(100),
+    last_name VARCHAR(100),
+    first_name VARCHAR(100),
     email VARCHAR(255) NOT NULL,
-    telephone VARCHAR(30),
-    organisation VARCHAR(255),
-    statut VARCHAR(50) DEFAULT 'inscrit', -- inscrit, confirme, annule, present
-    date_inscription TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE (evenement_id, email)
+    phone VARCHAR(30),
+    organization VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'registered', -- registered, confirmed, cancelled, attended
+    registered_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (event_id, email)
 );
 
 -- Médiathèque d'un événement (plusieurs albums possibles)
-CREATE TABLE evenement_mediatheque (
-    evenement_id UUID REFERENCES evenements(id) ON DELETE CASCADE,
+CREATE TABLE event_media_library (
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     album_id UUID REFERENCES albums(id) ON DELETE CASCADE,
-    PRIMARY KEY (evenement_id, album_id)
+    PRIMARY KEY (event_id, album_id)
 );
 
 -- ============================================================================
 -- ACTUALITÉS
 -- ============================================================================
 
-CREATE TABLE actualites (
+CREATE TABLE news (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    titre VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    contenu TEXT, -- Contenu riche (HTML/Markdown)
-    image_couverture_id UUID REFERENCES medias(id) ON DELETE SET NULL,
+    summary TEXT,
+    content TEXT, -- Contenu riche (HTML/Markdown)
+    cover_image_id UUID REFERENCES media(id) ON DELETE SET NULL,
     video_url VARCHAR(500),
-    statut_mise_en_avant statut_actualite DEFAULT 'standard',
-    statut statut_publication DEFAULT 'brouillon',
-    date_publication TIMESTAMPTZ,
-    visible_a_partir_de TIMESTAMPTZ,
-    campus_id UUID REFERENCES campus(id) ON DELETE SET NULL,
-    departement_id UUID REFERENCES departements(id) ON DELETE SET NULL,
+    highlight_status news_highlight_status DEFAULT 'standard',
+    status publication_status DEFAULT 'draft',
+    published_at TIMESTAMPTZ,
+    visible_from TIMESTAMPTZ,
+    campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
+    department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
     service_id UUID REFERENCES services(id) ON DELETE SET NULL,
-    evenement_id UUID REFERENCES evenements(id) ON DELETE SET NULL,
-    projet_id UUID, -- FK ajoutée après création de la table projets
-    auteur_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    event_id UUID REFERENCES events(id) ON DELETE SET NULL,
+    project_id UUID, -- FK ajoutée après création de la table projects
+    author_id UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_actualites_date ON actualites(date_publication);
-CREATE INDEX idx_actualites_statut ON actualites(statut, statut_mise_en_avant);
-CREATE INDEX idx_actualites_slug ON actualites(slug);
-CREATE INDEX idx_actualites_projet ON actualites(projet_id);
+CREATE INDEX idx_news_published_at ON news(published_at);
+CREATE INDEX idx_news_status ON news(status, highlight_status);
+CREATE INDEX idx_news_slug ON news(slug);
+CREATE INDEX idx_news_project ON news(project_id);
 
 -- Photos d'une actualité
-CREATE TABLE actualite_medias (
-    actualite_id UUID REFERENCES actualites(id) ON DELETE CASCADE,
-    media_id UUID REFERENCES medias(id) ON DELETE CASCADE,
-    ordre INT DEFAULT 0,
-    PRIMARY KEY (actualite_id, media_id)
+CREATE TABLE news_media (
+    news_id UUID REFERENCES news(id) ON DELETE CASCADE,
+    media_id UUID REFERENCES media(id) ON DELETE CASCADE,
+    display_order INT DEFAULT 0,
+    PRIMARY KEY (news_id, media_id)
 );
 
 -- Tags/catégories pour actualités
 CREATE TABLE tags (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nom VARCHAR(100) UNIQUE NOT NULL,
+    name VARCHAR(100) UNIQUE NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
-    icone VARCHAR(50),
+    icon VARCHAR(50),
     description TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE actualite_tags (
-    actualite_id UUID REFERENCES actualites(id) ON DELETE CASCADE,
+CREATE TABLE news_tags (
+    news_id UUID REFERENCES news(id) ON DELETE CASCADE,
     tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
-    PRIMARY KEY (actualite_id, tag_id)
+    PRIMARY KEY (news_id, tag_id)
 );
 
 -- ============================================================================
@@ -761,129 +761,129 @@ CREATE TABLE actualite_tags (
 -- ============================================================================
 
 -- Catégories de projets
-CREATE TABLE projet_categories (
+CREATE TABLE project_categories (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nom VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
-    icone VARCHAR(50),
+    icon VARCHAR(50),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE projets (
+CREATE TABLE projects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    titre VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
-    resume TEXT,
+    summary TEXT,
     description TEXT,
-    image_couverture_id UUID REFERENCES medias(id) ON DELETE SET NULL,
-    date_debut DATE,
-    date_fin DATE,
+    cover_image_id UUID REFERENCES media(id) ON DELETE SET NULL,
+    start_date DATE,
+    end_date DATE,
     budget DECIMAL(15, 2),
-    devise VARCHAR(10) DEFAULT 'EUR',
-    beneficiaires TEXT,
-    statut statut_projet DEFAULT 'planifie',
-    statut_publication statut_publication DEFAULT 'brouillon',
-    departement_id UUID REFERENCES departements(id) ON DELETE SET NULL,
-    responsable_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    currency VARCHAR(10) DEFAULT 'EUR',
+    beneficiaries TEXT,
+    status project_status DEFAULT 'planned',
+    publication_status publication_status DEFAULT 'draft',
+    department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
+    manager_id UUID REFERENCES users(id) ON DELETE SET NULL,
     album_id UUID REFERENCES albums(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_projets_statut ON projets(statut);
-CREATE INDEX idx_projets_slug ON projets(slug);
+CREATE INDEX idx_projects_status ON projects(status);
+CREATE INDEX idx_projects_slug ON projects(slug);
 
 -- Pays concernés par un projet
-CREATE TABLE projet_pays (
-    projet_id UUID REFERENCES projets(id) ON DELETE CASCADE,
-    pays_id UUID REFERENCES pays(id) ON DELETE CASCADE,
-    PRIMARY KEY (projet_id, pays_id)
+CREATE TABLE project_countries (
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    country_id UUID REFERENCES countries(id) ON DELETE CASCADE,
+    PRIMARY KEY (project_id, country_id)
 );
 
 -- Catégories d'un projet
-CREATE TABLE projet_projet_categories (
-    projet_id UUID REFERENCES projets(id) ON DELETE CASCADE,
-    categorie_id UUID REFERENCES projet_categories(id) ON DELETE CASCADE,
-    PRIMARY KEY (projet_id, categorie_id)
+CREATE TABLE project_category_links (
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    category_id UUID REFERENCES project_categories(id) ON DELETE CASCADE,
+    PRIMARY KEY (project_id, category_id)
 );
 
 -- Partenaires d'un projet
-CREATE TABLE projet_partenaires (
-    projet_id UUID REFERENCES projets(id) ON DELETE CASCADE,
-    partenaire_id UUID REFERENCES partenaires(id) ON DELETE CASCADE,
-    role_partenaire VARCHAR(255),
-    PRIMARY KEY (projet_id, partenaire_id)
+CREATE TABLE project_partners (
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    partner_id UUID REFERENCES partners(id) ON DELETE CASCADE,
+    partner_role VARCHAR(255),
+    PRIMARY KEY (project_id, partner_id)
 );
 
 -- Appels liés à un projet
-CREATE TABLE projet_appels (
+CREATE TABLE project_calls (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    projet_id UUID REFERENCES projets(id) ON DELETE CASCADE,
-    titre VARCHAR(255) NOT NULL,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
     description TEXT,
-    statut statut_appel DEFAULT 'a_venir',
+    status call_status DEFAULT 'upcoming',
     conditions TEXT,
-    type type_appel,
-    date_limite TIMESTAMPTZ,
+    type call_type,
+    deadline TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Médiathèque d'un projet (plusieurs albums possibles)
-CREATE TABLE projet_mediatheque (
-    projet_id UUID REFERENCES projets(id) ON DELETE CASCADE,
+CREATE TABLE project_media_library (
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     album_id UUID REFERENCES albums(id) ON DELETE CASCADE,
-    PRIMARY KEY (projet_id, album_id)
+    PRIMARY KEY (project_id, album_id)
 );
 
--- Ajout des FK vers projets pour evenements et actualites
-ALTER TABLE evenements
-ADD CONSTRAINT fk_evenements_projet
-FOREIGN KEY (projet_id) REFERENCES projets(id) ON DELETE SET NULL;
+-- Ajout des FK vers projects pour events et news
+ALTER TABLE events
+ADD CONSTRAINT fk_events_project
+FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL;
 
-ALTER TABLE actualites
-ADD CONSTRAINT fk_actualites_projet
-FOREIGN KEY (projet_id) REFERENCES projets(id) ON DELETE SET NULL;
+ALTER TABLE news
+ADD CONSTRAINT fk_news_project
+FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL;
 
 -- ============================================================================
 -- CONTENUS ÉDITORIAUX ET CONFIGURATION
 -- ============================================================================
 
 -- Catégories de contenus éditoriaux
-CREATE TABLE contenu_categories (
+CREATE TABLE editorial_categories (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code VARCHAR(50) UNIQUE NOT NULL,
-    nom VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL,
     description TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Contenus éditoriaux de configuration
-CREATE TABLE contenus_editoriaux (
+CREATE TABLE editorial_contents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    cle VARCHAR(100) UNIQUE NOT NULL,
-    valeur TEXT,
-    type_valeur type_valeur_editoriale DEFAULT 'texte',
-    categorie_id UUID REFERENCES contenu_categories(id) ON DELETE SET NULL,
-    annee_concernee INT,
+    key VARCHAR(100) UNIQUE NOT NULL,
+    value TEXT,
+    value_type editorial_value_type DEFAULT 'text',
+    category_id UUID REFERENCES editorial_categories(id) ON DELETE SET NULL,
+    year INT,
     description TEXT,
-    modifiable_par_admin BOOLEAN DEFAULT TRUE,
+    admin_editable BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_contenus_cle ON contenus_editoriaux(cle);
-CREATE INDEX idx_contenus_categorie ON contenus_editoriaux(categorie_id);
+CREATE INDEX idx_editorial_contents_key ON editorial_contents(key);
+CREATE INDEX idx_editorial_contents_category ON editorial_contents(category_id);
 
 -- Historique des modifications de contenus éditoriaux
-CREATE TABLE contenus_editoriaux_historique (
+CREATE TABLE editorial_contents_history (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    contenu_id UUID REFERENCES contenus_editoriaux(id) ON DELETE CASCADE,
-    ancienne_valeur TEXT,
-    nouvelle_valeur TEXT,
-    modifie_par UUID REFERENCES utilisateurs(id),
-    modifie_at TIMESTAMPTZ DEFAULT NOW()
+    content_id UUID REFERENCES editorial_contents(id) ON DELETE CASCADE,
+    old_value TEXT,
+    new_value TEXT,
+    modified_by UUID REFERENCES users(id),
+    modified_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================================
@@ -891,54 +891,54 @@ CREATE TABLE contenus_editoriaux_historique (
 -- ============================================================================
 
 -- Abonnés à la newsletter
-CREATE TABLE newsletter_abonnes (
+CREATE TABLE newsletter_subscribers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
-    nom VARCHAR(100),
-    prenom VARCHAR(100),
-    utilisateur_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
-    actif BOOLEAN DEFAULT TRUE,
-    token_desinscription VARCHAR(255) UNIQUE,
+    last_name VARCHAR(100),
+    first_name VARCHAR(100),
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    active BOOLEAN DEFAULT TRUE,
+    unsubscribe_token VARCHAR(255) UNIQUE,
     source VARCHAR(100), -- d'où vient l'inscription
-    date_inscription TIMESTAMPTZ DEFAULT NOW(),
-    date_desinscription TIMESTAMPTZ,
+    subscribed_at TIMESTAMPTZ DEFAULT NOW(),
+    unsubscribed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_newsletter_email ON newsletter_abonnes(email);
+CREATE INDEX idx_newsletter_subscribers_email ON newsletter_subscribers(email);
 
 -- Campagnes de newsletter
-CREATE TABLE newsletter_campagnes (
+CREATE TABLE newsletter_campaigns (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    titre VARCHAR(255) NOT NULL,
-    sujet VARCHAR(255) NOT NULL,
-    contenu_html TEXT,
-    contenu_texte TEXT,
-    statut VARCHAR(50) DEFAULT 'brouillon', -- brouillon, programmee, envoyee
-    date_envoi_programmee TIMESTAMPTZ,
-    date_envoi_effective TIMESTAMPTZ,
-    nombre_destinataires INT DEFAULT 0,
-    nombre_ouvertures INT DEFAULT 0,
-    nombre_clics INT DEFAULT 0,
-    created_by UUID REFERENCES utilisateurs(id),
+    title VARCHAR(255) NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    html_content TEXT,
+    text_content TEXT,
+    status VARCHAR(50) DEFAULT 'draft', -- draft, scheduled, sent
+    scheduled_send_at TIMESTAMPTZ,
+    sent_at TIMESTAMPTZ,
+    recipient_count INT DEFAULT 0,
+    open_count INT DEFAULT 0,
+    click_count INT DEFAULT 0,
+    created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Historique d'envoi par destinataire
-CREATE TABLE newsletter_envois (
+CREATE TABLE newsletter_sends (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    campagne_id UUID REFERENCES newsletter_campagnes(id) ON DELETE CASCADE,
-    abonne_id UUID REFERENCES newsletter_abonnes(id) ON DELETE CASCADE,
+    campaign_id UUID REFERENCES newsletter_campaigns(id) ON DELETE CASCADE,
+    subscriber_id UUID REFERENCES newsletter_subscribers(id) ON DELETE CASCADE,
     email VARCHAR(255) NOT NULL,
-    statut VARCHAR(50) DEFAULT 'envoye', -- envoye, ouvert, clique, erreur
-    date_envoi TIMESTAMPTZ DEFAULT NOW(),
-    date_ouverture TIMESTAMPTZ,
-    date_clic TIMESTAMPTZ,
-    erreur_message TEXT
+    status VARCHAR(50) DEFAULT 'sent', -- sent, opened, clicked, error
+    sent_at TIMESTAMPTZ DEFAULT NOW(),
+    opened_at TIMESTAMPTZ,
+    clicked_at TIMESTAMPTZ,
+    error_message TEXT
 );
 
-CREATE INDEX idx_newsletter_envois_campagne ON newsletter_envois(campagne_id);
+CREATE INDEX idx_newsletter_sends_campaign ON newsletter_sends(campaign_id);
 
 -- ============================================================================
 -- AUDIT ET LOGS
@@ -946,20 +946,20 @@ CREATE INDEX idx_newsletter_envois_campagne ON newsletter_envois(campagne_id);
 
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    utilisateur_id UUID REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     action VARCHAR(50) NOT NULL, -- create, update, delete, login, logout
-    table_concernee VARCHAR(100),
-    enregistrement_id UUID,
-    anciennes_valeurs JSONB,
-    nouvelles_valeurs JSONB,
-    ip_adresse INET,
+    table_name VARCHAR(100),
+    record_id UUID,
+    old_values JSONB,
+    new_values JSONB,
+    ip_address INET,
     user_agent TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_audit_utilisateur ON audit_logs(utilisateur_id);
-CREATE INDEX idx_audit_table ON audit_logs(table_concernee);
-CREATE INDEX idx_audit_date ON audit_logs(created_at);
+CREATE INDEX idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX idx_audit_logs_table ON audit_logs(table_name);
+CREATE INDEX idx_audit_logs_date ON audit_logs(created_at);
 
 -- ============================================================================
 -- FONCTIONS ET TRIGGERS
@@ -996,93 +996,93 @@ END;
 $$ language 'plpgsql';
 
 -- Fonction pour générer un numéro de dossier de candidature
-CREATE OR REPLACE FUNCTION generer_numero_dossier()
+CREATE OR REPLACE FUNCTION generate_application_reference()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.numero_dossier = 'CAND-' || TO_CHAR(NOW(), 'YYYY') || '-' || LPAD(NEXTVAL('seq_candidature_numero')::TEXT, 6, '0');
+    NEW.reference_number = 'APP-' || TO_CHAR(NOW(), 'YYYY') || '-' || LPAD(NEXTVAL('seq_application_reference')::TEXT, 6, '0');
     RETURN NEW;
 END;
 $$ language 'plpgsql';
 
 -- Séquence pour les numéros de dossier
-CREATE SEQUENCE IF NOT EXISTS seq_candidature_numero START 1;
+CREATE SEQUENCE IF NOT EXISTS seq_application_reference START 1;
 
 -- Trigger pour générer le numéro de dossier
-CREATE TRIGGER trigger_generer_numero_dossier
-BEFORE INSERT ON candidatures
+CREATE TRIGGER trigger_generate_application_reference
+BEFORE INSERT ON applications
 FOR EACH ROW
-WHEN (NEW.numero_dossier IS NULL)
-EXECUTE FUNCTION generer_numero_dossier();
+WHEN (NEW.reference_number IS NULL)
+EXECUTE FUNCTION generate_application_reference();
 
 -- ============================================================================
 -- DONNÉES INITIALES
 -- ============================================================================
 
 -- Rôles par défaut
-INSERT INTO roles (code, nom_fr, description, niveau_hierarchie) VALUES
+INSERT INTO roles (code, name_fr, description, hierarchy_level) VALUES
 ('super_admin', 'Super Administrateur', 'Accès complet à toutes les fonctionnalités', 100),
 ('admin', 'Administrateur', 'Administration générale de la plateforme', 80),
-('admin_campus', 'Administrateur Campus', 'Administration d''un campus spécifique', 60),
-('editeur', 'Éditeur', 'Création et modification de contenus', 40),
-('moderateur', 'Modérateur', 'Modération des contenus et candidatures', 30),
-('utilisateur', 'Utilisateur', 'Utilisateur standard inscrit', 10);
+('campus_admin', 'Administrateur Campus', 'Administration d''un campus spécifique', 60),
+('editor', 'Éditeur', 'Création et modification de contenus', 40),
+('moderator', 'Modérateur', 'Modération des contenus et candidatures', 30),
+('user', 'Utilisateur', 'Utilisateur standard inscrit', 10);
 
 -- Catégories de contenus éditoriaux
-INSERT INTO contenu_categories (code, nom, description) VALUES
-('statistique', 'Statistiques', 'Chiffres clés et statistiques'),
-('valeur', 'Valeurs', 'Valeurs de l''université'),
-('strategie', 'Stratégie', 'Éléments stratégiques'),
+INSERT INTO editorial_categories (code, name, description) VALUES
+('statistics', 'Statistiques', 'Chiffres clés et statistiques'),
+('values', 'Valeurs', 'Valeurs de l''université'),
+('strategy', 'Stratégie', 'Éléments stratégiques'),
 ('contact', 'Contact', 'Informations de contact'),
-('reseaux_sociaux', 'Réseaux sociaux', 'Liens vers les réseaux sociaux'),
+('social_media', 'Réseaux sociaux', 'Liens vers les réseaux sociaux'),
 ('legal', 'Mentions légales', 'Contenus juridiques');
 
 -- Permissions de base
-INSERT INTO permissions (code, nom_fr, categorie) VALUES
+INSERT INTO permissions (code, name_fr, category) VALUES
 -- Gestion des utilisateurs
-('users.view', 'Voir les utilisateurs', 'utilisateurs'),
-('users.create', 'Créer des utilisateurs', 'utilisateurs'),
-('users.edit', 'Modifier les utilisateurs', 'utilisateurs'),
-('users.delete', 'Supprimer des utilisateurs', 'utilisateurs'),
-('users.roles', 'Gérer les rôles des utilisateurs', 'utilisateurs'),
+('users.view', 'Voir les utilisateurs', 'users'),
+('users.create', 'Créer des utilisateurs', 'users'),
+('users.edit', 'Modifier les utilisateurs', 'users'),
+('users.delete', 'Supprimer des utilisateurs', 'users'),
+('users.roles', 'Gérer les rôles des utilisateurs', 'users'),
 -- Gestion des formations
-('formations.view', 'Voir les formations', 'formations'),
-('formations.create', 'Créer des formations', 'formations'),
-('formations.edit', 'Modifier les formations', 'formations'),
-('formations.delete', 'Supprimer des formations', 'formations'),
+('programs.view', 'Voir les formations', 'programs'),
+('programs.create', 'Créer des formations', 'programs'),
+('programs.edit', 'Modifier les formations', 'programs'),
+('programs.delete', 'Supprimer des formations', 'programs'),
 -- Gestion des candidatures
-('candidatures.view', 'Voir les candidatures', 'candidatures'),
-('candidatures.evaluate', 'Évaluer les candidatures', 'candidatures'),
-('candidatures.export', 'Exporter les candidatures', 'candidatures'),
+('applications.view', 'Voir les candidatures', 'applications'),
+('applications.evaluate', 'Évaluer les candidatures', 'applications'),
+('applications.export', 'Exporter les candidatures', 'applications'),
 -- Gestion des événements
-('evenements.view', 'Voir les événements', 'evenements'),
-('evenements.create', 'Créer des événements', 'evenements'),
-('evenements.edit', 'Modifier les événements', 'evenements'),
-('evenements.delete', 'Supprimer des événements', 'evenements'),
+('events.view', 'Voir les événements', 'events'),
+('events.create', 'Créer des événements', 'events'),
+('events.edit', 'Modifier les événements', 'events'),
+('events.delete', 'Supprimer des événements', 'events'),
 -- Gestion des actualités
-('actualites.view', 'Voir les actualités', 'actualites'),
-('actualites.create', 'Créer des actualités', 'actualites'),
-('actualites.edit', 'Modifier les actualités', 'actualites'),
-('actualites.delete', 'Supprimer des actualités', 'actualites'),
+('news.view', 'Voir les actualités', 'news'),
+('news.create', 'Créer des actualités', 'news'),
+('news.edit', 'Modifier les actualités', 'news'),
+('news.delete', 'Supprimer des actualités', 'news'),
 -- Gestion des campus
-('campus.view', 'Voir les campus', 'campus'),
-('campus.create', 'Créer des campus', 'campus'),
-('campus.edit', 'Modifier les campus', 'campus'),
-('campus.delete', 'Supprimer des campus', 'campus'),
+('campuses.view', 'Voir les campus', 'campuses'),
+('campuses.create', 'Créer des campus', 'campuses'),
+('campuses.edit', 'Modifier les campus', 'campuses'),
+('campuses.delete', 'Supprimer des campus', 'campuses'),
 -- Gestion des partenaires
-('partenaires.view', 'Voir les partenaires', 'partenaires'),
-('partenaires.create', 'Créer des partenaires', 'partenaires'),
-('partenaires.edit', 'Modifier les partenaires', 'partenaires'),
-('partenaires.delete', 'Supprimer des partenaires', 'partenaires'),
+('partners.view', 'Voir les partenaires', 'partners'),
+('partners.create', 'Créer des partenaires', 'partners'),
+('partners.edit', 'Modifier les partenaires', 'partners'),
+('partners.delete', 'Supprimer des partenaires', 'partners'),
 -- Gestion des contenus éditoriaux
-('contenus.view', 'Voir les contenus éditoriaux', 'contenus'),
-('contenus.edit', 'Modifier les contenus éditoriaux', 'contenus'),
+('editorial.view', 'Voir les contenus éditoriaux', 'editorial'),
+('editorial.edit', 'Modifier les contenus éditoriaux', 'editorial'),
 -- Gestion de la newsletter
 ('newsletter.view', 'Voir les newsletters', 'newsletter'),
 ('newsletter.create', 'Créer des newsletters', 'newsletter'),
 ('newsletter.send', 'Envoyer des newsletters', 'newsletter'),
 -- Administration
-('admin.settings', 'Gérer les paramètres', 'administration'),
-('admin.audit', 'Voir les logs d''audit', 'administration');
+('admin.settings', 'Gérer les paramètres', 'admin'),
+('admin.audit', 'Voir les logs d''audit', 'admin');
 
 -- Attribution de toutes les permissions au super_admin
 INSERT INTO role_permissions (role_id, permission_id)
@@ -1095,76 +1095,76 @@ WHERE r.code = 'super_admin';
 -- ============================================================================
 
 -- Vue des formations avec leurs campus
-CREATE VIEW v_formations_campus AS
+CREATE VIEW v_programs_campuses AS
 SELECT
-    f.*,
-    d.denomination as departement_nom,
-    ARRAY_AGG(DISTINCT c.nom) FILTER (WHERE c.id IS NOT NULL) as campus_noms,
+    p.*,
+    d.name as department_name,
+    ARRAY_AGG(DISTINCT c.name) FILTER (WHERE c.id IS NOT NULL) as campus_names,
     ARRAY_AGG(DISTINCT c.id) FILTER (WHERE c.id IS NOT NULL) as campus_ids
-FROM formations f
-LEFT JOIN departements d ON f.departement_id = d.id
-LEFT JOIN formation_campus fc ON f.id = fc.formation_id
-LEFT JOIN campus c ON fc.campus_id = c.id
-GROUP BY f.id, d.denomination;
+FROM programs p
+LEFT JOIN departments d ON p.department_id = d.id
+LEFT JOIN program_campuses pc ON p.id = pc.program_id
+LEFT JOIN campuses c ON pc.campus_id = c.id
+GROUP BY p.id, d.name;
 
 -- Vue des événements à venir
-CREATE VIEW v_evenements_a_venir AS
+CREATE VIEW v_upcoming_events AS
 SELECT
     e.*,
-    c.nom as campus_nom,
-    p.nom_fr as pays_nom
-FROM evenements e
-LEFT JOIN campus c ON e.campus_id = c.id
-LEFT JOIN pays p ON e.pays_id = p.id
-WHERE e.statut = 'publie'
-AND e.date_debut >= NOW()
-ORDER BY e.date_debut ASC;
+    c.name as campus_name,
+    co.name_fr as country_name
+FROM events e
+LEFT JOIN campuses c ON e.campus_id = c.id
+LEFT JOIN countries co ON e.country_id = co.id
+WHERE e.status = 'published'
+AND e.start_date >= NOW()
+ORDER BY e.start_date ASC;
 
 -- Vue des actualités publiées
-CREATE VIEW v_actualites_publiees AS
+CREATE VIEW v_published_news AS
 SELECT
-    a.*,
-    u.nom as auteur_nom,
-    u.prenom as auteur_prenom,
-    c.nom as campus_nom,
-    d.denomination as departement_nom
-FROM actualites a
-LEFT JOIN utilisateurs u ON a.auteur_id = u.id
-LEFT JOIN campus c ON a.campus_id = c.id
-LEFT JOIN departements d ON a.departement_id = d.id
-WHERE a.statut = 'publie'
-AND (a.visible_a_partir_de IS NULL OR a.visible_a_partir_de <= NOW())
-ORDER BY a.date_publication DESC;
+    n.*,
+    u.last_name as author_last_name,
+    u.first_name as author_first_name,
+    c.name as campus_name,
+    d.name as department_name
+FROM news n
+LEFT JOIN users u ON n.author_id = u.id
+LEFT JOIN campuses c ON n.campus_id = c.id
+LEFT JOIN departments d ON n.department_id = d.id
+WHERE n.status = 'published'
+AND (n.visible_from IS NULL OR n.visible_from <= NOW())
+ORDER BY n.published_at DESC;
 
 -- Vue statistiques des candidatures par appel
-CREATE VIEW v_statistiques_candidatures AS
+CREATE VIEW v_application_statistics AS
 SELECT
-    ac.id as appel_id,
-    ac.titre as appel_titre,
-    COUNT(c.id) as total_candidatures,
-    COUNT(CASE WHEN c.statut = 'soumise' THEN 1 END) as soumises,
-    COUNT(CASE WHEN c.statut = 'en_cours_evaluation' THEN 1 END) as en_evaluation,
-    COUNT(CASE WHEN c.statut = 'acceptee' THEN 1 END) as acceptees,
-    COUNT(CASE WHEN c.statut = 'refusee' THEN 1 END) as refusees,
-    COUNT(CASE WHEN c.statut = 'liste_attente' THEN 1 END) as liste_attente
-FROM appels_candidature ac
-LEFT JOIN candidatures c ON ac.id = c.appel_id
-GROUP BY ac.id, ac.titre;
+    ac.id as call_id,
+    ac.title as call_title,
+    COUNT(a.id) as total_applications,
+    COUNT(CASE WHEN a.status = 'submitted' THEN 1 END) as submitted,
+    COUNT(CASE WHEN a.status = 'under_review' THEN 1 END) as under_review,
+    COUNT(CASE WHEN a.status = 'accepted' THEN 1 END) as accepted,
+    COUNT(CASE WHEN a.status = 'rejected' THEN 1 END) as rejected,
+    COUNT(CASE WHEN a.status = 'waitlisted' THEN 1 END) as waitlisted
+FROM application_calls ac
+LEFT JOIN applications a ON ac.id = a.call_id
+GROUP BY ac.id, ac.title;
 
 -- ============================================================================
 -- COMMENTAIRES POUR DOCUMENTATION
 -- ============================================================================
 
-COMMENT ON TABLE utilisateurs IS 'Utilisateurs inscrits sur la plateforme';
+COMMENT ON TABLE users IS 'Utilisateurs inscrits sur la plateforme';
 COMMENT ON TABLE roles IS 'Rôles définissant les permissions des utilisateurs';
-COMMENT ON TABLE formations IS 'Formations proposées par l''Université Senghor';
-COMMENT ON TABLE appels_candidature IS 'Appels à candidature (formations, bourses, projets, recrutements)';
-COMMENT ON TABLE candidatures IS 'Candidatures soumises par les utilisateurs';
-COMMENT ON TABLE evenements IS 'Événements organisés par l''université';
-COMMENT ON TABLE actualites IS 'Articles d''actualité et news';
-COMMENT ON TABLE campus IS 'Campus de l''université (siège et externalisés)';
-COMMENT ON TABLE partenaires IS 'Partenaires de l''université';
-COMMENT ON TABLE projets IS 'Projets de l''université';
-COMMENT ON TABLE contenus_editoriaux IS 'Contenus de configuration dynamiques (statistiques, valeurs, etc.)';
-COMMENT ON TABLE newsletter_abonnes IS 'Abonnés à la newsletter';
-COMMENT ON TABLE medias IS 'Fichiers médias centralisés (images, vidéos, documents)';
+COMMENT ON TABLE programs IS 'Formations proposées par l''Université Senghor';
+COMMENT ON TABLE application_calls IS 'Appels à candidature (formations, bourses, projets, recrutements)';
+COMMENT ON TABLE applications IS 'Candidatures soumises par les utilisateurs';
+COMMENT ON TABLE events IS 'Événements organisés par l''université';
+COMMENT ON TABLE news IS 'Articles d''actualité et news';
+COMMENT ON TABLE campuses IS 'Campus de l''université (siège et externalisés)';
+COMMENT ON TABLE partners IS 'Partenaires de l''université';
+COMMENT ON TABLE projects IS 'Projets de l''université';
+COMMENT ON TABLE editorial_contents IS 'Contenus de configuration dynamiques (statistiques, valeurs, etc.)';
+COMMENT ON TABLE newsletter_subscribers IS 'Abonnés à la newsletter';
+COMMENT ON TABLE media IS 'Fichiers médias centralisés (images, vidéos, documents)';
