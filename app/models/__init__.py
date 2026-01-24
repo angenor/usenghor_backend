@@ -48,6 +48,17 @@ from app.models.campus import (
     CampusPartner,
     CampusTeam,
 )
+from app.models.partner import Partner, PartnerType
+from app.models.academic import (
+    Program,
+    ProgramCampus,
+    ProgramCareerOpportunity,
+    ProgramCourse,
+    ProgramPartner,
+    ProgramSemester,
+    ProgramSkill,
+    ProgramType,
+)
 
 __all__ = [
     # Base
@@ -95,4 +106,16 @@ __all__ = [
     "CampusTeam",
     "CampusPartner",
     "CampusMediaLibrary",
+    # Partner
+    "PartnerType",
+    "Partner",
+    # Academic
+    "ProgramType",
+    "Program",
+    "ProgramCampus",
+    "ProgramPartner",
+    "ProgramSemester",
+    "ProgramCourse",
+    "ProgramCareerOpportunity",
+    "ProgramSkill",
 ]

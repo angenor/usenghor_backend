@@ -1,0 +1,78 @@
+"""
+Router Public - Programmes
+==========================
+
+Endpoints publics pour les programmes de formation.
+"""
+
+from fastapi import APIRouter, Depends, Query
+
+from app.core.dependencies import DbSession
+from app.core.exceptions import NotFoundException
+from app.core.pagination import PaginationParams, paginate
+from app.models.academic import Program, ProgramType
+from app.schemas.academic import ProgramPublic, ProgramPublicWithDetails
+from app.services.academic_service import AcademicService
+
+router = APIRouter(prefix="/programs", tags=["Programs"])
+
+
+@router.get("", response_model=dict)
+async def list_programs(
+    db: DbSession,
+    pagination: PaginationParams = Depends(),
+    search: str | None = Query(None, description="Recherche sur code, titre, description"),
+    program_type: ProgramType | None = Query(None, description="Filtrer par type"),
+    department_id: str | None = Query(None, description="Filtrer par département"),
+) -> dict:
+    """Liste les programmes publiés avec pagination et filtres."""
+    service = AcademicService(db)
+    query = await service.get_published_programs(
+        search=search,
+        program_type=program_type,
+        department_id=department_id,
+    )
+    return await paginate(db, query, pagination, Program)
+
+
+@router.get("/{slug}", response_model=ProgramPublicWithDetails)
+async def get_program_by_slug(
+    slug: str,
+    db: DbSession,
+) -> Program:
+    """Récupère un programme publié par son slug."""
+    service = AcademicService(db)
+    program = await service.get_program_by_slug(slug)
+    if not program:
+        raise NotFoundException("Programme non trouvé")
+
+    # Vérifier que le programme est publié
+    from app.models.base import PublicationStatus
+    if program.status != PublicationStatus.PUBLISHED:
+        raise NotFoundException("Programme non trouvé")
+
+    return program
+
+
+@router.get("/by-type/{program_type}", response_model=list[ProgramPublic])
+async def list_programs_by_type(
+    program_type: ProgramType,
+    db: DbSession,
+) -> list[Program]:
+    """Liste les programmes publiés d'un type donné."""
+    service = AcademicService(db)
+    query = await service.get_published_programs(program_type=program_type)
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
+@router.get("/by-department/{department_id}", response_model=list[ProgramPublic])
+async def list_programs_by_department(
+    department_id: str,
+    db: DbSession,
+) -> list[Program]:
+    """Liste les programmes publiés d'un département donné."""
+    service = AcademicService(db)
+    query = await service.get_published_programs(department_id=department_id)
+    result = await db.execute(query)
+    return list(result.scalars().all())

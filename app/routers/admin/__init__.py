@@ -9,13 +9,18 @@ from app.routers.admin import (
     audit_logs,
     campus_team,
     campuses,
+    career_opportunities,
     countries,
     departments,
     event_registrations,
     events,
     media,
     news,
+    partners,
     permissions,
+    programs,
+    program_semesters,
+    program_skills,
     roles,
     services,
     tags,
@@ -40,5 +45,10 @@ router.include_router(tags.router)
 router.include_router(event_registrations.router)
 router.include_router(campuses.router)
 router.include_router(campus_team.router)
+router.include_router(partners.router)
+router.include_router(programs.router)
+router.include_router(program_semesters.router)
+router.include_router(program_skills.router)
+router.include_router(career_opportunities.router)
 
 __all__ = ["router"]

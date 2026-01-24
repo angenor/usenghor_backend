@@ -902,16 +902,16 @@ format: str = Query("csv", pattern="^(csv|xlsx)$")
   - [x] CRUD campus
   - [x] Équipes campus
 
-- [ ] **9. Partners**
-  - [ ] CRUD partenaires
+- [x] **9. Partners**
+  - [x] CRUD partenaires
 
 ### Phase 4 : Académique (Semaine 7-8)
 
-- [ ] **10. Academic**
-  - [ ] CRUD programmes
-  - [ ] Semestres et cours
-  - [ ] Compétences
-  - [ ] Débouchés
+- [x] **10. Academic**
+  - [x] CRUD programmes
+  - [x] Semestres et cours
+  - [x] Compétences
+  - [x] Débouchés
 
 - [ ] **11. Application**
   - [ ] Appels à candidatures
