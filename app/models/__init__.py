@@ -75,6 +75,30 @@ from app.models.application import (
     MaritalStatus,
     SubmittedApplicationStatus,
 )
+from app.models.newsletter import (
+    CampaignStatus,
+    NewsletterCampaign,
+    NewsletterSend,
+    NewsletterSubscriber,
+    SendStatus,
+)
+from app.models.editorial import (
+    EditorialCategory,
+    EditorialContent,
+    EditorialContentHistory,
+    EditorialValueType,
+)
+from app.models.project import (
+    Project,
+    ProjectCall,
+    ProjectCallStatus,
+    ProjectCallType,
+    ProjectCategory,
+    ProjectCategoryLink,
+    ProjectCountry,
+    ProjectMediaLibrary,
+    ProjectPartner,
+)
 
 __all__ = [
     # Base
@@ -149,4 +173,25 @@ __all__ = [
     "Application",
     "ApplicationDegree",
     "ApplicationDocument",
+    # Newsletter
+    "CampaignStatus",
+    "SendStatus",
+    "NewsletterSubscriber",
+    "NewsletterCampaign",
+    "NewsletterSend",
+    # Editorial
+    "EditorialValueType",
+    "EditorialCategory",
+    "EditorialContent",
+    "EditorialContentHistory",
+    # Project
+    "ProjectCallType",
+    "ProjectCallStatus",
+    "ProjectCategory",
+    "Project",
+    "ProjectCategoryLink",
+    "ProjectCountry",
+    "ProjectPartner",
+    "ProjectCall",
+    "ProjectMediaLibrary",
 ]

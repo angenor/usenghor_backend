@@ -920,31 +920,31 @@ format: str = Query("csv", pattern="^(csv|xlsx)$")
 
 ### Phase 5 : Communication (Semaine 9-10)
 
-- [ ] **12. Newsletter**
-  - [ ] Campagnes
-  - [ ] Abonnés
-  - [ ] Envoi emails
+- [x] **12. Newsletter**
+  - [x] Campagnes
+  - [x] Abonnés
+  - [x] Envoi emails
 
-- [ ] **13. Editorial**
-  - [ ] Contenus éditoriaux
-  - [ ] Historique versions
+- [x] **13. Editorial**
+  - [x] Contenus éditoriaux
+  - [x] Historique versions
 
-- [ ] **14. Project**
-  - [ ] CRUD projets
-  - [ ] Catégories
-  - [ ] Appels à projets
+- [x] **14. Project**
+  - [x] CRUD projets
+  - [x] Catégories
+  - [x] Appels à projets
 
 ### Phase 6 : Finalisation (Semaine 11-12)
 
-- [ ] **15. Dashboard**
-  - [ ] Statistiques globales
-  - [ ] Activité récente
-  - [ ] Tâches en attente
+- [x] **15. Dashboard**
+  - [x] Statistiques globales
+  - [x] Activité récente
+  - [x] Tâches en attente
 
-- [ ] **16. Audit**
-  - [ ] Journal d'audit
-  - [ ] Statistiques
-  - [ ] Export
+- [x] **16. Audit**
+  - [x] Journal d'audit
+  - [x] Statistiques
+  - [x] Export
 
 - [ ] **17. Tests & Documentation**
   - [ ] Tests unitaires

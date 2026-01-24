@@ -9,13 +9,17 @@ from app.routers.admin import (
     application_calls,
     applications,
     audit_logs,
+    campaigns,
     campus_team,
     campuses,
     career_opportunities,
     countries,
+    dashboard,
     departments,
+    editorial,
     event_registrations,
     events,
+    institutional_projects,
     media,
     news,
     partners,
@@ -25,6 +29,7 @@ from app.routers.admin import (
     program_skills,
     roles,
     services,
+    subscribers,
     tags,
     users,
 )
@@ -32,6 +37,7 @@ from app.routers.admin import (
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 # Inclusion des sous-routers
+router.include_router(dashboard.router)
 router.include_router(users.router)
 router.include_router(roles.router)
 router.include_router(permissions.router)
@@ -54,5 +60,9 @@ router.include_router(program_skills.router)
 router.include_router(career_opportunities.router)
 router.include_router(application_calls.router)
 router.include_router(applications.router)
+router.include_router(subscribers.router)
+router.include_router(campaigns.router)
+router.include_router(editorial.router)
+router.include_router(institutional_projects.router)
 
 __all__ = ["router"]
