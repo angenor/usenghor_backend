@@ -20,6 +20,34 @@ from app.models.identity import (
     UserToken,
 )
 from app.models.media import Album, AlbumMedia, Media
+from app.models.organization import (
+    Department,
+    ProjectStatus,
+    Service,
+    ServiceAchievement,
+    ServiceMediaLibrary,
+    ServiceObjective,
+    ServiceProject,
+)
+from app.models.content import (
+    Event,
+    EventMediaLibrary,
+    EventPartner,
+    EventRegistration,
+    EventType,
+    News,
+    NewsHighlightStatus,
+    NewsMedia,
+    NewsTag,
+    RegistrationStatus,
+    Tag,
+)
+from app.models.campus import (
+    Campus,
+    CampusMediaLibrary,
+    CampusPartner,
+    CampusTeam,
+)
 
 __all__ = [
     # Base
@@ -42,4 +70,29 @@ __all__ = [
     "Media",
     "Album",
     "AlbumMedia",
+    # Organization
+    "ProjectStatus",
+    "Department",
+    "Service",
+    "ServiceObjective",
+    "ServiceAchievement",
+    "ServiceProject",
+    "ServiceMediaLibrary",
+    # Content
+    "EventType",
+    "NewsHighlightStatus",
+    "RegistrationStatus",
+    "Tag",
+    "Event",
+    "EventPartner",
+    "EventRegistration",
+    "EventMediaLibrary",
+    "News",
+    "NewsMedia",
+    "NewsTag",
+    # Campus
+    "Campus",
+    "CampusTeam",
+    "CampusPartner",
+    "CampusMediaLibrary",
 ]

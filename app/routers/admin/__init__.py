@@ -4,7 +4,23 @@ Admin routers - Routes avec authentification
 
 from fastapi import APIRouter
 
-from app.routers.admin import albums, audit_logs, countries, media, permissions, roles, users
+from app.routers.admin import (
+    albums,
+    audit_logs,
+    campus_team,
+    campuses,
+    countries,
+    departments,
+    event_registrations,
+    events,
+    media,
+    news,
+    permissions,
+    roles,
+    services,
+    tags,
+    users,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -16,5 +32,13 @@ router.include_router(audit_logs.router)
 router.include_router(countries.router)
 router.include_router(media.router)
 router.include_router(albums.router)
+router.include_router(departments.router)
+router.include_router(services.router)
+router.include_router(news.router)
+router.include_router(events.router)
+router.include_router(tags.router)
+router.include_router(event_registrations.router)
+router.include_router(campuses.router)
+router.include_router(campus_team.router)
 
 __all__ = ["router"]

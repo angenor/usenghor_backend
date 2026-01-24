@@ -886,21 +886,21 @@ format: str = Query("csv", pattern="^(csv|xlsx)$")
   - [x] Upload fichiers
   - [x] CRUD albums
 
-- [ ] **6. Organization**
-  - [ ] CRUD départements
-  - [ ] CRUD services
+- [x] **6. Organization**
+  - [x] CRUD départements
+  - [x] CRUD services
 
 ### Phase 3 : Contenus (Semaine 5-6)
 
-- [ ] **7. Content**
-  - [ ] CRUD actualités
-  - [ ] CRUD événements
-  - [ ] CRUD étiquettes
-  - [ ] Inscriptions événements
+- [x] **7. Content**
+  - [x] CRUD actualités
+  - [x] CRUD événements
+  - [x] CRUD étiquettes
+  - [x] Inscriptions événements
 
-- [ ] **8. Campus**
-  - [ ] CRUD campus
-  - [ ] Équipes campus
+- [x] **8. Campus**
+  - [x] CRUD campus
+  - [x] Équipes campus
 
 - [ ] **9. Partners**
   - [ ] CRUD partenaires
