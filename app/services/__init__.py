@@ -10,9 +10,11 @@ from app.services.media_service import MediaService
 from app.services.organization_service import OrganizationService
 from app.services.partner_service import PartnerService
 from app.services.academic_service import AcademicService
+from app.services.application_service import ApplicationService
 
 __all__ = [
     "AcademicService",
+    "ApplicationService",
     "CampusService",
     "ContentService",
     "CoreService",

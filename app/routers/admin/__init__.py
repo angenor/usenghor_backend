@@ -6,6 +6,8 @@ from fastapi import APIRouter
 
 from app.routers.admin import (
     albums,
+    application_calls,
+    applications,
     audit_logs,
     campus_team,
     campuses,
@@ -50,5 +52,7 @@ router.include_router(programs.router)
 router.include_router(program_semesters.router)
 router.include_router(program_skills.router)
 router.include_router(career_opportunities.router)
+router.include_router(application_calls.router)
+router.include_router(applications.router)
 
 __all__ = ["router"]

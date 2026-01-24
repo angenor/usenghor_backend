@@ -913,10 +913,10 @@ format: str = Query("csv", pattern="^(csv|xlsx)$")
   - [x] Compétences
   - [x] Débouchés
 
-- [ ] **11. Application**
-  - [ ] Appels à candidatures
-  - [ ] Gestion candidatures
-  - [ ] Évaluation
+- [x] **11. Application**
+  - [x] Appels à candidatures
+  - [x] Gestion candidatures
+  - [x] Évaluation
 
 ### Phase 5 : Communication (Semaine 9-10)
 

@@ -59,6 +59,22 @@ from app.models.academic import (
     ProgramSkill,
     ProgramType,
 )
+from app.models.application import (
+    Application,
+    ApplicationCall,
+    ApplicationDegree,
+    ApplicationDocument,
+    CallCoverage,
+    CallEligibilityCriteria,
+    CallRequiredDocument,
+    CallSchedule,
+    CallStatus,
+    CallType,
+    EmploymentStatus,
+    ExperienceDuration,
+    MaritalStatus,
+    SubmittedApplicationStatus,
+)
 
 __all__ = [
     # Base
@@ -118,4 +134,19 @@ __all__ = [
     "ProgramCourse",
     "ProgramCareerOpportunity",
     "ProgramSkill",
+    # Application
+    "CallType",
+    "CallStatus",
+    "SubmittedApplicationStatus",
+    "MaritalStatus",
+    "EmploymentStatus",
+    "ExperienceDuration",
+    "ApplicationCall",
+    "CallEligibilityCriteria",
+    "CallCoverage",
+    "CallRequiredDocument",
+    "CallSchedule",
+    "Application",
+    "ApplicationDegree",
+    "ApplicationDocument",
 ]
