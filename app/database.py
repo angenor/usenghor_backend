@@ -66,6 +66,9 @@ async def init_db() -> None:
 
     Note: En production, utiliser Alembic pour les migrations.
     """
+    # Import des modèles pour que Base.metadata soit peuplé
+    from app import models  # noqa: F401
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

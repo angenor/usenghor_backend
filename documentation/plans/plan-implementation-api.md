@@ -865,10 +865,11 @@ format: str = Query("csv", pattern="^(csv|xlsx)$")
   - [x] Connexion PostgreSQL
   - [x] Docker Compose (PostgreSQL + Adminer)
 
-- [ ] **2. Authentification**
-  - [ ] Login/Logout
-  - [ ] JWT tokens
-  - [ ] Middleware auth
+- [x] **2. Authentification**
+  - [x] Login/Logout
+  - [x] JWT tokens
+  - [x] Middleware auth
+  - [x] Endpoints /api/auth/* (login, refresh, logout, me)
 
 - [ ] **3. Core Identity**
   - [ ] CRUD utilisateurs
