@@ -946,10 +946,10 @@ format: str = Query("csv", pattern="^(csv|xlsx)$")
   - [x] Statistiques
   - [x] Export
 
-- [ ] **17. Tests & Documentation**
-  - [ ] Tests unitaires
-  - [ ] Tests d'intégration
-  - [ ] Documentation OpenAPI
+- [x] **17. Tests & Documentation**
+  - [x] Tests unitaires
+  - [x] Tests d'intégration
+  - [x] Documentation OpenAPI
 
 ---
 
