@@ -37,8 +37,8 @@ class TestIdentityServiceUsers:
         assert user.last_name == "Dupont"
         assert user.first_name == "Jean"
         assert user.active is True
-        assert user.hashed_password is not None
-        assert user.hashed_password != "SecurePassword123!"
+        assert user.password_hash is not None
+        assert user.password_hash != "SecurePassword123!"
 
     @pytest.mark.asyncio
     async def test_create_user_duplicate_email(
@@ -71,7 +71,7 @@ class TestIdentityServiceUsers:
         """Test de récupération d'un utilisateur inexistant."""
         service = IdentityService(db_session)
 
-        user = await service.get_user_by_id("id-inexistant")
+        user = await service.get_user_by_id("00000000-0000-0000-0000-000000000000")
 
         assert user is None
 
@@ -135,15 +135,13 @@ class TestIdentityServiceUsers:
 
     @pytest.mark.asyncio
     async def test_deactivate_user(self, db_session: AsyncSession, test_user: User):
-        """Test de désactivation d'un utilisateur."""
+        """Test de désactivation d'un utilisateur via toggle_user_active."""
         service = IdentityService(db_session)
 
-        result = await service.deactivate_user(test_user.id)
+        # L'utilisateur est actif par défaut, toggle_user_active le désactive
+        user = await service.toggle_user_active(test_user.id)
 
-        assert result is True
-
-        # Vérifier que l'utilisateur est désactivé
-        user = await service.get_user_by_id(test_user.id)
+        assert user is not None
         assert user.active is False
 
 
@@ -156,13 +154,13 @@ class TestIdentityServiceRoles:
         service = IdentityService(db_session)
 
         role = await service.create_role(
-            name="Éditeur",
+            name_fr="Éditeur",
             code="editor",
             description="Rôle pour les éditeurs de contenu",
         )
 
         assert role is not None
-        assert role.name == "Éditeur"
+        assert role.name_fr == "Éditeur"
         assert role.code == "editor"
 
     @pytest.mark.asyncio
@@ -174,7 +172,7 @@ class TestIdentityServiceRoles:
 
         with pytest.raises(ConflictException):
             await service.create_role(
-                name="Autre Admin",
+                name_fr="Autre Admin",
                 code=admin_role.code,  # Code déjà utilisé
                 description="Description",
             )
@@ -200,60 +198,56 @@ class TestIdentityServiceRoles:
 
         # Créer un nouveau rôle
         role = await service.create_role(
-            name="Test Role",
+            name_fr="Test Role",
             code="test_role",
             description="Rôle de test",
         )
+        role_id = role.id  # Sauvegarder l'ID avant modifications
+        await db_session.commit()
 
         # Assigner quelques permissions
         permission_ids = [test_permissions[0].id, test_permissions[1].id]
-        await service.set_role_permissions(role.id, permission_ids)
+        updated_role = await service.set_role_permissions(role_id, permission_ids)
+        await db_session.commit()
 
-        # Vérifier les permissions du rôle
-        updated_role = await service.get_role_by_id(role.id)
+        # Vérifier les permissions du rôle retourné
         assert len(updated_role.permissions) == 2
 
 
 class TestIdentityServiceAuthentication:
-    """Tests pour l'authentification."""
+    """Tests pour l'authentification (via security module)."""
 
     @pytest.mark.asyncio
-    async def test_authenticate_user_success(
+    async def test_verify_user_password_success(
         self, db_session: AsyncSession, test_user: User
     ):
-        """Test d'authentification réussie."""
-        service = IdentityService(db_session)
+        """Test de vérification de mot de passe réussie."""
+        from app.core.security import verify_password
 
-        user = await service.authenticate_user(
-            email=test_user.email,
-            password="TestPassword123!",
-        )
+        service = IdentityService(db_session)
+        user = await service.get_user_by_email(test_user.email)
 
         assert user is not None
-        assert user.id == test_user.id
+        assert verify_password("TestPass123!", user.password_hash) is True
 
     @pytest.mark.asyncio
-    async def test_authenticate_user_wrong_password(
+    async def test_verify_user_password_wrong(
         self, db_session: AsyncSession, test_user: User
     ):
-        """Test d'authentification avec mauvais mot de passe."""
+        """Test de vérification avec mauvais mot de passe."""
+        from app.core.security import verify_password
+
         service = IdentityService(db_session)
+        user = await service.get_user_by_email(test_user.email)
 
-        user = await service.authenticate_user(
-            email=test_user.email,
-            password="WrongPassword!",
-        )
-
-        assert user is None
+        assert user is not None
+        assert verify_password("WrongPassword!", user.password_hash) is False
 
     @pytest.mark.asyncio
-    async def test_authenticate_user_not_found(self, db_session: AsyncSession):
-        """Test d'authentification avec email inexistant."""
+    async def test_get_user_by_email_not_found(self, db_session: AsyncSession):
+        """Test de récupération avec email inexistant."""
         service = IdentityService(db_session)
 
-        user = await service.authenticate_user(
-            email="inexistant@usenghor.org",
-            password="Password123!",
-        )
+        user = await service.get_user_by_email("inexistant@usenghor.org")
 
         assert user is None

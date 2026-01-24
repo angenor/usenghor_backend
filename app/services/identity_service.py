@@ -469,7 +469,9 @@ class IdentityService:
             self.db.add(role_perm)
 
         await self.db.flush()
-        return await self.get_role_by_id(role_id)
+        # Expirer le rôle pour forcer le rechargement des relations
+        await self.db.refresh(role, ["permissions"])
+        return role
 
     async def get_role_users(self, role_id: str) -> list[User]:
         """Récupère les utilisateurs ayant un rôle."""

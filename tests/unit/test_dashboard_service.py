@@ -13,7 +13,8 @@ from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.identity import User, AuditLog
-from app.models.content import News, Event
+from app.models.content import News, Event, EventType
+from app.models.base import PublicationStatus
 from app.services.dashboard_service import DashboardService
 
 
@@ -120,9 +121,9 @@ class TestDashboardServicePendingTasks:
         for i in range(3):
             news = News(
                 id=str(uuid4()),
-                title_fr=f"Actualité brouillon {i}",
+                title=f"Actualité brouillon {i}",
                 slug=f"actualite-brouillon-{i}",
-                status="draft",
+                status=PublicationStatus.DRAFT,
                 created_at=datetime.now(timezone.utc),
             )
             db_session.add(news)
@@ -138,9 +139,10 @@ class TestDashboardServicePendingTasks:
         for i in range(2):
             event = Event(
                 id=str(uuid4()),
-                title_fr=f"Événement à venir {i}",
+                title=f"Événement à venir {i}",
                 slug=f"evenement-a-venir-{i}",
-                status="published",
+                type=EventType.CONFERENCE,
+                status=PublicationStatus.PUBLISHED,
                 start_date=datetime.now(timezone.utc) + timedelta(days=i + 1),
                 end_date=datetime.now(timezone.utc) + timedelta(days=i + 2),
                 created_at=datetime.now(timezone.utc),
@@ -160,7 +162,7 @@ class TestDashboardServicePendingTasks:
 
         assert response is not None
         assert response.total == 0
-        assert len(response.tasks) == 0
+        assert len(response.categories) == 0
 
     @pytest.mark.asyncio
     async def test_get_pending_tasks_with_drafts(
@@ -171,9 +173,12 @@ class TestDashboardServicePendingTasks:
 
         response = await service.get_pending_tasks()
 
-        # Vérifier que les brouillons apparaissent dans les tâches
-        news_tasks = [t for t in response.tasks if t.type == "news_draft"]
-        assert len(news_tasks) == 3
+        # Vérifier que les brouillons apparaissent dans les catégories
+        news_category = next(
+            (c for c in response.categories if c.category == "news_draft"), None
+        )
+        assert news_category is not None
+        assert news_category.count == 3
 
     @pytest.mark.asyncio
     async def test_get_pending_tasks_with_upcoming_events(
@@ -185,5 +190,8 @@ class TestDashboardServicePendingTasks:
         response = await service.get_pending_tasks()
 
         # Vérifier les événements à venir
-        event_tasks = [t for t in response.tasks if t.type == "upcoming_event"]
-        assert len(event_tasks) >= 1
+        event_category = next(
+            (c for c in response.categories if c.category == "event_upcoming"), None
+        )
+        assert event_category is not None
+        assert event_category.count >= 1
