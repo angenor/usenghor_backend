@@ -871,20 +871,20 @@ format: str = Query("csv", pattern="^(csv|xlsx)$")
   - [x] Middleware auth
   - [x] Endpoints /api/auth/* (login, refresh, logout, me)
 
-- [ ] **3. Core Identity**
-  - [ ] CRUD utilisateurs
-  - [ ] CRUD rôles
-  - [ ] CRUD permissions
-  - [ ] Système RBAC
+- [x] **3. Core Identity**
+  - [x] CRUD utilisateurs
+  - [x] CRUD rôles
+  - [x] CRUD permissions
+  - [x] Système RBAC
 
 ### Phase 2 : Données de base (Semaine 3-4)
 
-- [ ] **4. Core**
-  - [ ] CRUD pays
+- [x] **4. Core**
+  - [x] CRUD pays
 
-- [ ] **5. Media**
-  - [ ] Upload fichiers
-  - [ ] CRUD albums
+- [x] **5. Media**
+  - [x] Upload fichiers
+  - [x] CRUD albums
 
 - [ ] **6. Organization**
   - [ ] CRUD départements

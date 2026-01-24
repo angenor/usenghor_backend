@@ -214,3 +214,155 @@ class UserMeUpdate(BaseModel):
     linkedin: str | None = None
     city: str | None = None
     address: str | None = None
+
+
+# =============================================================================
+# Admin Schemas - Users
+# =============================================================================
+
+
+class UserRolesUpdate(BaseModel):
+    """Mise à jour des rôles d'un utilisateur."""
+
+    role_ids: list[str]
+
+
+class UserBulkAction(BaseModel):
+    """Action en masse sur les utilisateurs."""
+
+    user_ids: list[str]
+    action: str = Field(pattern="^(activate|deactivate|delete)$")
+
+
+class UserActivity(BaseModel):
+    """Activité d'un utilisateur."""
+
+    last_login_at: datetime | None
+    created_at: datetime
+    roles: list[str]
+    total_logins: int = 0
+
+    model_config = {"from_attributes": True}
+
+
+class PasswordResetResponse(BaseModel):
+    """Réponse de réinitialisation de mot de passe."""
+
+    temporary_password: str
+    message: str = "Mot de passe réinitialisé avec succès"
+
+
+# =============================================================================
+# Admin Schemas - Roles
+# =============================================================================
+
+
+class RoleCreate(BaseModel):
+    """Création d'un rôle."""
+
+    code: str = Field(min_length=2, max_length=50)
+    name_fr: str = Field(min_length=2, max_length=100)
+    description: str | None = None
+    hierarchy_level: int = Field(default=0, ge=0, le=100)
+    active: bool = True
+
+
+class RoleUpdate(BaseModel):
+    """Mise à jour d'un rôle."""
+
+    code: str | None = Field(default=None, min_length=2, max_length=50)
+    name_fr: str | None = Field(default=None, min_length=2, max_length=100)
+    description: str | None = None
+    hierarchy_level: int | None = Field(default=None, ge=0, le=100)
+    active: bool | None = None
+
+
+class RoleDuplicate(BaseModel):
+    """Duplication d'un rôle."""
+
+    new_code: str = Field(min_length=2, max_length=50)
+    new_name: str = Field(min_length=2, max_length=100)
+
+
+class RolePermissionsUpdate(BaseModel):
+    """Mise à jour des permissions d'un rôle."""
+
+    permission_ids: list[str]
+
+
+class RoleCompare(BaseModel):
+    """Comparaison de rôles."""
+
+    role_ids: list[str] = Field(min_length=2, max_length=5)
+
+
+# =============================================================================
+# Admin Schemas - Permissions
+# =============================================================================
+
+
+class PermissionCreate(BaseModel):
+    """Création d'une permission."""
+
+    code: str = Field(min_length=2, max_length=50)
+    name_fr: str = Field(min_length=2, max_length=100)
+    description: str | None = None
+    category: str | None = Field(default=None, max_length=50)
+
+
+class PermissionUpdate(BaseModel):
+    """Mise à jour d'une permission."""
+
+    code: str | None = Field(default=None, min_length=2, max_length=50)
+    name_fr: str | None = Field(default=None, min_length=2, max_length=100)
+    description: str | None = None
+    category: str | None = Field(default=None, max_length=50)
+
+
+class PermissionMatrix(BaseModel):
+    """Matrice des permissions."""
+
+    permissions: dict
+    roles: list[dict]
+
+
+class PermissionMatrixUpdate(BaseModel):
+    """Mise à jour de la matrice des permissions."""
+
+    updates: list[dict]  # [{role_id, permission_id, granted}]
+
+
+# =============================================================================
+# Admin Schemas - Audit Logs
+# =============================================================================
+
+
+class AuditLogRead(BaseModel):
+    """Log d'audit en lecture."""
+
+    id: str
+    user_id: str | None
+    action: str
+    table_name: str | None
+    record_id: str | None
+    old_values: dict | None
+    new_values: dict | None
+    ip_address: str | None
+    user_agent: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AuditLogStatistics(BaseModel):
+    """Statistiques des logs d'audit."""
+
+    total: int
+    by_action: dict[str, int]
+    by_table: dict[str, int]
+
+
+class AuditLogPurge(BaseModel):
+    """Requête de purge des logs d'audit."""
+
+    before_date: datetime
