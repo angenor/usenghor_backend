@@ -61,7 +61,10 @@ class Role(Base, UUIDMixin, TimestampMixin):
         secondary="role_permissions", back_populates="roles"
     )
     users: Mapped[list["User"]] = relationship(
-        secondary="user_roles", back_populates="roles"
+        secondary="user_roles",
+        back_populates="roles",
+        primaryjoin="Role.id == UserRole.role_id",
+        secondaryjoin="User.id == UserRole.user_id",
     )
 
 
@@ -109,7 +112,10 @@ class User(Base, UUIDMixin, TimestampMixin):
 
     # Relations
     roles: Mapped[list["Role"]] = relationship(
-        secondary="user_roles", back_populates="users"
+        secondary="user_roles",
+        back_populates="users",
+        primaryjoin="User.id == UserRole.user_id",
+        secondaryjoin="Role.id == UserRole.role_id",
     )
     tokens: Mapped[list["UserToken"]] = relationship(back_populates="user")
 

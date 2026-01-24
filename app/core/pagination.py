@@ -54,6 +54,7 @@ async def paginate(
     query: Select,
     pagination: PaginationParams,
     model_class: type,
+    schema_class: type | None = None,
 ) -> dict:
     """
     Pagine une requête SQLAlchemy.
@@ -63,6 +64,7 @@ async def paginate(
         query: Requête SQLAlchemy Select.
         pagination: Paramètres de pagination.
         model_class: Classe du modèle pour le tri.
+        schema_class: Classe Pydantic optionnelle pour la conversion des items.
 
     Returns:
         Dictionnaire avec items, total, page, limit, pages.
@@ -87,11 +89,17 @@ async def paginate(
     result = await db.execute(query)
     items = result.scalars().all()
 
+    # Convertir en schémas Pydantic si spécifié
+    if schema_class is not None:
+        items = [schema_class.model_validate(item) for item in items]
+    else:
+        items = list(items)
+
     # Calculer le nombre de pages
     pages = ceil(total / pagination.limit) if pagination.limit > 0 else 0
 
     return {
-        "items": list(items),
+        "items": items,
         "total": total,
         "page": pagination.page,
         "limit": pagination.limit,

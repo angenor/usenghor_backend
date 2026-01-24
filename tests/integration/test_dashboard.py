@@ -85,9 +85,9 @@ class TestDashboardEndpoints:
         assert response.status_code == 200
         data = response.json()
 
-        assert "tasks" in data
+        assert "categories" in data
         assert "total" in data
-        assert isinstance(data["tasks"], list)
+        assert isinstance(data["categories"], list)
 
     @pytest.mark.asyncio
     async def test_dashboard_stats_unauthorized(self, client: AsyncClient):

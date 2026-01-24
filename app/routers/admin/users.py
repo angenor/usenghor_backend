@@ -38,7 +38,7 @@ async def list_users(
     """Liste les utilisateurs avec pagination et filtres."""
     service = IdentityService(db)
     query = await service.get_users(search=search, active=active, role_id=role_id)
-    return await paginate(db, query, pagination, User)
+    return await paginate(db, query, pagination, User, UserRead)
 
 
 @router.get("/{user_id}", response_model=UserWithRoles)

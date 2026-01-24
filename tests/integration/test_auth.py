@@ -21,7 +21,7 @@ class TestAuthLogin:
             "/api/auth/login",
             data={
                 "username": test_user.email,
-                "password": "TestPassword123!",
+                "password": "TestPass123!",
             },
         )
 
@@ -69,7 +69,7 @@ class TestAuthRefresh:
             "/api/auth/login",
             data={
                 "username": test_user.email,
-                "password": "TestPassword123!",
+                "password": "TestPass123!",
             },
         )
         tokens = login_response.json()

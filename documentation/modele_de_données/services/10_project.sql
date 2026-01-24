@@ -14,9 +14,7 @@
 -- Note: Utilise project_status défini dans 04_organization.sql
 -- ============================================================================
 
--- Types ENUM spécifiques à ce service
-CREATE TYPE call_type AS ENUM ('application', 'scholarship', 'project', 'recruitment', 'training');
-CREATE TYPE call_status AS ENUM ('ongoing', 'closed', 'upcoming');
+-- Types ENUM: call_type et call_status sont définis dans 08_application.sql
 
 -- Catégories de projets
 CREATE TABLE project_categories (

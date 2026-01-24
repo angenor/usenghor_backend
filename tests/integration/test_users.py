@@ -34,14 +34,14 @@ class TestUsersEndpoints:
         """Test de pagination des utilisateurs."""
         response = await authenticated_client.get(
             "/api/admin/users",
-            params={"page": 1, "page_size": 2},
+            params={"page": 1, "limit": 2},
         )
 
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) <= 2
         assert data["page"] == 1
-        assert data["page_size"] == 2
+        assert data["limit"] == 2
 
     @pytest.mark.asyncio
     async def test_list_users_with_search(
@@ -86,7 +86,9 @@ class TestUsersEndpoints:
     @pytest.mark.asyncio
     async def test_get_user_not_found(self, authenticated_client: AsyncClient):
         """Test de récupération d'un utilisateur inexistant."""
-        response = await authenticated_client.get("/api/admin/users/id-inexistant")
+        # Utiliser un UUID valide mais inexistant
+        non_existent_uuid = "00000000-0000-0000-0000-000000000000"
+        response = await authenticated_client.get(f"/api/admin/users/{non_existent_uuid}")
 
         assert response.status_code == 404
 
