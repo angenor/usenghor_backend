@@ -5,7 +5,11 @@ Router Admin - Médias
 Endpoints pour la gestion des fichiers médias.
 """
 
+from datetime import datetime
+from typing import Literal
+
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+from fastapi.responses import FileResponse, StreamingResponse
 
 from app.core.dependencies import CurrentUser, DbSession, PermissionChecker
 from app.core.pagination import PaginationParams, paginate
@@ -14,10 +18,13 @@ from app.models.media import Media
 from app.schemas.common import IdResponse, MessageResponse
 from app.schemas.media import (
     MediaBulkDelete,
+    MediaDownloadZip,
+    MediaExternalCreate,
     MediaRead,
     MediaStatistics,
     MediaUpdate,
     MediaUploadResponse,
+    MediaUsage,
 )
 from app.services.media_service import MediaService
 
@@ -31,11 +38,22 @@ async def list_media(
     pagination: PaginationParams = Depends(),
     search: str | None = Query(None, description="Recherche sur nom ou description"),
     type: MediaType | None = Query(None, description="Filtrer par type"),
+    date_from: datetime | None = Query(None, description="Date de début"),
+    date_to: datetime | None = Query(None, description="Date de fin"),
+    sort_by: Literal["created_at", "name", "size_bytes"] = Query("created_at", description="Champ de tri"),
+    sort_order: Literal["asc", "desc"] = Query("desc", description="Ordre de tri"),
     _: bool = Depends(PermissionChecker("media.view")),
 ) -> dict:
     """Liste les médias avec pagination et filtres."""
     service = MediaService(db)
-    query = await service.get_media_list(search=search, media_type=type)
+    query = await service.get_media_list(
+        search=search,
+        media_type=type,
+        date_from=date_from,
+        date_to=date_to,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
     return await paginate(db, query, pagination, Media)
 
 
@@ -97,6 +115,71 @@ async def upload_multiple_media(
     """Upload plusieurs fichiers médias."""
     service = MediaService(db)
     return await service.upload_multiple_files(files=files, folder=folder)
+
+
+@router.post("/external", response_model=MediaRead, status_code=status.HTTP_201_CREATED)
+async def create_external_media(
+    media_data: MediaExternalCreate,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("media.create")),
+) -> Media:
+    """Crée une entrée pour un média externe (URL)."""
+    service = MediaService(db)
+    return await service.create_external_media(
+        name=media_data.name,
+        url=media_data.url,
+        media_type=media_data.type,
+        description=media_data.description,
+        alt_text=media_data.alt_text,
+        credits=media_data.credits,
+    )
+
+
+@router.post("/download-zip", response_class=StreamingResponse)
+async def download_media_zip(
+    download_data: MediaDownloadZip,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("media.view")),
+):
+    """Télécharge plusieurs médias dans un fichier ZIP."""
+    service = MediaService(db)
+    zip_buffer, filename = await service.create_zip_download(download_data.ids)
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.get("/{media_id}/usage", response_model=MediaUsage)
+async def get_media_usage(
+    media_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("media.view")),
+) -> dict:
+    """Vérifie où un média est utilisé."""
+    service = MediaService(db)
+    return await service.check_media_usage(media_id)
+
+
+@router.get("/{media_id}/download", response_class=FileResponse)
+async def download_media(
+    media_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("media.view")),
+):
+    """Télécharge un fichier média."""
+    service = MediaService(db)
+    file_path, filename, mime_type = await service.get_download_info(media_id)
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type=mime_type,
+    )
 
 
 @router.put("/{media_id}", response_model=MediaRead)

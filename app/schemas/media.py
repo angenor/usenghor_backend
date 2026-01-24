@@ -94,6 +94,38 @@ class MediaStatistics(BaseModel):
     total_size_bytes: int
 
 
+class MediaExternalCreate(BaseModel):
+    """Schéma pour créer un média externe (URL)."""
+
+    name: str = Field(..., min_length=1, max_length=255, description="Nom du média")
+    url: str = Field(..., max_length=500, description="URL externe")
+    type: MediaType = Field(..., description="Type de média")
+    description: str | None = Field(None, description="Description")
+    alt_text: str | None = Field(None, max_length=255, description="Texte alternatif")
+    credits: str | None = Field(None, max_length=255, description="Crédits")
+
+
+class MediaUsageItem(BaseModel):
+    """Un élément d'utilisation d'un média."""
+
+    type: str = Field(..., description="Type d'entité (news, event, etc.)")
+    id: str = Field(..., description="ID de l'entité")
+    title: str = Field(..., description="Titre de l'entité")
+
+
+class MediaUsage(BaseModel):
+    """Résultat de vérification d'utilisation d'un média."""
+
+    is_used: bool = Field(..., description="Le média est-il utilisé ?")
+    usage: list[MediaUsageItem] = Field(default_factory=list, description="Liste des utilisations")
+
+
+class MediaDownloadZip(BaseModel):
+    """Schéma pour téléchargement multiple en ZIP."""
+
+    ids: list[str] = Field(..., min_length=1, description="Liste des IDs médias")
+
+
 # =============================================================================
 # ALBUMS
 # =============================================================================

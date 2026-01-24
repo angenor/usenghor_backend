@@ -135,6 +135,10 @@ class MediaService:
         self,
         search: str | None = None,
         media_type: MediaType | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> select:
         """
         Construit une requête pour lister les médias.
@@ -142,6 +146,10 @@ class MediaService:
         Args:
             search: Recherche sur nom ou description.
             media_type: Filtrer par type de média.
+            date_from: Date de début (upload).
+            date_to: Date de fin (upload).
+            sort_by: Champ de tri (created_at, name, size_bytes).
+            sort_order: Ordre de tri (asc, desc).
 
         Returns:
             Requête SQLAlchemy Select.
@@ -160,6 +168,19 @@ class MediaService:
 
         if media_type:
             query = query.where(Media.type == media_type)
+
+        if date_from:
+            query = query.where(Media.created_at >= date_from)
+
+        if date_to:
+            query = query.where(Media.created_at <= date_to)
+
+        # Tri
+        sort_column = getattr(Media, sort_by, Media.created_at)
+        if sort_order == "asc":
+            query = query.order_by(sort_column.asc())
+        else:
+            query = query.order_by(sort_column.desc())
 
         return query
 
