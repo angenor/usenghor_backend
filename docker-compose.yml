@@ -9,11 +9,13 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-usenghor}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-usenghor_secret}
       POSTGRES_DB: ${POSTGRES_DB:-usenghor}
+      POSTGRES_MULTIPLE_DATABASES: usenghor_test
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./documentation/modele_de_données/services:/docker-entrypoint-initdb.d:ro
+      - ./scripts/create-test-db.sh:/docker-entrypoint-initdb.d/00-create-test-db.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-usenghor} -d ${POSTGRES_DB:-usenghor}"]
       interval: 10s

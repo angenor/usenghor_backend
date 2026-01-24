@@ -3,29 +3,36 @@ Configuration des tests
 =======================
 
 Fixtures pytest pour les tests unitaires et d'intégration.
+Utilise PostgreSQL pour une compatibilité complète avec la production.
 """
 
 import asyncio
+import os
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
-from typing import Any
 from uuid import uuid4
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
-from app.models.identity import Permission, Role, RolePermission, User
+from app.models.identity import Permission, Role, RolePermission, User, UserRole
 from app.core.security import get_password_hash, create_access_token
 
 
-# Configuration pour utiliser SQLite en mémoire pour les tests
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# ============================================================================
+# Configuration de la base de données de test PostgreSQL
+# ============================================================================
+
+# URL de la base de données de test
+# Utilise les mêmes credentials que le développement mais une base différente
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://usenghor:usenghor_secret@localhost:5432/usenghor_test"
+)
 
 
 @pytest.fixture(scope="session")
@@ -36,28 +43,30 @@ def event_loop():
     loop.close()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="session")
 async def test_engine():
-    """Crée un moteur de base de données de test."""
+    """
+    Crée un moteur de base de données de test PostgreSQL.
+
+    Scope session pour éviter de recréer le moteur à chaque test.
+    Les tables sont créées une fois au début et supprimées à la fin.
+    """
     engine = create_async_engine(
         TEST_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
         echo=False,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=10,
     )
 
-    # Activer les clés étrangères pour SQLite
-    @event.listens_for(engine.sync_engine, "connect")
-    def set_sqlite_pragma(dbapi_connection, connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
+    # Créer toutes les tables au début de la session
     async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
     yield engine
 
+    # Nettoyer à la fin de la session
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
@@ -66,7 +75,12 @@ async def test_engine():
 
 @pytest_asyncio.fixture(scope="function")
 async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Crée une session de base de données pour les tests."""
+    """
+    Crée une session de base de données pour chaque test.
+
+    Chaque test obtient une session fraîche avec nettoyage automatique
+    des données après le test pour assurer l'isolation.
+    """
     async_session = async_sessionmaker(
         test_engine,
         class_=AsyncSession,
@@ -77,6 +91,14 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 
     async with async_session() as session:
         yield session
+        await session.commit()
+
+    # Nettoyer les données après le test
+    async with async_session() as cleanup_session:
+        async with cleanup_session.begin():
+            # Supprimer dans l'ordre inverse des dépendances FK
+            for table in reversed(Base.metadata.sorted_tables):
+                await cleanup_session.execute(table.delete())
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -96,6 +118,10 @@ async def client(test_engine, db_session) -> AsyncGenerator[AsyncClient, None]:
 
     app.dependency_overrides.clear()
 
+
+# ============================================================================
+# Fixtures de données de test
+# ============================================================================
 
 @pytest_asyncio.fixture(scope="function")
 async def test_permissions(db_session: AsyncSession) -> list[Permission]:
@@ -172,7 +198,6 @@ async def test_user(db_session: AsyncSession, admin_role: Role) -> User:
     await db_session.flush()
 
     # Associer le rôle admin à l'utilisateur
-    from app.models.identity import UserRole
     user_role = UserRole(
         user_id=user.id,
         role_id=admin_role.id,
@@ -208,8 +233,6 @@ async def authenticated_client(
 @pytest_asyncio.fixture(scope="function")
 async def sample_users(db_session: AsyncSession, admin_role: Role) -> list[User]:
     """Crée plusieurs utilisateurs de test."""
-    from app.models.identity import UserRole
-
     users = []
     for i in range(5):
         user = User(
