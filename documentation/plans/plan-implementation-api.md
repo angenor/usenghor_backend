@@ -855,97 +855,100 @@ format: str = Query("csv", pattern="^(csv|xlsx)$")
 
 ## 7. Ordre d'implémentation
 
+> **Légende** : `[ ]` À faire · `[~]` En cours · `[x]` Terminé
+
 ### Phase 1 : Fondations (Semaine 1-2)
 
-1. **Configuration projet**
-   - Structure des dossiers
-   - Configuration FastAPI
-   - Connexion PostgreSQL
+- [x] **1. Configuration projet**
+  - [x] Structure des dossiers
+  - [x] Configuration FastAPI
+  - [x] Connexion PostgreSQL
+  - [x] Docker Compose (PostgreSQL + Adminer)
 
-2. **Authentification**
-   - Login/Logout
-   - JWT tokens
-   - Middleware auth
+- [ ] **2. Authentification**
+  - [ ] Login/Logout
+  - [ ] JWT tokens
+  - [ ] Middleware auth
 
-3. **Core Identity**
-   - CRUD utilisateurs
-   - CRUD rôles
-   - CRUD permissions
-   - Système RBAC
+- [ ] **3. Core Identity**
+  - [ ] CRUD utilisateurs
+  - [ ] CRUD rôles
+  - [ ] CRUD permissions
+  - [ ] Système RBAC
 
 ### Phase 2 : Données de base (Semaine 3-4)
 
-4. **Core**
-   - CRUD pays
+- [ ] **4. Core**
+  - [ ] CRUD pays
 
-5. **Media**
-   - Upload fichiers
-   - CRUD albums
+- [ ] **5. Media**
+  - [ ] Upload fichiers
+  - [ ] CRUD albums
 
-6. **Organization**
-   - CRUD départements
-   - CRUD services
+- [ ] **6. Organization**
+  - [ ] CRUD départements
+  - [ ] CRUD services
 
 ### Phase 3 : Contenus (Semaine 5-6)
 
-7. **Content**
-   - CRUD actualités
-   - CRUD événements
-   - CRUD étiquettes
-   - Inscriptions événements
+- [ ] **7. Content**
+  - [ ] CRUD actualités
+  - [ ] CRUD événements
+  - [ ] CRUD étiquettes
+  - [ ] Inscriptions événements
 
-8. **Campus**
-   - CRUD campus
-   - Équipes campus
+- [ ] **8. Campus**
+  - [ ] CRUD campus
+  - [ ] Équipes campus
 
-9. **Partners**
-   - CRUD partenaires
+- [ ] **9. Partners**
+  - [ ] CRUD partenaires
 
 ### Phase 4 : Académique (Semaine 7-8)
 
-10. **Academic**
-    - CRUD programmes
-    - Semestres et cours
-    - Compétences
-    - Débouchés
+- [ ] **10. Academic**
+  - [ ] CRUD programmes
+  - [ ] Semestres et cours
+  - [ ] Compétences
+  - [ ] Débouchés
 
-11. **Application**
-    - Appels à candidatures
-    - Gestion candidatures
-    - Évaluation
+- [ ] **11. Application**
+  - [ ] Appels à candidatures
+  - [ ] Gestion candidatures
+  - [ ] Évaluation
 
 ### Phase 5 : Communication (Semaine 9-10)
 
-12. **Newsletter**
-    - Campagnes
-    - Abonnés
-    - Envoi emails
+- [ ] **12. Newsletter**
+  - [ ] Campagnes
+  - [ ] Abonnés
+  - [ ] Envoi emails
 
-13. **Editorial**
-    - Contenus éditoriaux
-    - Historique versions
+- [ ] **13. Editorial**
+  - [ ] Contenus éditoriaux
+  - [ ] Historique versions
 
-14. **Project**
-    - CRUD projets
-    - Catégories
-    - Appels à projets
+- [ ] **14. Project**
+  - [ ] CRUD projets
+  - [ ] Catégories
+  - [ ] Appels à projets
 
 ### Phase 6 : Finalisation (Semaine 11-12)
 
-15. **Dashboard**
-    - Statistiques globales
-    - Activité récente
-    - Tâches en attente
+- [ ] **15. Dashboard**
+  - [ ] Statistiques globales
+  - [ ] Activité récente
+  - [ ] Tâches en attente
 
-16. **Audit**
-    - Journal d'audit
-    - Statistiques
-    - Export
+- [ ] **16. Audit**
+  - [ ] Journal d'audit
+  - [ ] Statistiques
+  - [ ] Export
 
-17. **Tests & Documentation**
-    - Tests unitaires
-    - Tests d'intégration
-    - Documentation OpenAPI
+- [ ] **17. Tests & Documentation**
+  - [ ] Tests unitaires
+  - [ ] Tests d'intégration
+  - [ ] Documentation OpenAPI
 
 ---
 

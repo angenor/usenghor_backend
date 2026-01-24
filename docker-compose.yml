@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: usenghor_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-usenghor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-usenghor_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-usenghor}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./documentation/modele_de_données/services:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-usenghor} -d ${POSTGRES_DB:-usenghor}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - usenghor_network
+
+  adminer:
+    image: adminer:latest
+    container_name: usenghor_adminer
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - usenghor_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  usenghor_network:
+    driver: bridge
