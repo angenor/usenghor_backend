@@ -56,7 +56,7 @@ async def list_applications(
         status=status,
         program_id=program_id,
     )
-    return await paginate(db, query, pagination, Application)
+    return await paginate(db, query, pagination, Application, ApplicationRead)
 
 
 @router.get("/statistics", response_model=ApplicationStatistics)
@@ -98,7 +98,7 @@ async def create_application(
     service = ApplicationService(db)
     data = application_data.model_dump(exclude_unset=True)
     application = await service.create_application(data)
-    return IdResponse(id=application.id)
+    return IdResponse(id=application.id, message="Candidature créée avec succès")
 
 
 @router.put("/{application_id}", response_model=ApplicationRead)

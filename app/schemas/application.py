@@ -371,7 +371,6 @@ class ApplicationDocumentRead(ApplicationDocumentBase):
     is_valid: bool | None
     validation_comment: str | None
     created_at: datetime
-    updated_at: datetime
 
     model_config = {"from_attributes": True}
 

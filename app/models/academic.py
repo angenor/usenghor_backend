@@ -16,6 +16,7 @@ from sqlalchemy import (
     String,
     Text,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -43,13 +44,19 @@ class Program(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
     teaching_methods: Mapped[str | None] = mapped_column(Text)
 
-    # Références externes (pas de FK)
-    cover_image_external_id: Mapped[str | None] = mapped_column(String(36))
-    department_external_id: Mapped[str | None] = mapped_column(String(36))
-    coordinator_external_id: Mapped[str | None] = mapped_column(String(36))
+    # Références externes (pas de FK) - UUID pour compatibilité avec le schéma DB
+    cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    department_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    coordinator_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     type: Mapped[ProgramType] = mapped_column(
-        Enum(ProgramType, name="program_type", create_type=False), nullable=False
+        Enum(
+            ProgramType,
+            name="program_type",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
     )
     duration_months: Mapped[int | None] = mapped_column(Integer)
     credits: Mapped[int | None] = mapped_column(Integer)
@@ -57,7 +64,12 @@ class Program(Base, UUIDMixin, TimestampMixin):
     required_degree: Mapped[str | None] = mapped_column(Text)
 
     status: Mapped[PublicationStatus] = mapped_column(
-        Enum(PublicationStatus, name="publication_status", create_type=False),
+        Enum(
+            PublicationStatus,
+            name="publication_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         default=PublicationStatus.DRAFT,
     )
     display_order: Mapped[int] = mapped_column(Integer, default=0)
@@ -94,7 +106,7 @@ class ProgramCampus(Base):
     program_id: Mapped[str] = mapped_column(
         ForeignKey("programs.id", ondelete="CASCADE"), primary_key=True
     )
-    campus_external_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    campus_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
 
 
 class ProgramPartner(Base):
@@ -105,7 +117,7 @@ class ProgramPartner(Base):
     program_id: Mapped[str] = mapped_column(
         ForeignKey("programs.id", ondelete="CASCADE"), primary_key=True
     )
-    partner_external_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    partner_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     partnership_type: Mapped[str | None] = mapped_column(String(100))
 
 

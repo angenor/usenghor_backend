@@ -19,6 +19,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    func,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -254,31 +255,46 @@ class Application(Base, UUIDMixin, TimestampMixin):
         ForeignKey("application_calls.id", ondelete="SET NULL")
     )
 
-    # Références externes (pas de FK)
-    program_external_id: Mapped[str | None] = mapped_column(String(36))
-    user_external_id: Mapped[str | None] = mapped_column(String(36))
-    reviewer_external_id: Mapped[str | None] = mapped_column(String(36))
+    # Références externes (pas de FK) - UUID pour compatibilité avec le schéma DB
+    program_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    user_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    reviewer_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     # Informations personnelles
     salutation: Mapped[Salutation | None] = mapped_column(
-        Enum(Salutation, name="salutation", create_type=False)
+        Enum(
+            Salutation,
+            name="salutation",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        )
     )
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     birth_date: Mapped[date | None] = mapped_column(Date)
     birth_city: Mapped[str | None] = mapped_column(String(100))
 
-    # Références pays (externe)
-    birth_country_external_id: Mapped[str | None] = mapped_column(String(36))
-    nationality_external_id: Mapped[str | None] = mapped_column(String(36))
-    country_external_id: Mapped[str | None] = mapped_column(String(36))
-    employer_country_external_id: Mapped[str | None] = mapped_column(String(36))
+    # Références pays (externe) - UUID pour compatibilité avec le schéma DB
+    birth_country_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    nationality_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    country_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    employer_country_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     marital_status: Mapped[MaritalStatus | None] = mapped_column(
-        Enum(MaritalStatus, name="marital_status", create_type=False)
+        Enum(
+            MaritalStatus,
+            name="marital_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        )
     )
     employment_status: Mapped[EmploymentStatus | None] = mapped_column(
-        Enum(EmploymentStatus, name="employment_status", create_type=False)
+        Enum(
+            EmploymentStatus,
+            name="employment_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        )
     )
     employment_status_other: Mapped[str | None] = mapped_column(String(255))
 
@@ -300,7 +316,12 @@ class Application(Base, UUIDMixin, TimestampMixin):
     employer_phone: Mapped[str | None] = mapped_column(String(30))
     employer_email: Mapped[str | None] = mapped_column(String(255))
     experience_duration: Mapped[ExperienceDuration | None] = mapped_column(
-        Enum(ExperienceDuration, name="experience_duration", create_type=False)
+        Enum(
+            ExperienceDuration,
+            name="experience_duration",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        )
     )
 
     # Formation académique
@@ -311,7 +332,12 @@ class Application(Base, UUIDMixin, TimestampMixin):
 
     # Statut
     status: Mapped[SubmittedApplicationStatus] = mapped_column(
-        Enum(SubmittedApplicationStatus, name="submitted_application_status", create_type=False),
+        Enum(
+            SubmittedApplicationStatus,
+            name="submitted_application_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         default=SubmittedApplicationStatus.SUBMITTED,
     )
     submitted_at: Mapped[datetime] = mapped_column(
@@ -352,7 +378,7 @@ class ApplicationDegree(Base, UUIDMixin):
     year: Mapped[int | None] = mapped_column(Integer)
     institution: Mapped[str | None] = mapped_column(String(255))
     city: Mapped[str | None] = mapped_column(String(100))
-    country_external_id: Mapped[str | None] = mapped_column(String(36))
+    country_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     specialization: Mapped[str | None] = mapped_column(String(255))
     honors: Mapped[str | None] = mapped_column(String(50))
     display_order: Mapped[int] = mapped_column(Integer, default=0)
@@ -363,7 +389,7 @@ class ApplicationDegree(Base, UUIDMixin):
     )
 
 
-class ApplicationDocument(Base, UUIDMixin, TimestampMixin):
+class ApplicationDocument(Base, UUIDMixin):
     """Document soumis par un candidat."""
 
     __tablename__ = "application_documents"
@@ -375,9 +401,14 @@ class ApplicationDocument(Base, UUIDMixin, TimestampMixin):
         ForeignKey("call_required_documents.id", ondelete="SET NULL")
     )
     document_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    media_external_id: Mapped[str | None] = mapped_column(String(36))
+    media_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     is_valid: Mapped[bool | None] = mapped_column(Boolean)
     validation_comment: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
 
     # Relations
     application: Mapped["Application"] = relationship(
