@@ -537,3 +537,57 @@ class ApplicationStatistics(BaseModel):
     rejected: int = 0
     waitlisted: int = 0
     incomplete: int = 0
+
+
+# =============================================================================
+# STATISTIQUES ÉTENDUES
+# =============================================================================
+
+
+class TimelineDataPoint(BaseModel):
+    """Point de données pour l'évolution temporelle."""
+
+    period: str  # Format "YYYY-MM" ou "YYYY-MM-DD"
+    count: int
+
+
+class ProgramStatistics(BaseModel):
+    """Statistiques par programme/appel."""
+
+    program_id: str
+    program_title: str
+    total: int
+    accepted: int
+    acceptance_rate: float
+
+
+class CallStatistics(BaseModel):
+    """Statistiques détaillées par appel."""
+
+    call_id: str
+    call_title: str
+    total: int
+    submitted: int
+    under_review: int
+    accepted: int
+    rejected: int
+    waitlisted: int
+    incomplete: int
+
+
+class ExtendedApplicationStatistics(BaseModel):
+    """Statistiques étendues des candidatures."""
+
+    # KPIs
+    total: int
+    pending: int  # submitted + under_review
+    acceptance_rate: float  # accepted / (accepted + rejected + waitlisted) * 100
+    completion_rate: float  # (total - incomplete) / total * 100
+
+    # Par statut
+    by_status: dict[str, int]
+
+    # Détails
+    timeline: list[TimelineDataPoint]
+    by_program: list[ProgramStatistics]
+    by_call: list[CallStatistics]

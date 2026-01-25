@@ -5,6 +5,8 @@ Router Admin - Candidatures
 Endpoints CRUD pour la gestion des candidatures.
 """
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.dependencies import CurrentUser, DbSession, PermissionChecker
@@ -25,6 +27,7 @@ from app.schemas.application import (
     ApplicationStatusUpdate,
     ApplicationUpdate,
     ApplicationWithDetails,
+    ExtendedApplicationStatistics,
 )
 from app.schemas.common import IdResponse, MessageResponse
 from app.services.application_service import ApplicationService
@@ -70,6 +73,33 @@ async def get_statistics(
     service = ApplicationService(db)
     stats = await service.get_application_statistics(call_id)
     return ApplicationStatistics(**stats)
+
+
+@router.get("/statistics/extended", response_model=ExtendedApplicationStatistics)
+async def get_extended_statistics(
+    db: DbSession,
+    current_user: CurrentUser,
+    call_id: str | None = Query(None, description="Filtrer par appel"),
+    date_from: date | None = Query(None, description="Date de début (YYYY-MM-DD)"),
+    date_to: date | None = Query(None, description="Date de fin (YYYY-MM-DD)"),
+    granularity: str = Query("month", description="Granularité: day, week, month"),
+    _: bool = Depends(PermissionChecker("applications.view")),
+) -> ExtendedApplicationStatistics:
+    """Récupère les statistiques étendues des candidatures."""
+    from datetime import datetime
+
+    # Convertir les dates en datetime pour le service
+    date_from_dt = datetime.combine(date_from, datetime.min.time()) if date_from else None
+    date_to_dt = datetime.combine(date_to, datetime.max.time()) if date_to else None
+
+    service = ApplicationService(db)
+    stats = await service.get_extended_statistics(
+        call_id=call_id,
+        date_from=date_from_dt,
+        date_to=date_to_dt,
+        granularity=granularity,
+    )
+    return ExtendedApplicationStatistics(**stats)
 
 
 @router.get("/{application_id}", response_model=ApplicationWithDetails)

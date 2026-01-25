@@ -8,7 +8,7 @@ Logique métier pour la gestion des appels à candidature et candidatures.
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import case, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -736,3 +736,267 @@ class ApplicationService:
             stats[status.value] = result.scalar() or 0
 
         return stats
+
+    # =========================================================================
+    # EXTENDED STATISTICS
+    # =========================================================================
+
+    async def get_extended_statistics(
+        self,
+        call_id: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        granularity: str = "month",
+    ) -> dict:
+        """Récupère les statistiques étendues des candidatures."""
+        from datetime import date
+
+        # 1. Stats de base par statut avec filtres de date
+        base_stats = await self._get_status_counts(call_id, date_from, date_to)
+
+        # 2. KPIs calculés
+        total = base_stats["total"]
+        pending = base_stats.get("submitted", 0) + base_stats.get("under_review", 0)
+        decided = (
+            base_stats.get("accepted", 0)
+            + base_stats.get("rejected", 0)
+            + base_stats.get("waitlisted", 0)
+        )
+        acceptance_rate = (
+            round((base_stats.get("accepted", 0) / decided * 100), 1) if decided > 0 else 0
+        )
+        incomplete = base_stats.get("incomplete", 0)
+        completion_rate = (
+            round(((total - incomplete) / total * 100), 1) if total > 0 else 0
+        )
+
+        # 3. Timeline
+        timeline = await self._get_timeline_stats(call_id, date_from, date_to, granularity)
+
+        # 4. Par programme (via ApplicationCall.title comme proxy)
+        by_program = await self._get_stats_by_program(call_id, date_from, date_to)
+
+        # 5. Par appel
+        by_call = await self._get_stats_by_call(date_from, date_to)
+
+        return {
+            "total": total,
+            "pending": pending,
+            "acceptance_rate": acceptance_rate,
+            "completion_rate": completion_rate,
+            "by_status": {
+                "submitted": base_stats.get("submitted", 0),
+                "under_review": base_stats.get("under_review", 0),
+                "accepted": base_stats.get("accepted", 0),
+                "rejected": base_stats.get("rejected", 0),
+                "waitlisted": base_stats.get("waitlisted", 0),
+                "incomplete": base_stats.get("incomplete", 0),
+            },
+            "timeline": timeline,
+            "by_program": by_program,
+            "by_call": by_call,
+        }
+
+    async def _get_status_counts(
+        self,
+        call_id: str | None,
+        date_from: datetime | None,
+        date_to: datetime | None,
+    ) -> dict:
+        """Comptages par statut avec filtres de date."""
+        base_query = select(func.count(Application.id))
+
+        if call_id:
+            base_query = base_query.where(Application.call_id == call_id)
+        if date_from:
+            base_query = base_query.where(Application.submitted_at >= date_from)
+        if date_to:
+            base_query = base_query.where(Application.submitted_at <= date_to)
+
+        # Total
+        total_result = await self.db.execute(base_query)
+        total = total_result.scalar() or 0
+
+        # Par statut
+        stats = {"total": total}
+        for status in SubmittedApplicationStatus:
+            query = base_query.where(Application.status == status)
+            result = await self.db.execute(query)
+            stats[status.value] = result.scalar() or 0
+
+        return stats
+
+    async def _get_timeline_stats(
+        self,
+        call_id: str | None,
+        date_from: datetime | None,
+        date_to: datetime | None,
+        granularity: str,
+    ) -> list[dict]:
+        """Évolution temporelle des candidatures."""
+        from sqlalchemy import text
+
+        # Déterminer le format de troncature selon la granularité
+        trunc_format = {
+            "day": "day",
+            "week": "week",
+            "month": "month",
+        }.get(granularity, "month")
+
+        # Expression date_trunc réutilisable
+        date_trunc_expr = func.date_trunc(trunc_format, Application.submitted_at)
+
+        # Requête avec GROUP BY date_trunc
+        query = select(
+            func.to_char(
+                date_trunc_expr,
+                "YYYY-MM" if trunc_format == "month" else "YYYY-MM-DD",
+            ).label("period"),
+            func.count(Application.id).label("count"),
+        )
+
+        if call_id:
+            query = query.where(Application.call_id == call_id)
+        if date_from:
+            query = query.where(Application.submitted_at >= date_from)
+        if date_to:
+            query = query.where(Application.submitted_at <= date_to)
+
+        # GROUP BY et ORDER BY avec la même expression
+        query = query.group_by(date_trunc_expr).order_by(date_trunc_expr)
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        return [{"period": row.period, "count": row.count} for row in rows if row.period]
+
+    async def _get_stats_by_program(
+        self,
+        call_id: str | None,
+        date_from: datetime | None,
+        date_to: datetime | None,
+    ) -> list[dict]:
+        """Statistiques groupées par programme (via ApplicationCall.title)."""
+        # Requête avec JOIN sur ApplicationCall
+        query = (
+            select(
+                ApplicationCall.id.label("program_id"),
+                ApplicationCall.title.label("program_title"),
+                func.count(Application.id).label("total"),
+                func.sum(
+                    case(
+                        (Application.status == SubmittedApplicationStatus.ACCEPTED, 1),
+                        else_=0,
+                    )
+                ).label("accepted"),
+            )
+            .select_from(Application)
+            .join(ApplicationCall, Application.call_id == ApplicationCall.id)
+        )
+
+        if call_id:
+            query = query.where(Application.call_id == call_id)
+        if date_from:
+            query = query.where(Application.submitted_at >= date_from)
+        if date_to:
+            query = query.where(Application.submitted_at <= date_to)
+
+        query = query.group_by(ApplicationCall.id, ApplicationCall.title).order_by(
+            func.count(Application.id).desc()
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        return [
+            {
+                "program_id": row.program_id,
+                "program_title": row.program_title,
+                "total": row.total,
+                "accepted": row.accepted or 0,
+                "acceptance_rate": (
+                    round((row.accepted or 0) / row.total * 100, 1) if row.total > 0 else 0
+                ),
+            }
+            for row in rows
+        ]
+
+    async def _get_stats_by_call(
+        self,
+        date_from: datetime | None,
+        date_to: datetime | None,
+    ) -> list[dict]:
+        """Statistiques détaillées par appel."""
+        # Sous-requêtes pour compter chaque statut avec case()
+        query = (
+            select(
+                ApplicationCall.id.label("call_id"),
+                ApplicationCall.title.label("call_title"),
+                func.count(Application.id).label("total"),
+                func.sum(
+                    case(
+                        (Application.status == SubmittedApplicationStatus.SUBMITTED, 1),
+                        else_=0,
+                    )
+                ).label("submitted"),
+                func.sum(
+                    case(
+                        (Application.status == SubmittedApplicationStatus.UNDER_REVIEW, 1),
+                        else_=0,
+                    )
+                ).label("under_review"),
+                func.sum(
+                    case(
+                        (Application.status == SubmittedApplicationStatus.ACCEPTED, 1),
+                        else_=0,
+                    )
+                ).label("accepted"),
+                func.sum(
+                    case(
+                        (Application.status == SubmittedApplicationStatus.REJECTED, 1),
+                        else_=0,
+                    )
+                ).label("rejected"),
+                func.sum(
+                    case(
+                        (Application.status == SubmittedApplicationStatus.WAITLISTED, 1),
+                        else_=0,
+                    )
+                ).label("waitlisted"),
+                func.sum(
+                    case(
+                        (Application.status == SubmittedApplicationStatus.INCOMPLETE, 1),
+                        else_=0,
+                    )
+                ).label("incomplete"),
+            )
+            .select_from(Application)
+            .join(ApplicationCall, Application.call_id == ApplicationCall.id)
+        )
+
+        if date_from:
+            query = query.where(Application.submitted_at >= date_from)
+        if date_to:
+            query = query.where(Application.submitted_at <= date_to)
+
+        query = query.group_by(ApplicationCall.id, ApplicationCall.title).order_by(
+            func.count(Application.id).desc()
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        return [
+            {
+                "call_id": row.call_id,
+                "call_title": row.call_title,
+                "total": row.total,
+                "submitted": row.submitted or 0,
+                "under_review": row.under_review or 0,
+                "accepted": row.accepted or 0,
+                "rejected": row.rejected or 0,
+                "waitlisted": row.waitlisted or 0,
+                "incomplete": row.incomplete or 0,
+            }
+            for row in rows
+        ]
