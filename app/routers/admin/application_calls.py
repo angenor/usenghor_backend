@@ -62,7 +62,7 @@ async def list_calls(
         publication_status=publication_status,
         program_id=program_id,
     )
-    return await paginate(db, query, pagination, ApplicationCall)
+    return await paginate(db, query, pagination, ApplicationCall, ApplicationCallRead)
 
 
 @router.get("/{call_id}", response_model=ApplicationCallWithDetails)
@@ -92,7 +92,7 @@ async def create_call(
     data = call_data.model_dump(exclude_unset=True)
     data["created_by_external_id"] = current_user.id
     call = await service.create_call(data)
-    return IdResponse(id=call.id)
+    return IdResponse(id=call.id, message="Appel créé avec succès")
 
 
 @router.put("/{call_id}", response_model=ApplicationCallRead)

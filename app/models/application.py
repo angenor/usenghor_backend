@@ -20,6 +20,7 @@ from sqlalchemy import (
     String,
     Text,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -96,17 +97,18 @@ class ApplicationCall(Base, UUIDMixin, TimestampMixin):
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
 
-    # Références externes (pas de FK)
-    cover_image_external_id: Mapped[str | None] = mapped_column(String(36))
-    program_external_id: Mapped[str | None] = mapped_column(String(36))
-    campus_external_id: Mapped[str | None] = mapped_column(String(36))
-    created_by_external_id: Mapped[str | None] = mapped_column(String(36))
+    # Références externes (pas de FK) - UUID pour correspondre au schéma SQL
+    cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    program_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    campus_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    created_by_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     type: Mapped[CallType] = mapped_column(
-        Enum(CallType, name="call_type", create_type=False), nullable=False
+        Enum(CallType, name="call_type", create_type=False, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
     )
     status: Mapped[CallStatus] = mapped_column(
-        Enum(CallStatus, name="call_status", create_type=False),
+        Enum(CallStatus, name="call_status", create_type=False, values_callable=lambda x: [e.value for e in x]),
         default=CallStatus.UPCOMING,
     )
 
@@ -123,7 +125,7 @@ class ApplicationCall(Base, UUIDMixin, TimestampMixin):
     use_internal_form: Mapped[bool] = mapped_column(Boolean, default=True)
 
     publication_status: Mapped[PublicationStatus] = mapped_column(
-        Enum(PublicationStatus, name="publication_status", create_type=False),
+        Enum(PublicationStatus, name="publication_status", create_type=False, values_callable=lambda x: [e.value for e in x]),
         default=PublicationStatus.DRAFT,
     )
 
