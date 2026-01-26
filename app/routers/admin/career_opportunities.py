@@ -34,7 +34,7 @@ async def list_career_opportunities(
     """Liste les débouchés avec pagination et filtres."""
     service = AcademicService(db)
     query = await service.get_career_opportunities(program_id=program_id)
-    return await paginate(db, query, pagination, ProgramCareerOpportunity)
+    return await paginate(db, query, pagination, ProgramCareerOpportunity, ProgramCareerOpportunityRead)
 
 
 @router.get("/{opportunity_id}", response_model=ProgramCareerOpportunityRead)
