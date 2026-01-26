@@ -29,7 +29,7 @@ async def list_tags(
     """Liste les tags avec pagination et filtres."""
     service = ContentService(db)
     query = await service.get_tags(search=search)
-    return await paginate(db, query, pagination, Tag)
+    return await paginate(db, query, pagination, Tag, TagRead)
 
 
 @router.get("/{tag_id}", response_model=TagRead)

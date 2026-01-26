@@ -26,11 +26,11 @@ router = APIRouter(prefix="/event-registrations", tags=["Event Registrations"])
 async def list_event_registrations(
     db: DbSession,
     current_user: CurrentUser,
-    event_id: str = Query(..., description="ID de l'événement"),
+    event_id: str | None = Query(None, description="ID de l'événement (optionnel)"),
     status: RegistrationStatus | None = Query(None, description="Filtrer par statut"),
     _: bool = Depends(PermissionChecker("events.view")),
 ) -> list:
-    """Liste les inscriptions d'un événement."""
+    """Liste les inscriptions, optionnellement filtrées par événement."""
     service = ContentService(db)
     return await service.get_event_registrations(event_id, status)
 

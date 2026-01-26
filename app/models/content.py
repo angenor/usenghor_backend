@@ -19,6 +19,7 @@ from sqlalchemy import (
     String,
     Text,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -82,17 +83,18 @@ class Event(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
     content: Mapped[str | None] = mapped_column(Text)
 
-    # Références externes
-    cover_image_external_id: Mapped[str | None] = mapped_column(String(36))
-    country_external_id: Mapped[str | None] = mapped_column(String(36))
-    campus_external_id: Mapped[str | None] = mapped_column(String(36))
-    department_external_id: Mapped[str | None] = mapped_column(String(36))
-    project_external_id: Mapped[str | None] = mapped_column(String(36))
-    organizer_external_id: Mapped[str | None] = mapped_column(String(36))
-    album_external_id: Mapped[str | None] = mapped_column(String(36))
+    # Références externes (pas de FK) - UUID pour correspondre au schéma SQL
+    cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    country_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    campus_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    department_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    project_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    organizer_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    album_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     type: Mapped[EventType] = mapped_column(
-        Enum(EventType, name="event_type", create_type=False), nullable=False
+        Enum(EventType, name="event_type", create_type=False, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
     )
     type_other: Mapped[str | None] = mapped_column(String(100))
 
@@ -115,7 +117,7 @@ class Event(Base, UUIDMixin, TimestampMixin):
     max_attendees: Mapped[int | None] = mapped_column(Integer)
 
     status: Mapped[PublicationStatus] = mapped_column(
-        Enum(PublicationStatus, name="publication_status", create_type=False),
+        Enum(PublicationStatus, name="publication_status", create_type=False, values_callable=lambda x: [e.value for e in x]),
         default=PublicationStatus.DRAFT,
     )
 
@@ -136,7 +138,7 @@ class EventPartner(Base):
     event_id: Mapped[str] = mapped_column(
         ForeignKey("events.id", ondelete="CASCADE"), primary_key=True
     )
-    partner_external_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    partner_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
 
 
 class EventRegistration(Base, UUIDMixin):
@@ -147,7 +149,7 @@ class EventRegistration(Base, UUIDMixin):
     event_id: Mapped[str] = mapped_column(
         ForeignKey("events.id", ondelete="CASCADE"), nullable=False
     )
-    user_external_id: Mapped[str | None] = mapped_column(String(36))
+    user_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     # Pour les non-inscrits
     last_name: Mapped[str | None] = mapped_column(String(100))
@@ -157,7 +159,7 @@ class EventRegistration(Base, UUIDMixin):
     organization: Mapped[str | None] = mapped_column(String(255))
 
     status: Mapped[RegistrationStatus] = mapped_column(
-        Enum(RegistrationStatus, name="registration_status", create_type=False),
+        Enum(RegistrationStatus, name="registration_status", create_type=False, values_callable=lambda x: [e.value for e in x]),
         default=RegistrationStatus.REGISTERED,
     )
     registered_at: Mapped[datetime] = mapped_column(
@@ -176,7 +178,7 @@ class EventMediaLibrary(Base):
     event_id: Mapped[str] = mapped_column(
         ForeignKey("events.id", ondelete="CASCADE"), primary_key=True
     )
-    album_external_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    album_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
 
 
 class News(Base, UUIDMixin, TimestampMixin):
@@ -190,21 +192,21 @@ class News(Base, UUIDMixin, TimestampMixin):
     content: Mapped[str | None] = mapped_column(Text)
     video_url: Mapped[str | None] = mapped_column(String(500))
 
-    # Références externes
-    cover_image_external_id: Mapped[str | None] = mapped_column(String(36))
-    campus_external_id: Mapped[str | None] = mapped_column(String(36))
-    department_external_id: Mapped[str | None] = mapped_column(String(36))
-    service_external_id: Mapped[str | None] = mapped_column(String(36))
-    event_external_id: Mapped[str | None] = mapped_column(String(36))
-    project_external_id: Mapped[str | None] = mapped_column(String(36))
-    author_external_id: Mapped[str | None] = mapped_column(String(36))
+    # Références externes (pas de FK) - UUID pour correspondre au schéma SQL
+    cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    campus_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    department_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    service_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    event_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    project_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    author_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     highlight_status: Mapped[NewsHighlightStatus] = mapped_column(
-        Enum(NewsHighlightStatus, name="news_highlight_status", create_type=False),
+        Enum(NewsHighlightStatus, name="news_highlight_status", create_type=False, values_callable=lambda x: [e.value for e in x]),
         default=NewsHighlightStatus.STANDARD,
     )
     status: Mapped[PublicationStatus] = mapped_column(
-        Enum(PublicationStatus, name="publication_status", create_type=False),
+        Enum(PublicationStatus, name="publication_status", create_type=False, values_callable=lambda x: [e.value for e in x]),
         default=PublicationStatus.DRAFT,
     )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -224,7 +226,7 @@ class NewsMedia(Base):
     news_id: Mapped[str] = mapped_column(
         ForeignKey("news.id", ondelete="CASCADE"), primary_key=True
     )
-    media_external_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    media_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
 
 

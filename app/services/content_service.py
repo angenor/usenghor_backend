@@ -325,16 +325,16 @@ class ContentService:
     # =========================================================================
 
     async def get_event_registrations(
-        self, event_id: str, status: RegistrationStatus | None = None
+        self, event_id: str | None = None, status: RegistrationStatus | None = None
     ) -> list[EventRegistration]:
-        """Récupère les inscriptions d'un événement."""
-        event = await self.get_event_by_id(event_id)
-        if not event:
-            raise NotFoundException("Événement non trouvé")
+        """Récupère les inscriptions, optionnellement filtrées par événement."""
+        query = select(EventRegistration)
 
-        query = select(EventRegistration).where(
-            EventRegistration.event_id == event_id
-        )
+        if event_id:
+            event = await self.get_event_by_id(event_id)
+            if not event:
+                raise NotFoundException("Événement non trouvé")
+            query = query.where(EventRegistration.event_id == event_id)
 
         if status:
             query = query.where(EventRegistration.status == status)

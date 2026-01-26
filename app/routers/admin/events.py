@@ -49,7 +49,7 @@ async def list_events(
         to_date=to_date,
         campus_id=campus_id,
     )
-    return await paginate(db, query, pagination, Event)
+    return await paginate(db, query, pagination, Event, schema_class=EventRead)
 
 
 @router.get("/{event_id}", response_model=EventWithRegistrations)
