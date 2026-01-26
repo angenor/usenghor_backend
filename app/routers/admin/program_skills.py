@@ -34,7 +34,7 @@ async def list_skills(
     """Liste les compétences avec pagination et filtres."""
     service = AcademicService(db)
     query = await service.get_skills(program_id=program_id)
-    return await paginate(db, query, pagination, ProgramSkill)
+    return await paginate(db, query, pagination, ProgramSkill, ProgramSkillRead)
 
 
 @router.get("/{skill_id}", response_model=ProgramSkillRead)
