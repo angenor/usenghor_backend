@@ -38,7 +38,7 @@ async def list_semesters(
     """Liste les semestres avec pagination et filtres."""
     service = AcademicService(db)
     query = await service.get_semesters(program_id=program_id)
-    return await paginate(db, query, pagination, ProgramSemester)
+    return await paginate(db, query, pagination, ProgramSemester, ProgramSemesterRead)
 
 
 @router.get("/{semester_id}", response_model=ProgramSemesterWithCourses)
@@ -47,13 +47,13 @@ async def get_semester(
     db: DbSession,
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("programs.view")),
-) -> ProgramSemester:
+) -> ProgramSemesterWithCourses:
     """Récupère un semestre par son ID."""
     service = AcademicService(db)
     semester = await service.get_semester_by_id(semester_id)
     if not semester:
         raise NotFoundException("Semestre non trouvé")
-    return semester
+    return ProgramSemesterWithCourses.model_validate(semester)
 
 
 @router.post("", response_model=IdResponse, status_code=status.HTTP_201_CREATED)
@@ -82,11 +82,12 @@ async def update_semester(
     db: DbSession,
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("programs.edit")),
-) -> ProgramSemester:
+) -> ProgramSemesterRead:
     """Met à jour un semestre."""
     service = AcademicService(db)
     update_dict = semester_data.model_dump(exclude_unset=True)
-    return await service.update_semester(semester_id, **update_dict)
+    semester = await service.update_semester(semester_id, **update_dict)
+    return ProgramSemesterRead.model_validate(semester)
 
 
 @router.delete("/{semester_id}", response_model=MessageResponse)
@@ -113,10 +114,11 @@ async def get_semester_courses(
     db: DbSession,
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("programs.view")),
-) -> list:
+) -> list[ProgramCourseRead]:
     """Récupère les cours d'un semestre."""
     service = AcademicService(db)
-    return await service.get_semester_courses(semester_id)
+    courses = await service.get_semester_courses(semester_id)
+    return [ProgramCourseRead.model_validate(c) for c in courses]
 
 
 @router.post("/{semester_id}/courses", response_model=IdResponse, status_code=status.HTTP_201_CREATED)
@@ -152,7 +154,7 @@ async def update_course(
     db: DbSession,
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("programs.edit")),
-):
+) -> ProgramCourseRead:
     """Met à jour un cours."""
     service = AcademicService(db)
 
@@ -162,7 +164,8 @@ async def update_course(
         raise NotFoundException("Semestre non trouvé")
 
     update_dict = course_data.model_dump(exclude_unset=True)
-    return await service.update_course(course_id, **update_dict)
+    course = await service.update_course(course_id, **update_dict)
+    return ProgramCourseRead.model_validate(course)
 
 
 @router.delete("/{semester_id}/courses/{course_id}", response_model=MessageResponse)
@@ -192,7 +195,7 @@ async def reorder_courses(
     db: DbSession,
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("programs.edit")),
-) -> list:
+) -> list[ProgramCourseRead]:
     """Réordonne les cours d'un semestre."""
     service = AcademicService(db)
 
@@ -201,4 +204,5 @@ async def reorder_courses(
     if not semester:
         raise NotFoundException("Semestre non trouvé")
 
-    return await service.reorder_courses(reorder_data.course_ids)
+    courses = await service.reorder_courses(reorder_data.course_ids)
+    return [ProgramCourseRead.model_validate(c) for c in courses]

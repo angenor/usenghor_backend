@@ -39,9 +39,9 @@ async def list_programs(
     current_user: CurrentUser,
     pagination: PaginationParams = Depends(),
     search: str | None = Query(None, description="Recherche sur code, titre, description"),
-    program_type: ProgramType | None = Query(None, description="Filtrer par type"),
-    department_id: str | None = Query(None, description="Filtrer par département"),
-    status: PublicationStatus | None = Query(None, description="Filtrer par statut"),
+    program_type: ProgramType | None = Query(None, alias="type", description="Filtrer par type"),
+    department_id: str | None = Query(None, alias="department_external_id", description="Filtrer par département"),
+    publication_status: PublicationStatus | None = Query(None, alias="status", description="Filtrer par statut"),
     _: bool = Depends(PermissionChecker("programs.view")),
 ) -> dict:
     """Liste les programmes avec pagination et filtres."""
@@ -50,9 +50,9 @@ async def list_programs(
         search=search,
         program_type=program_type,
         department_id=department_id,
-        status=status,
+        status=publication_status,
     )
-    return await paginate(db, query, pagination, Program)
+    return await paginate(db, query, pagination, Program, ProgramRead)
 
 
 @router.get("/{program_id}", response_model=ProgramWithDetails)
@@ -130,14 +130,20 @@ async def delete_program(
 @router.post("/{program_id}/toggle-active", response_model=ProgramRead)
 async def toggle_program_status(
     program_id: str,
-    status: PublicationStatus,
     db: DbSession,
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("programs.edit")),
-) -> Program:
-    """Change le statut de publication d'un programme."""
+) -> ProgramRead:
+    """Bascule le statut de publication d'un programme entre 'published' et 'draft'."""
     service = AcademicService(db)
-    return await service.toggle_program_status(program_id, status)
+    # Récupérer le programme actuel
+    program = await service.get_program_by_id(program_id)
+    if not program:
+        raise NotFoundException("Programme non trouvé")
+    # Basculer le statut
+    new_status = PublicationStatus.draft if program.status == PublicationStatus.published else PublicationStatus.published
+    updated = await service.toggle_program_status(program_id, new_status)
+    return ProgramRead.model_validate(updated)
 
 
 @router.post("/{program_id}/duplicate", response_model=ProgramWithDetails, status_code=status.HTTP_201_CREATED)
