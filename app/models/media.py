@@ -20,7 +20,7 @@ class Media(Base, UUIDMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     type: Mapped[MediaType] = mapped_column(
-        Enum(MediaType, name="media_type", create_type=False),
+        Enum(MediaType, name="media_type", create_type=False, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
     )
     url: Mapped[str] = mapped_column(String(500), nullable=False)

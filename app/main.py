@@ -7,9 +7,11 @@ Application principale de l'API USenghor.
 
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import close_db, init_db
@@ -196,6 +198,12 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(admin_router)
 app.include_router(public_router)
+
+# Fichiers statiques (uploads)
+# Créer le dossier immédiatement pour permettre le montage
+uploads_dir = Path(settings.storage_path)
+uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 
 @app.get("/api/health", tags=["Health"])
