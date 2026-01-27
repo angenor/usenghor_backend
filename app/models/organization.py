@@ -6,8 +6,10 @@ Modèles SQLAlchemy pour la gestion de la structure organisationnelle.
 """
 
 import enum
+from datetime import datetime
 
-from sqlalchemy import Boolean, Date, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -33,10 +35,10 @@ class Department(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
     mission: Mapped[str | None] = mapped_column(Text)
 
-    # Références externes (pas de FK, car cross-service)
-    icon_external_id: Mapped[str | None] = mapped_column(String(36))
-    cover_image_external_id: Mapped[str | None] = mapped_column(String(36))
-    head_external_id: Mapped[str | None] = mapped_column(String(36))
+    # Références externes (pas de FK, car cross-service) - UUID pour correspondre au schéma SQL
+    icon_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    head_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     display_order: Mapped[int] = mapped_column(Integer, default=0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -62,9 +64,9 @@ class Service(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
     mission: Mapped[str | None] = mapped_column(Text)
 
-    # Références externes
-    head_external_id: Mapped[str | None] = mapped_column(String(36))
-    album_external_id: Mapped[str | None] = mapped_column(String(36))
+    # Références externes (pas de FK) - UUID pour correspondre au schéma SQL
+    head_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    album_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     email: Mapped[str | None] = mapped_column(String(255))
     phone: Mapped[str | None] = mapped_column(String(30))
@@ -114,7 +116,7 @@ class ServiceObjective(Base, UUIDMixin):
     )
 
 
-class ServiceAchievement(Base, UUIDMixin, TimestampMixin):
+class ServiceAchievement(Base, UUIDMixin):
     """Réalisation d'un service."""
 
     __tablename__ = "service_achievements"
@@ -125,8 +127,15 @@ class ServiceAchievement(Base, UUIDMixin, TimestampMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     type: Mapped[str | None] = mapped_column(String(100))
-    cover_image_external_id: Mapped[str | None] = mapped_column(String(36))
+    cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     achievement_date: Mapped[str | None] = mapped_column(Date)
+
+    # Seulement created_at (pas de updated_at selon le schéma SQL)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
 
     # Relation
     service: Mapped["Service"] = relationship(
@@ -144,7 +153,7 @@ class ServiceProject(Base, UUIDMixin, TimestampMixin):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    cover_image_external_id: Mapped[str | None] = mapped_column(String(36))
+    cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     progress: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[ProjectStatus] = mapped_column(
         Enum(
@@ -172,4 +181,4 @@ class ServiceMediaLibrary(Base):
     service_id: Mapped[str] = mapped_column(
         ForeignKey("services.id", ondelete="CASCADE"), primary_key=True
     )
-    album_external_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    album_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)

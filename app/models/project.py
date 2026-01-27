@@ -200,6 +200,7 @@ class ProjectCall(Base, UUIDMixin, TimestampMixin):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     status: Mapped[ProjectCallStatus] = mapped_column(
         Enum(
             ProjectCallStatus,

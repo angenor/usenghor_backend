@@ -210,6 +210,7 @@ class ProjectCallBase(BaseModel):
 
     title: str = Field(..., min_length=1, max_length=255, description="Titre")
     description: str | None = Field(None, description="Description")
+    cover_image_external_id: str | None = Field(None, description="ID image de couverture")
     conditions: str | None = Field(None, description="Conditions")
     type: ProjectCallType | None = Field(None, description="Type d'appel")
     deadline: datetime | None = Field(None, description="Date limite")
@@ -228,6 +229,7 @@ class ProjectCallUpdate(BaseModel):
 
     title: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
+    cover_image_external_id: str | None = None
     status: ProjectCallStatus | None = None
     conditions: str | None = None
     type: ProjectCallType | None = None

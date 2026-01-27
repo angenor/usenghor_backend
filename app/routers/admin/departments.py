@@ -37,7 +37,7 @@ async def list_departments(
     """Liste les départements avec pagination et filtres."""
     service = OrganizationService(db)
     query = await service.get_departments(search=search, active=active)
-    return await paginate(db, query, pagination, Department)
+    return await paginate(db, query, pagination, Department, DepartmentRead)
 
 
 @router.get("/{department_id}", response_model=DepartmentWithServices)
