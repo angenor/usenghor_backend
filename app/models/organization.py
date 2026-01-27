@@ -147,7 +147,12 @@ class ServiceProject(Base, UUIDMixin, TimestampMixin):
     cover_image_external_id: Mapped[str | None] = mapped_column(String(36))
     progress: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[ProjectStatus] = mapped_column(
-        Enum(ProjectStatus, name="project_status", create_type=False),
+        Enum(
+            ProjectStatus,
+            name="project_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         default=ProjectStatus.PLANNED,
     )
     start_date: Mapped[str | None] = mapped_column(Date)

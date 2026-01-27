@@ -56,7 +56,12 @@ class Album(Base, UUIDMixin, TimestampMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     status: Mapped[PublicationStatus] = mapped_column(
-        Enum(PublicationStatus, name="publication_status", create_type=False),
+        Enum(
+            PublicationStatus,
+            name="publication_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         default=PublicationStatus.DRAFT,
     )
 

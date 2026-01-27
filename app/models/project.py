@@ -13,6 +13,7 @@ from sqlalchemy import (
     Boolean,
     Date,
     DateTime,
+    Enum,
     ForeignKey,
     Integer,
     Numeric,
@@ -20,6 +21,7 @@ from sqlalchemy import (
     Text,
     func,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -78,10 +80,10 @@ class Project(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (sans FK)
-    cover_image_external_id: Mapped[str | None] = mapped_column(String(36))
-    department_external_id: Mapped[str | None] = mapped_column(String(36))
-    manager_external_id: Mapped[str | None] = mapped_column(String(36))
-    album_external_id: Mapped[str | None] = mapped_column(String(36))
+    cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    department_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    manager_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    album_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     # Dates et budget
     start_date: Mapped[date | None] = mapped_column(Date)
@@ -92,10 +94,22 @@ class Project(Base, UUIDMixin, TimestampMixin):
 
     # Statuts
     status: Mapped[ProjectStatus] = mapped_column(
+        Enum(
+            ProjectStatus,
+            name="project_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         default=ProjectStatus.PLANNED,
         nullable=False,
     )
     publication_status: Mapped[PublicationStatus] = mapped_column(
+        Enum(
+            PublicationStatus,
+            name="publication_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         default=PublicationStatus.DRAFT,
         nullable=False,
     )
@@ -148,7 +162,7 @@ class ProjectCountry(Base):
         primary_key=True,
     )
     country_external_id: Mapped[str] = mapped_column(
-        String(36),
+        UUID(as_uuid=False),
         primary_key=True,
     )
 
@@ -166,7 +180,7 @@ class ProjectPartner(Base):
         primary_key=True,
     )
     partner_external_id: Mapped[str] = mapped_column(
-        String(36),
+        UUID(as_uuid=False),
         primary_key=True,
     )
     partner_role: Mapped[str | None] = mapped_column(String(255))
@@ -187,11 +201,24 @@ class ProjectCall(Base, UUIDMixin, TimestampMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     status: Mapped[ProjectCallStatus] = mapped_column(
+        Enum(
+            ProjectCallStatus,
+            name="call_status",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         default=ProjectCallStatus.UPCOMING,
         nullable=False,
     )
     conditions: Mapped[str | None] = mapped_column(Text)
-    type: Mapped[ProjectCallType | None] = mapped_column()
+    type: Mapped[ProjectCallType | None] = mapped_column(
+        Enum(
+            ProjectCallType,
+            name="call_type",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+    )
     deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Relations
@@ -208,7 +235,7 @@ class ProjectMediaLibrary(Base):
         primary_key=True,
     )
     album_external_id: Mapped[str] = mapped_column(
-        String(36),
+        UUID(as_uuid=False),
         primary_key=True,
     )
 

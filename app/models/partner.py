@@ -38,7 +38,12 @@ class Partner(Base, UUIDMixin, TimestampMixin):
 
     website: Mapped[str | None] = mapped_column(String(500))
     type: Mapped[PartnerType] = mapped_column(
-        Enum(PartnerType, name="partner_type", create_type=False),
+        Enum(
+            PartnerType,
+            name="partner_type",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         nullable=False,
     )
     email: Mapped[str | None] = mapped_column(String(255))
