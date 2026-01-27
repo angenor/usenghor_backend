@@ -47,7 +47,7 @@ async def list_categories(
     """Liste les catégories avec pagination et filtres."""
     service = EditorialService(db)
     query = await service.get_categories(search=search)
-    return await paginate(db, query, pagination, EditorialCategory)
+    return await paginate(db, query, pagination, EditorialCategory, CategoryRead)
 
 
 @router.get("/categories/with-count", response_model=list[CategoryWithContentsCount])
@@ -74,13 +74,13 @@ async def get_category(
     db: DbSession,
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("editorial.view")),
-) -> EditorialCategory:
+) -> CategoryRead:
     """Récupère une catégorie par son ID."""
     service = EditorialService(db)
     category = await service.get_category_by_id(category_id)
     if not category:
         raise NotFoundException("Catégorie non trouvée")
-    return category
+    return CategoryRead.model_validate(category)
 
 
 @router.post(
@@ -105,12 +105,13 @@ async def update_category(
     db: DbSession,
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("editorial.edit")),
-) -> EditorialCategory:
+) -> CategoryRead:
     """Met à jour une catégorie."""
     service = EditorialService(db)
-    return await service.update_category(
+    category = await service.update_category(
         category_id, **data.model_dump(exclude_unset=True)
     )
+    return CategoryRead.model_validate(category)
 
 
 @router.delete("/categories/{category_id}", response_model=MessageResponse)
@@ -154,7 +155,24 @@ async def list_contents(
         year=year,
         admin_editable=admin_editable,
     )
-    return await paginate(db, query, pagination, EditorialContent)
+    return await paginate(db, query, pagination, EditorialContent, ContentRead)
+
+
+def _content_to_schema_with_category(content: EditorialContent) -> ContentWithCategory:
+    """Convertit un EditorialContent SQLAlchemy en schéma Pydantic ContentWithCategory."""
+    return ContentWithCategory(
+        id=content.id,
+        key=content.key,
+        value=content.value,
+        value_type=content.value_type,
+        category_id=content.category_id,
+        year=content.year,
+        description=content.description,
+        admin_editable=content.admin_editable,
+        created_at=content.created_at,
+        updated_at=content.updated_at,
+        category=CategoryRead.model_validate(content.category) if content.category else None,
+    )
 
 
 @router.get("/contents/{content_id}", response_model=ContentWithCategory)
@@ -163,13 +181,13 @@ async def get_content(
     db: DbSession,
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("editorial.view")),
-) -> EditorialContent:
+) -> ContentWithCategory:
     """Récupère un contenu par son ID."""
     service = EditorialService(db)
     content = await service.get_content_by_id(content_id)
     if not content:
         raise NotFoundException("Contenu non trouvé")
-    return content
+    return _content_to_schema_with_category(content)
 
 
 @router.get("/contents/by-key/{key}", response_model=ContentWithCategory)
@@ -178,13 +196,13 @@ async def get_content_by_key(
     db: DbSession,
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("editorial.view")),
-) -> EditorialContent:
+) -> ContentWithCategory:
     """Récupère un contenu par sa clé."""
     service = EditorialService(db)
     content = await service.get_content_by_key(key)
     if not content:
         raise NotFoundException("Contenu non trouvé")
-    return content
+    return _content_to_schema_with_category(content)
 
 
 @router.post(
@@ -212,14 +230,15 @@ async def update_content(
     db: DbSession,
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("editorial.edit")),
-) -> EditorialContent:
+) -> ContentRead:
     """Met à jour un contenu."""
     service = EditorialService(db)
-    return await service.update_content(
+    content = await service.update_content(
         content_id,
         **data.model_dump(exclude_unset=True),
         modified_by_external_id=current_user.id,
     )
+    return ContentRead.model_validate(content)
 
 
 @router.delete("/contents/{content_id}", response_model=MessageResponse)

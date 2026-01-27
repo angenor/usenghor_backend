@@ -8,7 +8,8 @@ Gestion des contenus éditoriaux de configuration et leur historique.
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -54,6 +55,12 @@ class EditorialContent(Base, UUIDMixin):
     key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     value: Mapped[str | None] = mapped_column(Text)
     value_type: Mapped[EditorialValueType] = mapped_column(
+        Enum(
+            EditorialValueType,
+            name="editorial_value_type",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         default=EditorialValueType.TEXT,
         nullable=False,
     )
@@ -97,7 +104,7 @@ class EditorialContentHistory(Base, UUIDMixin):
     )
     old_value: Mapped[str | None] = mapped_column(Text)
     new_value: Mapped[str | None] = mapped_column(Text)
-    modified_by_external_id: Mapped[str | None] = mapped_column(String(36))
+    modified_by_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     modified_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
