@@ -42,7 +42,7 @@ async def list_partners(
         country_id=country_id,
         active=active,
     )
-    return await paginate(db, query, pagination, Partner)
+    return await paginate(db, query, pagination, Partner, PartnerRead)
 
 
 @router.get("/{partner_id}", response_model=PartnerRead)

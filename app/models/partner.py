@@ -8,6 +8,7 @@ Modèles SQLAlchemy pour la gestion des partenaires.
 import enum
 
 from sqlalchemy import Boolean, Enum, Integer, String, Text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -33,8 +34,12 @@ class Partner(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (pas de FK, car cross-service)
-    logo_external_id: Mapped[str | None] = mapped_column(String(36))
-    country_external_id: Mapped[str | None] = mapped_column(String(36))
+    logo_external_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), nullable=True, default=None
+    )
+    country_external_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), nullable=True, default=None
+    )
 
     website: Mapped[str | None] = mapped_column(String(500))
     type: Mapped[PartnerType] = mapped_column(

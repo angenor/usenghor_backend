@@ -54,7 +54,7 @@ async def list_media(
         sort_by=sort_by,
         sort_order=sort_order,
     )
-    return await paginate(db, query, pagination, Media)
+    return await paginate(db, query, pagination, Media, MediaRead)
 
 
 @router.get("/statistics", response_model=MediaStatistics)
