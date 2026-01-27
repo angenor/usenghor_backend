@@ -380,6 +380,45 @@ class MediaService:
                 continue
         return count
 
+    async def get_download_info(self, media_id: str) -> tuple[Path, str, str]:
+        """
+        Récupère les informations de téléchargement d'un média.
+
+        Args:
+            media_id: ID du média.
+
+        Returns:
+            Tuple (chemin du fichier, nom du fichier, type MIME).
+
+        Raises:
+            NotFoundException: Si le média n'existe pas ou est externe.
+        """
+        media = await self.get_media_by_id(media_id)
+        if not media:
+            raise NotFoundException("Média non trouvé")
+
+        if media.is_external_url:
+            raise NotFoundException("Ce média est une URL externe et ne peut pas être téléchargé")
+
+        # Construire le chemin du fichier
+        # L'URL est stockée comme /uploads/folder/filename
+        # storage_path est le répertoire uploads (/var/www/uploads ou ./uploads)
+        # On extrait folder/filename de l'URL pour construire le chemin complet
+        url_parts = media.url.split("/uploads/", 1)
+        if len(url_parts) > 1:
+            # Chemin relatif depuis le dossier uploads: folder/filename
+            relative_path = url_parts[1]
+            file_path = self.storage_path / relative_path
+        else:
+            # Fallback: essayer avec le chemin complet
+            relative_path = media.url.lstrip("/")
+            file_path = self.storage_path.parent / relative_path
+
+        if not file_path.exists():
+            raise NotFoundException(f"Fichier non trouvé sur le serveur: {file_path}")
+
+        return file_path, media.name, media.mime_type or "application/octet-stream"
+
     async def get_media_statistics(self) -> dict:
         """Récupère les statistiques des médias."""
         # Total par type
