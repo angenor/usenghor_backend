@@ -53,7 +53,7 @@ async def list_services(
     query = await service.get_services(
         search=search, department_id=department_id, active=active
     )
-    return await paginate(db, query, pagination, Service)
+    return await paginate(db, query, pagination, Service, ServiceRead)
 
 
 @router.get("/{service_id}", response_model=ServiceWithDetails)
