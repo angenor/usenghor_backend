@@ -27,7 +27,8 @@ router = APIRouter(prefix="/campus-team", tags=["Campus Team"])
 async def list_campus_team(
     db: DbSession,
     current_user: CurrentUser,
-    pagination: PaginationParams = Depends(),
+    page: int = Query(1, ge=1, description="Numéro de page"),
+    limit: int = Query(100, ge=1, le=200, description="Nombre d'éléments par page"),
     campus_id: str | None = Query(None, description="Filtrer par campus"),
     active: bool | None = Query(None, description="Filtrer par statut actif"),
     _: bool = Depends(PermissionChecker("campuses.view")),
@@ -35,7 +36,10 @@ async def list_campus_team(
     """Liste les membres d'équipe avec pagination et filtres."""
     service = CampusService(db)
     query = await service.get_campus_team(campus_id=campus_id, active=active)
-    return await paginate(db, query, pagination, CampusTeam)
+
+    # Pagination personnalisée avec tri par display_order
+    pagination = PaginationParams(page=page, limit=limit, sort_by="display_order", sort_order="asc")
+    return await paginate(db, query, pagination, CampusTeam, CampusTeamRead)
 
 
 @router.get("/{team_member_id}", response_model=CampusTeamRead)
