@@ -17,12 +17,12 @@ from app.database import Base
 
 
 class Salutation(str, enum.Enum):
-    """Civilité."""
+    """Civilité - alignée sur l'enum PostgreSQL ('Mr', 'Mrs', 'Dr', 'Pr')."""
 
-    MR = "Mr"
-    MRS = "Mrs"
-    DR = "Dr"
-    PR = "Pr"
+    Mr = "Mr"
+    Mrs = "Mrs"
+    Dr = "Dr"
+    Pr = "Pr"
 
 
 class PublicationStatus(str, enum.Enum):

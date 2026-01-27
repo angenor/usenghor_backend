@@ -37,7 +37,7 @@ async def list_roles(
     """Liste les rôles avec pagination et filtres."""
     service = IdentityService(db)
     query = await service.get_roles(search=search, active=active)
-    return await paginate(db, query, pagination, Role)
+    return await paginate(db, query, pagination, Role, RoleRead)
 
 
 @router.get("/{role_id}", response_model=RoleWithPermissions)
