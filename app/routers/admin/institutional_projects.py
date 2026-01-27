@@ -53,7 +53,7 @@ async def list_categories(
     """Liste les catégories de projets."""
     service = ProjectService(db)
     query = await service.get_categories(search=search)
-    return await paginate(db, query, pagination, ProjectCategory)
+    return await paginate(db, query, pagination, ProjectCategory, ProjectCategoryRead)
 
 
 @router.get("/categories/{category_id}", response_model=ProjectCategoryRead)
@@ -142,7 +142,7 @@ async def list_projects(
         category_id=category_id,
         department_external_id=department_external_id,
     )
-    return await paginate(db, query, pagination, Project)
+    return await paginate(db, query, pagination, Project, ProjectReadWithRelations)
 
 
 @router.get("/statistics", response_model=ProjectStatistics)
@@ -329,7 +329,7 @@ async def list_all_calls(
     """Liste tous les appels de projets."""
     service = ProjectService(db)
     query = await service.get_calls(status=status)
-    return await paginate(db, query, pagination, ProjectCall)
+    return await paginate(db, query, pagination, ProjectCall, ProjectCallRead)
 
 
 @router.get("/{project_id}/calls", response_model=list[ProjectCallRead])
