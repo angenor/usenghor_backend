@@ -8,6 +8,7 @@ Modèles SQLAlchemy pour la gestion des campus.
 from datetime import date
 
 from sqlalchemy import Boolean, Date, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -23,11 +24,11 @@ class Campus(Base, UUIDMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
 
-    # Références externes (pas de FK, car cross-service)
-    cover_image_external_id: Mapped[str | None] = mapped_column(String(36))
-    country_external_id: Mapped[str | None] = mapped_column(String(36))
-    head_external_id: Mapped[str | None] = mapped_column(String(36))
-    album_external_id: Mapped[str | None] = mapped_column(String(36))
+    # Références externes (pas de FK, car cross-service) - UUID pour correspondre au schéma SQL
+    cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    country_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    head_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    album_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     # Coordonnées
     email: Mapped[str | None] = mapped_column(String(255))
@@ -60,7 +61,7 @@ class CampusPartner(Base):
     campus_id: Mapped[str] = mapped_column(
         ForeignKey("campuses.id", ondelete="CASCADE"), primary_key=True
     )
-    partner_external_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    partner_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     start_date: Mapped[date | None] = mapped_column(Date)
     end_date: Mapped[date | None] = mapped_column(Date)
 
@@ -73,7 +74,7 @@ class CampusTeam(Base, UUIDMixin):
     campus_id: Mapped[str] = mapped_column(
         ForeignKey("campuses.id", ondelete="CASCADE"), nullable=False
     )
-    user_external_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    user_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     position: Mapped[str] = mapped_column(String(255), nullable=False)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
     start_date: Mapped[date | None] = mapped_column(Date)
@@ -95,4 +96,4 @@ class CampusMediaLibrary(Base):
     campus_id: Mapped[str] = mapped_column(
         ForeignKey("campuses.id", ondelete="CASCADE"), primary_key=True
     )
-    album_external_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    album_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)

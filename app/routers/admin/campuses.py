@@ -47,7 +47,7 @@ async def list_campuses(
         active=active,
         is_headquarters=is_headquarters,
     )
-    return await paginate(db, query, pagination, Campus)
+    return await paginate(db, query, pagination, Campus, CampusRead)
 
 
 @router.get("/{campus_id}", response_model=CampusWithTeam)
