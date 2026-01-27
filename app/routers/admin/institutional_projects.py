@@ -83,7 +83,7 @@ async def create_category(
     """Crée une nouvelle catégorie."""
     service = ProjectService(db)
     category = await service.create_category(**data.model_dump(exclude_unset=True))
-    return IdResponse(id=category.id)
+    return IdResponse(id=category.id, message="Catégorie créée avec succès")
 
 
 @router.put("/categories/{category_id}", response_model=ProjectCategoryRead)
@@ -182,7 +182,7 @@ async def create_project(
     """Crée un nouveau projet."""
     service = ProjectService(db)
     project = await service.create_project(**data.model_dump(exclude_unset=True))
-    return IdResponse(id=project.id)
+    return IdResponse(id=project.id, message="Projet créé avec succès")
 
 
 @router.put("/{project_id}", response_model=ProjectRead)
@@ -364,7 +364,7 @@ async def create_project_call(
     call = await service.create_call(
         project_id, **data.model_dump(exclude_unset=True)
     )
-    return IdResponse(id=call.id)
+    return IdResponse(id=call.id, message="Appel créé avec succès")
 
 
 @router.get("/calls/{call_id}", response_model=ProjectCallRead)
