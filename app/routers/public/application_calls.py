@@ -40,7 +40,7 @@ async def list_calls(
         call_status=call_status,
         program_id=program_id,
     )
-    return await paginate(db, query, pagination, ApplicationCall)
+    return await paginate(db, query, pagination, ApplicationCall, ApplicationCallPublic)
 
 
 @router.get("/ongoing", response_model=list[ApplicationCallPublic])
