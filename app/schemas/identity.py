@@ -7,7 +7,7 @@ Schémas Pydantic pour l'authentification et les utilisateurs.
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 # =============================================================================
@@ -353,6 +353,28 @@ class AuditLogRead(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    @field_validator("ip_address", mode="before")
+    @classmethod
+    def convert_ip_to_string(cls, v):
+        """Convertit l'adresse IP PostgreSQL INET en string."""
+        if v is None:
+            return None
+        return str(v)
+
+
+class AuditLogUserStat(BaseModel):
+    """Statistique par utilisateur."""
+
+    user_id: str
+    count: int
+
+
+class AuditLogDayStat(BaseModel):
+    """Statistique par jour."""
+
+    date: str
+    count: int
+
 
 class AuditLogStatistics(BaseModel):
     """Statistiques des logs d'audit."""
@@ -360,6 +382,8 @@ class AuditLogStatistics(BaseModel):
     total: int
     by_action: dict[str, int]
     by_table: dict[str, int]
+    by_user: list[AuditLogUserStat] = []
+    by_day: list[AuditLogDayStat] = []
 
 
 class AuditLogPurge(BaseModel):

@@ -6,10 +6,10 @@ Logique métier pour la gestion des utilisateurs, rôles et permissions.
 """
 
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import String, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -628,6 +628,10 @@ class IdentityService:
         table_name: str | None = None,
         record_id: str | None = None,
         action: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        ip_address: str | None = None,
+        search: str | None = None,
     ) -> select:
         """Construit une requête pour lister les logs d'audit."""
         query = select(AuditLog)
@@ -643,6 +647,26 @@ class IdentityService:
 
         if action:
             query = query.where(AuditLog.action == action)
+
+        if date_from:
+            query = query.where(AuditLog.created_at >= date_from)
+
+        if date_to:
+            query = query.where(AuditLog.created_at <= date_to)
+
+        if ip_address:
+            query = query.where(
+                cast(AuditLog.ip_address, String).ilike(f"{ip_address}%")
+            )
+
+        if search:
+            search_filter = f"%{search}%"
+            query = query.where(
+                or_(
+                    AuditLog.action.ilike(search_filter),
+                    AuditLog.table_name.ilike(search_filter),
+                )
+            )
 
         return query
 
@@ -701,10 +725,42 @@ class IdentityService:
         total_result = await self.db.execute(select(func.count(AuditLog.id)))
         total = total_result.scalar() or 0
 
+        # Top 10 utilisateurs
+        users_result = await self.db.execute(
+            select(AuditLog.user_id, func.count(AuditLog.id).label("count"))
+            .where(AuditLog.user_id.isnot(None))
+            .group_by(AuditLog.user_id)
+            .order_by(func.count(AuditLog.id).desc())
+            .limit(10)
+        )
+        by_user = [
+            {"user_id": str(row[0]), "count": row[1]}
+            for row in users_result.all()
+        ]
+
+        # Par jour (30 derniers jours)
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        day_column = func.date_trunc("day", AuditLog.created_at).label("day")
+        days_result = await self.db.execute(
+            select(
+                day_column,
+                func.count(AuditLog.id).label("count"),
+            )
+            .where(AuditLog.created_at >= thirty_days_ago)
+            .group_by(day_column)
+            .order_by(day_column)
+        )
+        by_day = [
+            {"date": row[0].isoformat(), "count": row[1]}
+            for row in days_result.all()
+        ]
+
         return {
             "total": total,
             "by_action": actions,
             "by_table": tables,
+            "by_user": by_user,
+            "by_day": by_day,
         }
 
     async def purge_audit_logs(self, before_date: datetime) -> int:

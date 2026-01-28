@@ -34,7 +34,7 @@ async def list_news(
         tag_id=tag_id,
         campus_id=campus_id,
     )
-    return await paginate(db, query, pagination, News)
+    return await paginate(db, query, pagination, News, schema_class=NewsWithTags)
 
 
 @router.get("/{slug}", response_model=NewsWithTags)
