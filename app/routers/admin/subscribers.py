@@ -69,7 +69,7 @@ async def create_subscriber(
     """Crée un nouvel abonné."""
     service = NewsletterService(db)
     subscriber = await service.subscribe(**data.model_dump(exclude_unset=True))
-    return IdResponse(id=subscriber.id)
+    return IdResponse(id=subscriber.id, message="Abonné créé avec succès")
 
 
 @router.put("/{subscriber_id}", response_model=SubscriberRead)

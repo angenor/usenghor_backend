@@ -84,7 +84,7 @@ async def create_campaign(
         **data.model_dump(exclude_unset=True),
         created_by_external_id=current_user.id,
     )
-    return IdResponse(id=campaign.id)
+    return IdResponse(id=campaign.id, message="Campagne créée avec succès")
 
 
 @router.put("/{campaign_id}", response_model=CampaignRead)
@@ -162,7 +162,7 @@ async def duplicate_campaign(
     """Duplique une campagne."""
     service = NewsletterService(db)
     campaign = await service.duplicate_campaign(campaign_id)
-    return IdResponse(id=campaign.id)
+    return IdResponse(id=campaign.id, message="Campagne dupliquée avec succès")
 
 
 @router.get("/{campaign_id}/statistics", response_model=CampaignStatistics)

@@ -95,7 +95,7 @@ async def create_category(
     """Crée une nouvelle catégorie."""
     service = EditorialService(db)
     category = await service.create_category(**data.model_dump(exclude_unset=True))
-    return IdResponse(id=category.id)
+    return IdResponse(id=category.id, message="Catégorie créée avec succès")
 
 
 @router.put("/categories/{category_id}", response_model=CategoryRead)
@@ -220,7 +220,7 @@ async def create_content(
         **data.model_dump(exclude_unset=True),
         modified_by_external_id=current_user.id,
     )
-    return IdResponse(id=content.id)
+    return IdResponse(id=content.id, message="Contenu créé avec succès")
 
 
 @router.put("/contents/{content_id}", response_model=ContentRead)

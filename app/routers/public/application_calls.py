@@ -139,4 +139,4 @@ async def submit_application(
         data["program_external_id"] = call.program_external_id
 
     application = await service.create_application(data)
-    return IdResponse(id=application.id)
+    return IdResponse(id=application.id, message="Candidature soumise avec succès")
