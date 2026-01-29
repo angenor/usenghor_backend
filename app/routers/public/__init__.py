@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from app.routers.public import (
     application_calls,
+    campuses,
     countries,
     editorial,
     events,
@@ -22,6 +23,7 @@ from app.routers.public import (
 router = APIRouter(prefix="/api/public", tags=["Public"])
 
 # Inclusion des sous-routers
+router.include_router(campuses.router)
 router.include_router(countries.router)
 router.include_router(news.router)
 router.include_router(events.router)
