@@ -10,7 +10,7 @@
 -- Tables: events, event_partners, event_registrations, event_media_library,
 --         news, news_media, tags, news_tags
 -- Dépendances externes: CORE (countries), IDENTITY (users), MEDIA (media, albums),
---                       CAMPUS (campuses), ORGANIZATION (departments, services),
+--                       CAMPUS (campuses), ORGANIZATION (sectors, services),
 --                       PARTNER (partners), PROJECT (projects)
 -- ============================================================================
 
@@ -29,8 +29,8 @@ CREATE TABLE events (
     cover_image_external_id UUID,  -- → MEDIA.media.id
     country_external_id UUID,      -- → CORE.countries.id
     campus_external_id UUID,       -- → CAMPUS.campuses.id
-    department_external_id UUID,   -- → ORGANIZATION.departments.id
-    project_external_id UUID,      -- → PROJECT.projects.id
+    sector_external_id UUID,        -- → ORGANIZATION.sectors.id
+    project_external_id UUID,       -- → PROJECT.projects.id
     organizer_external_id UUID,    -- → IDENTITY.users.id
     album_external_id UUID,        -- → MEDIA.albums.id
     type event_type NOT NULL,
@@ -57,7 +57,7 @@ CREATE INDEX idx_events_project ON events(project_external_id);
 CREATE INDEX idx_events_type ON events(type);
 CREATE INDEX idx_events_slug ON events(slug);
 CREATE INDEX idx_events_campus ON events(campus_external_id);
-CREATE INDEX idx_events_department ON events(department_external_id);
+CREATE INDEX idx_events_sector ON events(sector_external_id);
 
 -- Partenaires d'un événement
 CREATE TABLE event_partners (
@@ -112,8 +112,8 @@ CREATE TABLE news (
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
     campus_external_id UUID,       -- → CAMPUS.campuses.id
-    department_external_id UUID,   -- → ORGANIZATION.departments.id
-    service_external_id UUID,      -- → ORGANIZATION.services.id
+    sector_external_id UUID,        -- → ORGANIZATION.sectors.id
+    service_external_id UUID,       -- → ORGANIZATION.services.id
     event_external_id UUID,        -- → CONTENT.events.id (même service, peut être FK si souhaité)
     project_external_id UUID,      -- → PROJECT.projects.id
     author_external_id UUID,       -- → IDENTITY.users.id

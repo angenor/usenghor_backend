@@ -9,7 +9,7 @@
 -- ============================================================================
 -- Tables: project_categories, projects, project_countries, project_category_links,
 --         project_partners, project_calls, project_media_library
--- Dépendances externes: CORE (countries), ORGANIZATION (departments),
+-- Dépendances externes: CORE (countries), ORGANIZATION (sectors),
 --                       IDENTITY (users), MEDIA (media, albums), PARTNER (partners)
 -- Note: Utilise project_status défini dans 04_organization.sql
 -- ============================================================================
@@ -34,7 +34,7 @@ CREATE TABLE projects (
     description TEXT,
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
-    department_external_id UUID,   -- → ORGANIZATION.departments.id
+    sector_external_id UUID,        -- → ORGANIZATION.sectors.id
     manager_external_id UUID,      -- → IDENTITY.users.id
     album_external_id UUID,        -- → MEDIA.albums.id
     start_date DATE,
@@ -50,7 +50,7 @@ CREATE TABLE projects (
 
 CREATE INDEX idx_projects_status ON projects(status);
 CREATE INDEX idx_projects_slug ON projects(slug);
-CREATE INDEX idx_projects_department ON projects(department_external_id);
+CREATE INDEX idx_projects_sector ON projects(sector_external_id);
 
 -- Pays concernés par un projet
 CREATE TABLE project_countries (
@@ -98,7 +98,7 @@ CREATE TABLE project_media_library (
 
 COMMENT ON TABLE projects IS '[PROJECT] Projets institutionnels de l''université';
 COMMENT ON TABLE project_categories IS '[PROJECT] Catégories de projets';
-COMMENT ON COLUMN projects.department_external_id IS 'Référence externe vers ORGANIZATION.departments.id';
+COMMENT ON COLUMN projects.sector_external_id IS 'Référence externe vers ORGANIZATION.sectors.id';
 COMMENT ON COLUMN projects.manager_external_id IS 'Référence externe vers IDENTITY.users.id';
 COMMENT ON COLUMN project_partners.partner_external_id IS 'Référence externe vers PARTNER.partners.id';
 

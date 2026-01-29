@@ -7,7 +7,7 @@
 --  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
 -- SERVICE: ORGANIZATION (Structure organisationnelle)
 -- ============================================================================
--- Tables: departments, services, service_objectives, service_achievements,
+-- Tables: sectors, services, service_objectives, service_achievements,
 --         service_projects, service_media_library
 -- Dépendances externes: IDENTITY (head_id), MEDIA (icon_id, cover_image_id, album_id)
 -- ============================================================================
@@ -15,8 +15,8 @@
 -- Types ENUM spécifiques à ce service
 CREATE TYPE project_status AS ENUM ('ongoing', 'completed', 'suspended', 'planned');
 
--- Départements / Directions
-CREATE TABLE departments (
+-- Secteurs
+CREATE TABLE sectors (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
@@ -32,12 +32,12 @@ CREATE TABLE departments (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_departments_code ON departments(code);
+CREATE INDEX idx_sectors_code ON sectors(code);
 
--- Services de département
+-- Services de secteur
 CREATE TABLE services (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    department_id UUID REFERENCES departments(id) ON DELETE CASCADE,
+    sector_id UUID REFERENCES sectors(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     mission TEXT,
@@ -52,7 +52,7 @@ CREATE TABLE services (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_services_department ON services(department_id);
+CREATE INDEX idx_services_sector ON services(sector_id);
 
 -- Objectifs d'un service
 CREATE TABLE service_objectives (
@@ -97,9 +97,9 @@ CREATE TABLE service_media_library (
     PRIMARY KEY (service_id, album_external_id)
 );
 
-COMMENT ON TABLE departments IS '[ORGANIZATION] Départements / Directions de l''université';
-COMMENT ON TABLE services IS '[ORGANIZATION] Services rattachés aux départements';
-COMMENT ON COLUMN departments.head_external_id IS 'Référence externe vers IDENTITY.users.id';
+COMMENT ON TABLE sectors IS '[ORGANIZATION] Secteurs de l''université';
+COMMENT ON TABLE services IS '[ORGANIZATION] Services rattachés aux secteurs';
+COMMENT ON COLUMN sectors.head_external_id IS 'Référence externe vers IDENTITY.users.id';
 COMMENT ON COLUMN services.album_external_id IS 'Référence externe vers MEDIA.albums.id';
 
 -- ============================================================================

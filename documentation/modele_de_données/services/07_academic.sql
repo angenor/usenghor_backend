@@ -9,7 +9,7 @@
 -- ============================================================================
 -- Tables: programs, program_campuses, program_partners, program_semesters,
 --         program_courses, program_career_opportunities, program_skills
--- Dépendances externes: ORGANIZATION (department_id), IDENTITY (coordinator_id),
+-- Dépendances externes: ORGANIZATION (sector_id), IDENTITY (coordinator_id),
 --                       MEDIA (cover_image_id), CAMPUS (campus_id), PARTNER (partner_id)
 -- ============================================================================
 
@@ -26,7 +26,7 @@ CREATE TABLE programs (
     teaching_methods TEXT,
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
-    department_external_id UUID,   -- → ORGANIZATION.departments.id
+    sector_external_id UUID,        -- → ORGANIZATION.sectors.id
     coordinator_external_id UUID,  -- → IDENTITY.users.id
     type program_type NOT NULL,
     duration_months INT,
@@ -41,7 +41,7 @@ CREATE TABLE programs (
 
 CREATE INDEX idx_programs_type ON programs(type);
 CREATE INDEX idx_programs_slug ON programs(slug);
-CREATE INDEX idx_programs_department ON programs(department_external_id);
+CREATE INDEX idx_programs_sector ON programs(sector_external_id);
 
 -- Campus où se déroule une formation
 CREATE TABLE program_campuses (
@@ -103,7 +103,7 @@ CREATE TABLE program_skills (
 );
 
 COMMENT ON TABLE programs IS '[ACADEMIC] Formations proposées par l''Université Senghor';
-COMMENT ON COLUMN programs.department_external_id IS 'Référence externe vers ORGANIZATION.departments.id';
+COMMENT ON COLUMN programs.sector_external_id IS 'Référence externe vers ORGANIZATION.sectors.id';
 COMMENT ON COLUMN programs.coordinator_external_id IS 'Référence externe vers IDENTITY.users.id';
 COMMENT ON COLUMN program_campuses.campus_external_id IS 'Référence externe vers CAMPUS.campuses.id';
 COMMENT ON COLUMN program_partners.partner_external_id IS 'Référence externe vers PARTNER.partners.id';
