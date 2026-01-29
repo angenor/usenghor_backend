@@ -14,9 +14,10 @@ from sqlalchemy import select
 from app.core.dependencies import DbSession
 from app.core.exceptions import NotFoundException
 from app.core.pagination import PaginationParams, paginate
-from app.models.campus import Campus
+from app.models.campus import Campus, CampusPartner
 from app.models.core import Country
 from app.models.media import Media
+from app.models.partner import Partner, PartnerType
 from app.services.campus_service import CampusService
 
 
@@ -57,6 +58,21 @@ class CampusPublicEnriched(BaseModel):
     is_headquarters: bool
 
     # Données de pays (résolues depuis country_external_id)
+    country_iso_code: str | None
+    country_name_fr: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class CampusPartnerPublic(BaseModel):
+    """Schéma public pour un partenaire de campus."""
+
+    id: str
+    name: str
+    description: str | None
+    logo_url: str | None
+    website: str | None
+    type: PartnerType
     country_iso_code: str | None
     country_name_fr: str | None
 
@@ -179,3 +195,53 @@ async def get_campus_by_code(
         country_iso_code=country.iso_code if country else None,
         country_name_fr=country.name_fr if country else None,
     )
+
+
+@router.get("/{campus_id}/partners", response_model=list[CampusPartnerPublic])
+async def get_campus_partners(
+    campus_id: str,
+    db: DbSession,
+) -> list[CampusPartnerPublic]:
+    """
+    Récupère les partenaires d'un campus.
+
+    Retourne la liste des partenaires actifs associés au campus,
+    avec leurs informations enrichies (logo, pays).
+    """
+    # Vérifier que le campus existe
+    campus_result = await db.execute(
+        select(Campus).where(Campus.id == campus_id, Campus.active == True)
+    )
+    if not campus_result.scalar_one_or_none():
+        raise NotFoundException("Campus non trouvé")
+
+    # Récupérer les partenaires avec jointures
+    query = (
+        select(Partner, Media, Country)
+        .join(CampusPartner, CampusPartner.partner_external_id == Partner.id)
+        .outerjoin(Media, Partner.logo_external_id == Media.id)
+        .outerjoin(Country, Partner.country_external_id == Country.id)
+        .where(
+            CampusPartner.campus_id == campus_id,
+            Partner.active == True,
+        )
+        .order_by(Partner.display_order, Partner.name)
+    )
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    partners = []
+    for partner, logo_media, country in rows:
+        partners.append(CampusPartnerPublic(
+            id=partner.id,
+            name=partner.name,
+            description=partner.description,
+            logo_url=resolve_media_url(logo_media),
+            website=partner.website,
+            type=partner.type,
+            country_iso_code=country.iso_code if country else None,
+            country_name_fr=country.name_fr if country else None,
+        ))
+
+    return partners
