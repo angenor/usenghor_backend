@@ -60,6 +60,21 @@ async def get_partner(
     return partner
 
 
+@router.get("/{partner_id}/associations", response_model=dict)
+async def get_partner_associations(
+    partner_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("partners.view")),
+) -> dict:
+    """Récupère les associations d'un partenaire (campus et projets)."""
+    service = PartnerService(db)
+    partner = await service.get_partner_by_id(partner_id)
+    if not partner:
+        raise NotFoundException("Partenaire non trouvé")
+    return await service.get_partner_associations(partner_id)
+
+
 @router.post("", response_model=IdResponse, status_code=status.HTTP_201_CREATED)
 async def create_partner(
     partner_data: PartnerCreate,

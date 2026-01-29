@@ -11,7 +11,9 @@ from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException
+from app.models.campus import Campus, CampusPartner
 from app.models.partner import Partner, PartnerType
+from app.models.project import Project, ProjectPartner
 
 
 class PartnerService:
@@ -184,3 +186,44 @@ class PartnerService:
             .order_by(Partner.display_order, Partner.name)
         )
         return list(result.scalars().all())
+
+    async def get_partner_associations(self, partner_id: str) -> dict:
+        """
+        Récupère les associations d'un partenaire (campus et projets).
+
+        Args:
+            partner_id: ID du partenaire.
+
+        Returns:
+            Dict avec les listes de campus et projets associés.
+        """
+        # Récupérer les campus associés
+        campus_result = await self.db.execute(
+            select(Campus.id, Campus.name, Campus.code)
+            .join(CampusPartner, Campus.id == CampusPartner.campus_id)
+            .where(CampusPartner.partner_external_id == partner_id)
+            .order_by(Campus.name)
+        )
+        campuses = [
+            {"id": row.id, "name": row.name, "code": row.code}
+            for row in campus_result.all()
+        ]
+
+        # Récupérer les projets associés
+        project_result = await self.db.execute(
+            select(Project.id, Project.title, ProjectPartner.partner_role)
+            .join(ProjectPartner, Project.id == ProjectPartner.project_id)
+            .where(ProjectPartner.partner_external_id == partner_id)
+            .order_by(Project.title)
+        )
+        projects = [
+            {"id": row.id, "title": row.title, "role": row.partner_role}
+            for row in project_result.all()
+        ]
+
+        return {
+            "campuses": campuses,
+            "projects": projects,
+            "campuses_count": len(campuses),
+            "projects_count": len(projects),
+        }
