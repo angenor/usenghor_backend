@@ -2,7 +2,7 @@
 Router Admin - Services
 =======================
 
-Endpoints CRUD pour la gestion des services de département.
+Endpoints CRUD pour la gestion des services de secteur.
 """
 
 from fastapi import APIRouter, Depends, Query, status
@@ -44,14 +44,14 @@ async def list_services(
     current_user: CurrentUser,
     pagination: PaginationParams = Depends(),
     search: str | None = Query(None, description="Recherche sur nom ou description"),
-    department_id: str | None = Query(None, description="Filtrer par département"),
+    sector_id: str | None = Query(None, description="Filtrer par secteur"),
     active: bool | None = Query(None, description="Filtrer par statut actif"),
     _: bool = Depends(PermissionChecker("organization.view")),
 ) -> dict:
     """Liste les services avec pagination et filtres."""
     service = OrganizationService(db)
     query = await service.get_services(
-        search=search, department_id=department_id, active=active
+        search=search, sector_id=sector_id, active=active
     )
     return await paginate(db, query, pagination, Service, ServiceRead)
 
@@ -82,7 +82,7 @@ async def create_service(
     org_service = OrganizationService(db)
     svc = await org_service.create_service(
         name=service_data.name,
-        department_id=service_data.department_id,
+        sector_id=service_data.sector_id,
         description=service_data.description,
         mission=service_data.mission,
         email=service_data.email,

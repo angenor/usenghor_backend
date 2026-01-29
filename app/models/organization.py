@@ -25,10 +25,10 @@ class ProjectStatus(str, enum.Enum):
     PLANNED = "planned"
 
 
-class Department(Base, UUIDMixin, TimestampMixin):
-    """Département / Direction de l'université."""
+class Sector(Base, UUIDMixin, TimestampMixin):
+    """Secteur de l'université."""
 
-    __tablename__ = "departments"
+    __tablename__ = "sectors"
 
     code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -46,19 +46,19 @@ class Department(Base, UUIDMixin, TimestampMixin):
     # Relations
     services: Mapped[list["Service"]] = relationship(
         "Service",
-        back_populates="department",
+        back_populates="sector",
         cascade="all, delete-orphan",
         lazy="selectin",
     )
 
 
 class Service(Base, UUIDMixin, TimestampMixin):
-    """Service rattaché à un département."""
+    """Service rattaché à un secteur."""
 
     __tablename__ = "services"
 
-    department_id: Mapped[str | None] = mapped_column(
-        ForeignKey("departments.id", ondelete="CASCADE")
+    sector_id: Mapped[str | None] = mapped_column(
+        ForeignKey("sectors.id", ondelete="CASCADE")
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
@@ -75,8 +75,8 @@ class Service(Base, UUIDMixin, TimestampMixin):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Relations
-    department: Mapped["Department"] = relationship(
-        "Department", back_populates="services"
+    sector: Mapped["Sector"] = relationship(
+        "Sector", back_populates="services"
     )
     objectives: Mapped[list["ServiceObjective"]] = relationship(
         "ServiceObjective",

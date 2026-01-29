@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import ConflictException, NotFoundException
 from app.models.organization import (
-    Department,
+    Sector,
     Service,
     ServiceAchievement,
     ServiceMediaLibrary,
@@ -29,16 +29,16 @@ class OrganizationService:
         self.db = db
 
     # =========================================================================
-    # DEPARTMENTS
+    # SECTORS
     # =========================================================================
 
-    async def get_departments(
+    async def get_sectors(
         self,
         search: str | None = None,
         active: bool | None = None,
     ) -> select:
         """
-        Construit une requête pour lister les départements.
+        Construit une requête pour lister les secteurs.
 
         Args:
             search: Recherche sur code ou nom.
@@ -47,180 +47,211 @@ class OrganizationService:
         Returns:
             Requête SQLAlchemy Select.
         """
-        query = select(Department).options(selectinload(Department.services))
+        query = select(Sector).options(selectinload(Sector.services))
 
         if search:
             search_filter = f"%{search}%"
             query = query.where(
                 or_(
-                    Department.code.ilike(search_filter),
-                    Department.name.ilike(search_filter),
-                    Department.description.ilike(search_filter),
+                    Sector.code.ilike(search_filter),
+                    Sector.name.ilike(search_filter),
+                    Sector.description.ilike(search_filter),
                 )
             )
 
         if active is not None:
-            query = query.where(Department.active == active)
+            query = query.where(Sector.active == active)
 
-        query = query.order_by(Department.display_order, Department.name)
+        query = query.order_by(Sector.display_order, Sector.name)
         return query
 
-    async def get_department_by_id(self, department_id: str) -> Department | None:
-        """Récupère un département par son ID."""
+    async def get_sector_by_id(self, sector_id: str) -> Sector | None:
+        """Récupère un secteur par son ID."""
         result = await self.db.execute(
-            select(Department)
-            .options(selectinload(Department.services))
-            .where(Department.id == department_id)
+            select(Sector)
+            .options(selectinload(Sector.services))
+            .where(Sector.id == sector_id)
         )
         return result.scalar_one_or_none()
 
-    async def get_department_by_code(self, code: str) -> Department | None:
-        """Récupère un département par son code."""
+    async def get_sector_by_code(self, code: str) -> Sector | None:
+        """Récupère un secteur par son code."""
         result = await self.db.execute(
-            select(Department).where(Department.code == code.upper())
+            select(Sector)
+            .options(selectinload(Sector.services))
+            .where(Sector.code == code.upper())
         )
         return result.scalar_one_or_none()
 
-    async def create_department(
+    async def create_sector(
         self,
         code: str,
         name: str,
         **kwargs,
-    ) -> Department:
+    ) -> Sector:
         """
-        Crée un nouveau département.
+        Crée un nouveau secteur.
 
         Args:
-            code: Code unique du département.
-            name: Nom du département.
+            code: Code unique du secteur.
+            name: Nom du secteur.
             **kwargs: Autres champs optionnels.
 
         Returns:
-            Département créé.
+            Secteur créé.
 
         Raises:
             ConflictException: Si le code existe déjà.
         """
         code = code.upper()
-        existing = await self.get_department_by_code(code)
+        existing = await self.get_sector_by_code(code)
         if existing:
-            raise ConflictException(f"Un département avec le code '{code}' existe déjà")
+            raise ConflictException(f"Un secteur avec le code '{code}' existe déjà")
 
-        department = Department(
+        sector = Sector(
             id=str(uuid4()),
             code=code,
             name=name,
             **kwargs,
         )
-        self.db.add(department)
+        self.db.add(sector)
         await self.db.flush()
-        return department
+        return sector
 
-    async def update_department(self, department_id: str, **kwargs) -> Department:
+    async def update_sector(self, sector_id: str, **kwargs) -> Sector:
         """
-        Met à jour un département.
+        Met à jour un secteur.
 
         Args:
-            department_id: ID du département.
+            sector_id: ID du secteur.
             **kwargs: Champs à mettre à jour.
 
         Returns:
-            Département mis à jour.
+            Secteur mis à jour.
 
         Raises:
-            NotFoundException: Si le département n'existe pas.
+            NotFoundException: Si le secteur n'existe pas.
             ConflictException: Si le nouveau code existe déjà.
         """
-        department = await self.get_department_by_id(department_id)
-        if not department:
-            raise NotFoundException("Département non trouvé")
+        sector = await self.get_sector_by_id(sector_id)
+        if not sector:
+            raise NotFoundException("Secteur non trouvé")
 
         # Vérifier l'unicité du code si modifié
         if "code" in kwargs and kwargs["code"]:
             kwargs["code"] = kwargs["code"].upper()
-            if kwargs["code"] != department.code:
-                existing = await self.get_department_by_code(kwargs["code"])
+            if kwargs["code"] != sector.code:
+                existing = await self.get_sector_by_code(kwargs["code"])
                 if existing:
                     raise ConflictException(
-                        f"Un département avec le code '{kwargs['code']}' existe déjà"
+                        f"Un secteur avec le code '{kwargs['code']}' existe déjà"
                     )
 
         await self.db.execute(
-            update(Department).where(Department.id == department_id).values(**kwargs)
+            update(Sector).where(Sector.id == sector_id).values(**kwargs)
         )
         await self.db.flush()
-        return await self.get_department_by_id(department_id)
+        return await self.get_sector_by_id(sector_id)
 
-    async def delete_department(self, department_id: str) -> None:
+    async def delete_sector(self, sector_id: str) -> None:
         """
-        Supprime un département.
+        Supprime un secteur.
 
         Args:
-            department_id: ID du département.
+            sector_id: ID du secteur.
 
         Raises:
-            NotFoundException: Si le département n'existe pas.
+            NotFoundException: Si le secteur n'existe pas.
         """
-        department = await self.get_department_by_id(department_id)
-        if not department:
-            raise NotFoundException("Département non trouvé")
+        sector = await self.get_sector_by_id(sector_id)
+        if not sector:
+            raise NotFoundException("Secteur non trouvé")
 
         await self.db.execute(
-            delete(Department).where(Department.id == department_id)
+            delete(Sector).where(Sector.id == sector_id)
         )
         await self.db.flush()
 
-    async def toggle_department_active(self, department_id: str) -> Department:
-        """Bascule le statut actif d'un département."""
-        department = await self.get_department_by_id(department_id)
-        if not department:
-            raise NotFoundException("Département non trouvé")
+    async def toggle_sector_active(self, sector_id: str) -> Sector:
+        """Bascule le statut actif d'un secteur."""
+        sector = await self.get_sector_by_id(sector_id)
+        if not sector:
+            raise NotFoundException("Secteur non trouvé")
 
         await self.db.execute(
-            update(Department)
-            .where(Department.id == department_id)
-            .values(active=not department.active)
+            update(Sector)
+            .where(Sector.id == sector_id)
+            .values(active=not sector.active)
         )
         await self.db.flush()
-        return await self.get_department_by_id(department_id)
+        return await self.get_sector_by_id(sector_id)
 
-    async def reorder_departments(self, department_ids: list[str]) -> list[Department]:
+    async def reorder_sectors(self, sector_ids: list[str]) -> list[Sector]:
         """
-        Réordonne les départements.
+        Réordonne les secteurs.
 
         Args:
-            department_ids: Liste ordonnée des IDs de départements.
+            sector_ids: Liste ordonnée des IDs de secteurs.
 
         Returns:
-            Liste des départements réordonnés.
+            Liste des secteurs réordonnés.
         """
-        for index, dept_id in enumerate(department_ids):
+        for index, sect_id in enumerate(sector_ids):
             await self.db.execute(
-                update(Department)
-                .where(Department.id == dept_id)
+                update(Sector)
+                .where(Sector.id == sect_id)
                 .values(display_order=index)
             )
         await self.db.flush()
 
         result = await self.db.execute(
-            select(Department)
-            .where(Department.id.in_(department_ids))
-            .order_by(Department.display_order)
+            select(Sector)
+            .where(Sector.id.in_(sector_ids))
+            .order_by(Sector.display_order)
         )
         return list(result.scalars().all())
 
-    async def get_department_services(self, department_id: str) -> list[Service]:
-        """Récupère les services d'un département."""
-        department = await self.get_department_by_id(department_id)
-        if not department:
-            raise NotFoundException("Département non trouvé")
+    async def get_sector_services(self, sector_id: str) -> list[Service]:
+        """Récupère les services d'un secteur."""
+        sector = await self.get_sector_by_id(sector_id)
+        if not sector:
+            raise NotFoundException("Secteur non trouvé")
 
         result = await self.db.execute(
             select(Service)
-            .where(Service.department_id == department_id)
+            .where(Service.sector_id == sector_id)
             .order_by(Service.display_order, Service.name)
         )
         return list(result.scalars().all())
+
+    # =========================================================================
+    # SECTORS - PUBLIC METHODS
+    # =========================================================================
+
+    async def get_active_sectors(self) -> list[Sector]:
+        """Récupère les secteurs actifs triés par display_order."""
+        result = await self.db.execute(
+            select(Sector)
+            .options(selectinload(Sector.services))
+            .where(Sector.active == True)
+            .order_by(Sector.display_order, Sector.name)
+        )
+        return list(result.scalars().all())
+
+    async def get_active_sectors_with_active_services(self) -> list[Sector]:
+        """Récupère les secteurs actifs avec uniquement leurs services actifs."""
+        result = await self.db.execute(
+            select(Sector)
+            .options(selectinload(Sector.services))
+            .where(Sector.active == True)
+            .order_by(Sector.display_order, Sector.name)
+        )
+        sectors = list(result.scalars().all())
+        # Filtrer pour ne garder que les services actifs
+        for sector in sectors:
+            sector.services = [s for s in sector.services if s.active]
+            sector.services.sort(key=lambda s: (s.display_order, s.name))
+        return sectors
 
     # =========================================================================
     # SERVICES
@@ -229,7 +260,7 @@ class OrganizationService:
     async def get_services(
         self,
         search: str | None = None,
-        department_id: str | None = None,
+        sector_id: str | None = None,
         active: bool | None = None,
     ) -> select:
         """
@@ -237,7 +268,7 @@ class OrganizationService:
 
         Args:
             search: Recherche sur nom ou description.
-            department_id: Filtrer par département.
+            sector_id: Filtrer par secteur.
             active: Filtrer par statut actif.
 
         Returns:
@@ -259,8 +290,8 @@ class OrganizationService:
                 )
             )
 
-        if department_id:
-            query = query.where(Service.department_id == department_id)
+        if sector_id:
+            query = query.where(Service.sector_id == sector_id)
 
         if active is not None:
             query = query.where(Service.active == active)
@@ -284,7 +315,7 @@ class OrganizationService:
     async def create_service(
         self,
         name: str,
-        department_id: str | None = None,
+        sector_id: str | None = None,
         **kwargs,
     ) -> Service:
         """
@@ -292,24 +323,24 @@ class OrganizationService:
 
         Args:
             name: Nom du service.
-            department_id: ID du département parent (optionnel).
+            sector_id: ID du secteur parent (optionnel).
             **kwargs: Autres champs optionnels.
 
         Returns:
             Service créé.
 
         Raises:
-            NotFoundException: Si le département n'existe pas.
+            NotFoundException: Si le secteur n'existe pas.
         """
-        if department_id:
-            department = await self.get_department_by_id(department_id)
-            if not department:
-                raise NotFoundException("Département non trouvé")
+        if sector_id:
+            sector = await self.get_sector_by_id(sector_id)
+            if not sector:
+                raise NotFoundException("Secteur non trouvé")
 
         service = Service(
             id=str(uuid4()),
             name=name,
-            department_id=department_id,
+            sector_id=sector_id,
             **kwargs,
         )
         self.db.add(service)
@@ -334,11 +365,11 @@ class OrganizationService:
         if not service:
             raise NotFoundException("Service non trouvé")
 
-        # Vérifier que le département existe si modifié
-        if "department_id" in kwargs and kwargs["department_id"]:
-            department = await self.get_department_by_id(kwargs["department_id"])
-            if not department:
-                raise NotFoundException("Département non trouvé")
+        # Vérifier que le secteur existe si modifié
+        if "sector_id" in kwargs and kwargs["sector_id"]:
+            sector = await self.get_sector_by_id(kwargs["sector_id"])
+            if not sector:
+                raise NotFoundException("Secteur non trouvé")
 
         await self.db.execute(
             update(Service).where(Service.id == service_id).values(**kwargs)
@@ -401,6 +432,52 @@ class OrganizationService:
             .order_by(Service.display_order)
         )
         return list(result.scalars().all())
+
+    # =========================================================================
+    # SERVICES - PUBLIC METHODS
+    # =========================================================================
+
+    async def get_active_services(
+        self, sector_id: str | None = None
+    ) -> list[Service]:
+        """
+        Récupère les services actifs.
+
+        Args:
+            sector_id: Filtrer par secteur (optionnel).
+
+        Returns:
+            Liste des services actifs triés.
+        """
+        query = select(Service).where(Service.active == True)
+
+        if sector_id:
+            query = query.where(Service.sector_id == sector_id)
+
+        query = query.order_by(Service.display_order, Service.name)
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def get_service_with_details(self, service_id: str) -> Service | None:
+        """
+        Récupère un service avec ses objectifs, réalisations et projets.
+
+        Args:
+            service_id: ID du service.
+
+        Returns:
+            Service avec ses détails ou None si non trouvé.
+        """
+        result = await self.db.execute(
+            select(Service)
+            .options(
+                selectinload(Service.objectives),
+                selectinload(Service.achievements),
+                selectinload(Service.projects),
+            )
+            .where(Service.id == service_id, Service.active == True)
+        )
+        return result.scalar_one_or_none()
 
     # =========================================================================
     # SERVICE OBJECTIVES

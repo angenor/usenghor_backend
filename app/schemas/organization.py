@@ -156,7 +156,7 @@ class ServiceBase(BaseModel):
 class ServiceCreate(ServiceBase):
     """Schéma pour la création d'un service."""
 
-    department_id: str | None = Field(None, description="ID du département parent")
+    sector_id: str | None = Field(None, description="ID du secteur parent")
     active: bool = Field(True, description="Statut actif")
 
 
@@ -168,7 +168,7 @@ class ServiceUpdate(BaseModel):
     mission: str | None = None
     email: EmailStr | None = None
     phone: str | None = Field(None, max_length=30)
-    department_id: str | None = None
+    sector_id: str | None = None
     head_external_id: str | None = None
     album_external_id: str | None = None
     display_order: int | None = Field(None, ge=0)
@@ -179,7 +179,7 @@ class ServiceRead(ServiceBase):
     """Schéma pour la lecture d'un service."""
 
     id: str
-    department_id: str | None
+    sector_id: str | None
     active: bool
     created_at: datetime
     updated_at: datetime
@@ -202,31 +202,31 @@ class ServiceReorder(BaseModel):
 
 
 # =============================================================================
-# DEPARTMENTS
+# SECTORS
 # =============================================================================
 
 
-class DepartmentBase(BaseModel):
-    """Schéma de base pour les départements."""
+class SectorBase(BaseModel):
+    """Schéma de base pour les secteurs."""
 
-    code: str = Field(..., min_length=1, max_length=20, description="Code unique du département")
-    name: str = Field(..., min_length=1, max_length=255, description="Nom du département")
-    description: str | None = Field(None, description="Description du département")
-    mission: str | None = Field(None, description="Mission du département")
+    code: str = Field(..., min_length=1, max_length=20, description="Code unique du secteur")
+    name: str = Field(..., min_length=1, max_length=255, description="Nom du secteur")
+    description: str | None = Field(None, description="Description du secteur")
+    mission: str | None = Field(None, description="Mission du secteur")
     icon_external_id: str | None = Field(None, description="ID de l'icône")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     head_external_id: str | None = Field(None, description="ID du responsable")
     display_order: int = Field(0, ge=0, description="Ordre d'affichage")
 
 
-class DepartmentCreate(DepartmentBase):
-    """Schéma pour la création d'un département."""
+class SectorCreate(SectorBase):
+    """Schéma pour la création d'un secteur."""
 
     active: bool = Field(True, description="Statut actif")
 
 
-class DepartmentUpdate(BaseModel):
-    """Schéma pour la mise à jour d'un département."""
+class SectorUpdate(BaseModel):
+    """Schéma pour la mise à jour d'un secteur."""
 
     code: str | None = Field(None, min_length=1, max_length=20)
     name: str | None = Field(None, min_length=1, max_length=255)
@@ -239,8 +239,8 @@ class DepartmentUpdate(BaseModel):
     active: bool | None = None
 
 
-class DepartmentRead(DepartmentBase):
-    """Schéma pour la lecture d'un département."""
+class SectorRead(SectorBase):
+    """Schéma pour la lecture d'un secteur."""
 
     id: str
     active: bool
@@ -250,13 +250,64 @@ class DepartmentRead(DepartmentBase):
     model_config = {"from_attributes": True}
 
 
-class DepartmentWithServices(DepartmentRead):
-    """Schéma pour un département avec ses services."""
+class SectorWithServices(SectorRead):
+    """Schéma pour un secteur avec ses services."""
 
     services: list[ServiceRead] = []
 
 
-class DepartmentReorder(BaseModel):
-    """Schéma pour le réordonnancement des départements."""
+class SectorReorder(BaseModel):
+    """Schéma pour le réordonnancement des secteurs."""
 
-    department_ids: list[str] = Field(..., min_length=1, description="Liste ordonnée des IDs")
+    sector_ids: list[str] = Field(..., min_length=1, description="Liste ordonnée des IDs")
+
+
+# =============================================================================
+# PUBLIC SCHEMAS
+# =============================================================================
+
+
+class SectorPublic(BaseModel):
+    """Schéma public pour un secteur (sans données sensibles)."""
+
+    id: str
+    code: str
+    name: str
+    description: str | None
+    mission: str | None
+    icon_external_id: str | None
+    cover_image_external_id: str | None
+    display_order: int
+
+    model_config = {"from_attributes": True}
+
+
+class ServicePublic(BaseModel):
+    """Schéma public pour un service (sans données sensibles)."""
+
+    id: str
+    name: str
+    description: str | None
+    mission: str | None
+    email: str | None
+    phone: str | None
+    sector_id: str | None
+    head_external_id: str | None
+    album_external_id: str | None
+    display_order: int
+
+    model_config = {"from_attributes": True}
+
+
+class ServicePublicWithDetails(ServicePublic):
+    """Schéma public pour un service avec ses détails."""
+
+    objectives: list[ServiceObjectiveRead] = []
+    achievements: list[ServiceAchievementRead] = []
+    projects: list[ServiceProjectRead] = []
+
+
+class SectorPublicWithServices(SectorPublic):
+    """Schéma public pour un secteur avec ses services."""
+
+    services: list[ServicePublic] = []

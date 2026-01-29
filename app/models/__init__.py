@@ -21,8 +21,8 @@ from app.models.identity import (
 )
 from app.models.media import Album, AlbumMedia, Media
 from app.models.organization import (
-    Department,
     ProjectStatus,
+    Sector,
     Service,
     ServiceAchievement,
     ServiceMediaLibrary,
@@ -123,7 +123,7 @@ __all__ = [
     "AlbumMedia",
     # Organization
     "ProjectStatus",
-    "Department",
+    "Sector",
     "Service",
     "ServiceObjective",
     "ServiceAchievement",

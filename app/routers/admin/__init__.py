@@ -15,7 +15,6 @@ from app.routers.admin import (
     career_opportunities,
     countries,
     dashboard,
-    departments,
     editorial,
     event_registrations,
     events,
@@ -28,6 +27,7 @@ from app.routers.admin import (
     program_semesters,
     program_skills,
     roles,
+    sectors,
     services,
     subscribers,
     tags,
@@ -45,7 +45,7 @@ router.include_router(audit_logs.router)
 router.include_router(countries.router)
 router.include_router(media.router)
 router.include_router(albums.router)
-router.include_router(departments.router)
+router.include_router(sectors.router)
 router.include_router(services.router)
 router.include_router(news.router)
 router.include_router(events.router)

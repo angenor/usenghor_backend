@@ -22,7 +22,7 @@ class PaginationParams:
     def __init__(
         self,
         page: int = Query(1, ge=1, description="Numéro de page"),
-        limit: int = Query(20, ge=1, le=100, description="Nombre d'éléments par page"),
+        limit: int = Query(20, ge=1, le=500, description="Nombre d'éléments par page"),
         sort_by: str = Query("created_at", description="Champ de tri"),
         sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Ordre de tri"),
     ):
