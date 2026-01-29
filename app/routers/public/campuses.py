@@ -14,8 +14,9 @@ from sqlalchemy import select
 from app.core.dependencies import DbSession
 from app.core.exceptions import NotFoundException
 from app.core.pagination import PaginationParams, paginate
-from app.models.campus import Campus, CampusPartner
+from app.models.campus import Campus, CampusPartner, CampusTeam
 from app.models.core import Country
+from app.models.identity import User
 from app.models.media import Media
 from app.models.partner import Partner, PartnerType
 from app.services.campus_service import CampusService
@@ -75,6 +76,20 @@ class CampusPartnerPublic(BaseModel):
     type: PartnerType
     country_iso_code: str | None
     country_name_fr: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class CampusTeamMemberPublic(BaseModel):
+    """Schéma public pour un membre d'équipe de campus."""
+
+    id: str
+    first_name: str
+    last_name: str
+    position: str
+    photo_url: str | None
+    email: str | None  # Email public pour contact
+    display_order: int
 
     model_config = {"from_attributes": True}
 
@@ -245,3 +260,52 @@ async def get_campus_partners(
         ))
 
     return partners
+
+
+@router.get("/{campus_id}/team", response_model=list[CampusTeamMemberPublic])
+async def get_campus_team(
+    campus_id: str,
+    db: DbSession,
+) -> list[CampusTeamMemberPublic]:
+    """
+    Récupère les membres de l'équipe d'un campus.
+
+    Retourne la liste des membres actifs de l'équipe du campus,
+    avec leurs informations publiques (nom, poste, photo).
+    """
+    # Vérifier que le campus existe
+    campus_result = await db.execute(
+        select(Campus).where(Campus.id == campus_id, Campus.active == True)
+    )
+    if not campus_result.scalar_one_or_none():
+        raise NotFoundException("Campus non trouvé")
+
+    # Récupérer les membres d'équipe avec jointures
+    query = (
+        select(CampusTeam, User, Media)
+        .join(User, CampusTeam.user_external_id == User.id)
+        .outerjoin(Media, User.photo_external_id == Media.id)
+        .where(
+            CampusTeam.campus_id == campus_id,
+            CampusTeam.active == True,
+            User.active == True,
+        )
+        .order_by(CampusTeam.display_order, User.last_name)
+    )
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    team_members = []
+    for team_member, user, photo_media in rows:
+        team_members.append(CampusTeamMemberPublic(
+            id=team_member.id,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            position=team_member.position,
+            photo_url=resolve_media_url(photo_media),
+            email=user.email,
+            display_order=team_member.display_order,
+        ))
+
+    return team_members
