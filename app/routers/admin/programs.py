@@ -40,7 +40,7 @@ async def list_programs(
     pagination: PaginationParams = Depends(),
     search: str | None = Query(None, description="Recherche sur code, titre, description"),
     program_type: ProgramType | None = Query(None, alias="type", description="Filtrer par type"),
-    department_id: str | None = Query(None, alias="department_external_id", description="Filtrer par département"),
+    sector_id: str | None = Query(None, alias="sector_external_id", description="Filtrer par département"),
     publication_status: PublicationStatus | None = Query(None, alias="status", description="Filtrer par statut"),
     _: bool = Depends(PermissionChecker("programs.view")),
 ) -> dict:
@@ -49,7 +49,7 @@ async def list_programs(
     query = await service.get_programs(
         search=search,
         program_type=program_type,
-        department_id=department_id,
+        sector_id=sector_id,
         status=publication_status,
     )
     return await paginate(db, query, pagination, Program, ProgramRead)
@@ -88,7 +88,7 @@ async def create_program(
         description=program_data.description,
         teaching_methods=program_data.teaching_methods,
         cover_image_external_id=program_data.cover_image_external_id,
-        department_external_id=program_data.department_external_id,
+        sector_external_id=program_data.sector_external_id,
         coordinator_external_id=program_data.coordinator_external_id,
         duration_months=program_data.duration_months,
         credits=program_data.credits,

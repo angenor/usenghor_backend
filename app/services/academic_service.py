@@ -38,7 +38,7 @@ class AcademicService:
         self,
         search: str | None = None,
         program_type: str | None = None,
-        department_id: str | None = None,
+        sector_id: str | None = None,
         status: PublicationStatus | None = None,
     ) -> select:
         """
@@ -47,7 +47,7 @@ class AcademicService:
         Args:
             search: Recherche sur code, titre ou description.
             program_type: Filtrer par type de programme.
-            department_id: Filtrer par département.
+            sector_id: Filtrer par département.
             status: Filtrer par statut de publication.
 
         Returns:
@@ -72,8 +72,8 @@ class AcademicService:
         if program_type:
             query = query.where(Program.type == program_type)
 
-        if department_id:
-            query = query.where(Program.department_external_id == department_id)
+        if sector_id:
+            query = query.where(Program.sector_external_id == sector_id)
 
         if status:
             query = query.where(Program.status == status)
@@ -85,7 +85,7 @@ class AcademicService:
         self,
         search: str | None = None,
         program_type: str | None = None,
-        department_id: str | None = None,
+        sector_id: str | None = None,
         skip_order_by: bool = False,
     ) -> select:
         """
@@ -94,7 +94,7 @@ class AcademicService:
         Args:
             search: Recherche sur code, titre ou description.
             program_type: Filtrer par type de programme.
-            department_id: Filtrer par département.
+            sector_id: Filtrer par département.
             skip_order_by: Ne pas ajouter de clause ORDER BY (utile pour pagination).
 
         Returns:
@@ -119,8 +119,8 @@ class AcademicService:
         if program_type:
             query = query.where(Program.type == program_type)
 
-        if department_id:
-            query = query.where(Program.department_external_id == department_id)
+        if sector_id:
+            query = query.where(Program.sector_external_id == sector_id)
 
         if not skip_order_by:
             query = query.order_by(Program.display_order, Program.title)
@@ -338,7 +338,7 @@ class AcademicService:
             description=program.description,
             teaching_methods=program.teaching_methods,
             cover_image_external_id=program.cover_image_external_id,
-            department_external_id=program.department_external_id,
+            sector_external_id=program.sector_external_id,
             coordinator_external_id=program.coordinator_external_id,
             duration_months=program.duration_months,
             credits=program.credits,

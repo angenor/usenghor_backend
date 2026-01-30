@@ -47,7 +47,7 @@ class Program(Base, UUIDMixin, TimestampMixin):
 
     # Références externes (pas de FK) - UUID pour compatibilité avec le schéma DB
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
-    department_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    sector_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     coordinator_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     type: Mapped[ProgramType] = mapped_column(

@@ -23,14 +23,14 @@ async def list_programs(
     pagination: PaginationParams = Depends(),
     search: str | None = Query(None, description="Recherche sur code, titre, description"),
     program_type: ProgramType | None = Query(None, description="Filtrer par type"),
-    department_id: str | None = Query(None, description="Filtrer par département"),
+    sector_id: str | None = Query(None, description="Filtrer par département"),
 ) -> dict:
     """Liste les programmes publiés avec pagination et filtres."""
     service = AcademicService(db)
     query = await service.get_published_programs(
         search=search,
         program_type=program_type,
-        department_id=department_id,
+        sector_id=sector_id,
         skip_order_by=True,  # Let paginate handle ORDER BY
     )
     return await paginate(db, query, pagination, Program, ProgramPublic)
@@ -78,13 +78,13 @@ async def list_programs_by_type(
     return list(result.scalars().all())
 
 
-@router.get("/by-department/{department_id}", response_model=list[ProgramPublic])
-async def list_programs_by_department(
-    department_id: str,
+@router.get("/by-sector/{sector_id}", response_model=list[ProgramPublic])
+async def list_programs_by_sector(
+    sector_id: str,
     db: DbSession,
 ) -> list[Program]:
     """Liste les programmes publiés d'un département donné."""
     service = AcademicService(db)
-    query = await service.get_published_programs(department_id=department_id)
+    query = await service.get_published_programs(sector_id=sector_id)
     result = await db.execute(query)
     return list(result.scalars().all())

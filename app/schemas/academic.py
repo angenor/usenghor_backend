@@ -263,7 +263,7 @@ class ProgramBase(BaseModel):
     description: str | None = Field(None, description="Description du programme")
     teaching_methods: str | None = Field(None, description="Méthodes pédagogiques")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
-    department_external_id: str | None = Field(None, description="ID du département")
+    sector_external_id: str | None = Field(None, description="ID du département")
     coordinator_external_id: str | None = Field(None, description="ID du coordinateur")
     type: ProgramType = Field(..., description="Type de programme")
     duration_months: int | None = Field(None, ge=1, description="Durée en mois")
@@ -292,7 +292,7 @@ class ProgramUpdate(BaseModel):
     description: str | None = None
     teaching_methods: str | None = None
     cover_image_external_id: str | None = None
-    department_external_id: str | None = None
+    sector_external_id: str | None = None
     coordinator_external_id: str | None = None
     type: ProgramType | None = None
     duration_months: int | None = Field(None, ge=1)
@@ -335,7 +335,7 @@ class ProgramPublic(BaseModel):
     description: str | None
     teaching_methods: str | None
     cover_image_external_id: str | None
-    department_external_id: str | None
+    sector_external_id: str | None
     type: ProgramType
     duration_months: int | None
     credits: int | None
