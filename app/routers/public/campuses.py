@@ -14,10 +14,10 @@ from sqlalchemy import select
 from app.core.dependencies import DbSession
 from app.core.exceptions import NotFoundException
 from app.core.pagination import PaginationParams, paginate
-from app.models.campus import Campus, CampusPartner, CampusTeam
+from app.models.campus import Campus, CampusMediaLibrary, CampusPartner, CampusTeam
 from app.models.core import Country
 from app.models.identity import User
-from app.models.media import Media
+from app.models.media import Album, AlbumMedia, Media, PublicationStatus
 from app.models.partner import Partner, PartnerType
 from app.services.campus_service import CampusService
 
@@ -90,6 +90,29 @@ class CampusTeamMemberPublic(BaseModel):
     photo_url: str | None
     email: str | None  # Email public pour contact
     display_order: int
+
+    model_config = {"from_attributes": True}
+
+
+class MediaPublic(BaseModel):
+    """Schéma public pour un média dans un album."""
+
+    id: str
+    name: str
+    type: str
+    url: str | None
+    alt_text: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class AlbumPublicWithMedia(BaseModel):
+    """Schéma public pour un album avec ses médias."""
+
+    id: str
+    title: str
+    description: str | None
+    media_items: list[MediaPublic]
 
     model_config = {"from_attributes": True}
 
@@ -309,3 +332,68 @@ async def get_campus_team(
         ))
 
     return team_members
+
+
+@router.get("/{campus_id}/albums", response_model=list[AlbumPublicWithMedia])
+async def get_campus_albums(
+    campus_id: str,
+    db: DbSession,
+) -> list[AlbumPublicWithMedia]:
+    """
+    Récupère les albums publiés associés à un campus.
+
+    Retourne la liste des albums avec leurs médias,
+    triés par ordre de création (les plus récents d'abord).
+    """
+    # Vérifier que le campus existe
+    campus_result = await db.execute(
+        select(Campus).where(Campus.id == campus_id, Campus.active == True)
+    )
+    if not campus_result.scalar_one_or_none():
+        raise NotFoundException("Campus non trouvé")
+
+    # Récupérer les albums associés au campus (publiés uniquement)
+    album_query = (
+        select(Album)
+        .join(CampusMediaLibrary, CampusMediaLibrary.album_external_id == Album.id)
+        .where(
+            CampusMediaLibrary.campus_id == campus_id,
+            Album.status == PublicationStatus.PUBLISHED,
+        )
+        .order_by(Album.created_at.desc())
+    )
+
+    album_result = await db.execute(album_query)
+    albums = album_result.scalars().all()
+
+    # Pour chaque album, récupérer ses médias
+    albums_with_media = []
+    for album in albums:
+        media_query = (
+            select(Media, AlbumMedia.display_order)
+            .join(AlbumMedia, AlbumMedia.media_id == Media.id)
+            .where(AlbumMedia.album_id == album.id)
+            .order_by(AlbumMedia.display_order)
+        )
+
+        media_result = await db.execute(media_query)
+        media_rows = media_result.all()
+
+        media_items = []
+        for media, _ in media_rows:
+            media_items.append(MediaPublic(
+                id=media.id,
+                name=media.name,
+                type=media.type.value if hasattr(media.type, 'value') else str(media.type),
+                url=resolve_media_url(media),
+                alt_text=media.alt_text,
+            ))
+
+        albums_with_media.append(AlbumPublicWithMedia(
+            id=album.id,
+            title=album.title,
+            description=album.description,
+            media_items=media_items,
+        ))
+
+    return albums_with_media
