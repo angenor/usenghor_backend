@@ -45,6 +45,7 @@ class ApplicationService:
         call_status: CallStatus | None = None,
         publication_status: PublicationStatus | None = None,
         program_id: str | None = None,
+        campus_id: str | None = None,
     ) -> select:
         """
         Construit une requête pour lister les appels à candidature.
@@ -55,6 +56,7 @@ class ApplicationService:
             call_status: Filtrer par statut de l'appel.
             publication_status: Filtrer par statut de publication.
             program_id: Filtrer par programme.
+            campus_id: Filtrer par campus.
 
         Returns:
             Requête SQLAlchemy Select.
@@ -87,6 +89,9 @@ class ApplicationService:
         if program_id:
             query = query.where(ApplicationCall.program_external_id == program_id)
 
+        if campus_id:
+            query = query.where(ApplicationCall.campus_external_id == campus_id)
+
         query = query.order_by(ApplicationCall.deadline.desc(), ApplicationCall.title)
         return query
 
@@ -96,6 +101,7 @@ class ApplicationService:
         call_type: str | None = None,
         call_status: CallStatus | None = None,
         program_id: str | None = None,
+        campus_id: str | None = None,
     ) -> select:
         """
         Construit une requête pour lister les appels publiés (public).
@@ -105,6 +111,7 @@ class ApplicationService:
             call_type: Filtrer par type d'appel.
             call_status: Filtrer par statut de l'appel.
             program_id: Filtrer par programme.
+            campus_id: Filtrer par campus.
 
         Returns:
             Requête SQLAlchemy Select.
@@ -115,6 +122,7 @@ class ApplicationService:
             call_status=call_status,
             publication_status=PublicationStatus.PUBLISHED,
             program_id=program_id,
+            campus_id=campus_id,
         )
 
     async def get_call_by_id(self, call_id: str) -> ApplicationCall | None:

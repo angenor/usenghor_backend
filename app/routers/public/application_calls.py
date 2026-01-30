@@ -31,6 +31,7 @@ async def list_calls(
     call_type: CallType | None = Query(None, description="Filtrer par type"),
     call_status: CallStatus | None = Query(None, description="Filtrer par statut"),
     program_id: str | None = Query(None, description="Filtrer par programme"),
+    campus_external_id: str | None = Query(None, description="Filtrer par campus"),
 ) -> dict:
     """Liste les appels à candidature publiés avec pagination et filtres."""
     service = ApplicationService(db)
@@ -39,6 +40,7 @@ async def list_calls(
         call_type=call_type,
         call_status=call_status,
         program_id=program_id,
+        campus_id=campus_external_id,
     )
     return await paginate(db, query, pagination, ApplicationCall, ApplicationCallPublic)
 

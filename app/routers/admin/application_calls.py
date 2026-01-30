@@ -51,6 +51,7 @@ async def list_calls(
     call_status: CallStatus | None = Query(None, description="Filtrer par statut"),
     publication_status: PublicationStatus | None = Query(None, description="Filtrer par statut de publication"),
     program_id: str | None = Query(None, description="Filtrer par programme"),
+    campus_external_id: str | None = Query(None, description="Filtrer par campus"),
     _: bool = Depends(PermissionChecker("applications.view")),
 ) -> dict:
     """Liste les appels à candidature avec pagination et filtres."""
@@ -61,6 +62,7 @@ async def list_calls(
         call_status=call_status,
         publication_status=publication_status,
         program_id=program_id,
+        campus_id=campus_external_id,
     )
     return await paginate(db, query, pagination, ApplicationCall, ApplicationCallRead)
 
