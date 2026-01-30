@@ -279,6 +279,7 @@ class ProgramCreate(ProgramBase):
     status: PublicationStatus = Field(
         PublicationStatus.DRAFT, description="Statut de publication"
     )
+    is_featured: bool = Field(False, description="Formation mise à la une")
 
 
 class ProgramUpdate(BaseModel):
@@ -299,6 +300,7 @@ class ProgramUpdate(BaseModel):
     degree_awarded: str | None = Field(None, max_length=255)
     required_degree: str | None = None
     status: PublicationStatus | None = None
+    is_featured: bool | None = None
     display_order: int | None = Field(None, ge=0)
 
 
@@ -307,6 +309,7 @@ class ProgramRead(ProgramBase):
 
     id: str
     status: PublicationStatus
+    is_featured: bool
     created_at: datetime
     updated_at: datetime
 
@@ -338,6 +341,7 @@ class ProgramPublic(BaseModel):
     credits: int | None
     degree_awarded: str | None
     required_degree: str | None
+    is_featured: bool
 
     model_config = {"from_attributes": True}
 

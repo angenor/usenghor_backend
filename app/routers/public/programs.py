@@ -35,6 +35,17 @@ async def list_programs(
     return await paginate(db, query, pagination, Program)
 
 
+@router.get("/featured", response_model=list[ProgramPublic])
+async def list_featured_programs(
+    db: DbSession,
+    limit: int = Query(4, ge=1, le=20, description="Nombre maximum de programmes"),
+) -> list[Program]:
+    """Liste les programmes publiés mis à la une."""
+    service = AcademicService(db)
+    programs = await service.get_featured_programs(limit=limit)
+    return programs
+
+
 @router.get("/{slug}", response_model=ProgramPublicWithDetails)
 async def get_program_by_slug(
     slug: str,

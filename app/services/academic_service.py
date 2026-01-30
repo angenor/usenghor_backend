@@ -123,6 +123,32 @@ class AcademicService:
         query = query.order_by(Program.display_order, Program.title)
         return query
 
+    async def get_featured_programs(self, limit: int = 4) -> list[Program]:
+        """
+        Récupère les programmes publiés mis à la une.
+
+        Args:
+            limit: Nombre maximum de programmes à retourner.
+
+        Returns:
+            Liste des programmes featured.
+        """
+        result = await self.db.execute(
+            select(Program)
+            .options(
+                selectinload(Program.semesters).selectinload(ProgramSemester.courses),
+                selectinload(Program.skills),
+                selectinload(Program.career_opportunities),
+            )
+            .where(
+                Program.status == PublicationStatus.PUBLISHED,
+                Program.is_featured == True,  # noqa: E712
+            )
+            .order_by(Program.display_order, Program.title)
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
     async def get_program_by_id(self, program_id: str) -> Program | None:
         """Récupère un programme par son ID."""
         result = await self.db.execute(

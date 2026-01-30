@@ -9,6 +9,7 @@ import enum
 from decimal import Decimal
 
 from sqlalchemy import (
+    Boolean,
     Enum,
     ForeignKey,
     Integer,
@@ -72,6 +73,7 @@ class Program(Base, UUIDMixin, TimestampMixin):
         ),
         default=PublicationStatus.DRAFT,
     )
+    is_featured: Mapped[bool] = mapped_column(Boolean, default=False)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
 
     # Relations

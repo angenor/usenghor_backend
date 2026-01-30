@@ -34,6 +34,7 @@ CREATE TABLE programs (
     degree_awarded VARCHAR(255),
     required_degree TEXT,
     status publication_status DEFAULT 'draft',
+    is_featured BOOLEAN DEFAULT FALSE,
     display_order INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -42,6 +43,7 @@ CREATE TABLE programs (
 CREATE INDEX idx_programs_type ON programs(type);
 CREATE INDEX idx_programs_slug ON programs(slug);
 CREATE INDEX idx_programs_sector ON programs(sector_external_id);
+CREATE INDEX idx_programs_featured ON programs(is_featured) WHERE is_featured = TRUE;
 
 -- Campus où se déroule une formation
 CREATE TABLE program_campuses (
@@ -105,6 +107,7 @@ CREATE TABLE program_skills (
 COMMENT ON TABLE programs IS '[ACADEMIC] Formations proposées par l''Université Senghor';
 COMMENT ON COLUMN programs.sector_external_id IS 'Référence externe vers ORGANIZATION.sectors.id';
 COMMENT ON COLUMN programs.coordinator_external_id IS 'Référence externe vers IDENTITY.users.id';
+COMMENT ON COLUMN programs.is_featured IS 'Formation mise à la une sur la page d''accueil';
 COMMENT ON COLUMN program_campuses.campus_external_id IS 'Référence externe vers CAMPUS.campuses.id';
 COMMENT ON COLUMN program_partners.partner_external_id IS 'Référence externe vers PARTNER.partners.id';
 
