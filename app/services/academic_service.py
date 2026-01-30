@@ -86,6 +86,7 @@ class AcademicService:
         search: str | None = None,
         program_type: str | None = None,
         department_id: str | None = None,
+        skip_order_by: bool = False,
     ) -> select:
         """
         Construit une requête pour lister les programmes publiés (public).
@@ -94,6 +95,7 @@ class AcademicService:
             search: Recherche sur code, titre ou description.
             program_type: Filtrer par type de programme.
             department_id: Filtrer par département.
+            skip_order_by: Ne pas ajouter de clause ORDER BY (utile pour pagination).
 
         Returns:
             Requête SQLAlchemy Select.
@@ -120,7 +122,8 @@ class AcademicService:
         if department_id:
             query = query.where(Program.department_external_id == department_id)
 
-        query = query.order_by(Program.display_order, Program.title)
+        if not skip_order_by:
+            query = query.order_by(Program.display_order, Program.title)
         return query
 
     async def get_featured_programs(self, limit: int = 4) -> list[Program]:

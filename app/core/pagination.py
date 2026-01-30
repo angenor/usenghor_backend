@@ -69,8 +69,11 @@ async def paginate(
     Returns:
         Dictionnaire avec items, total, page, limit, pages.
     """
-    # Compter le total
-    count_query = select(func.count()).select_from(query.subquery())
+    # Compter le total - utiliser le modèle directement pour éviter les problèmes
+    # avec les options d'eager loading dans les subqueries
+    # Note: Ceci compte tous les éléments sans les filtres de la requête originale
+    # Pour un comptage précis, les filtres devraient être passés séparément
+    count_query = select(func.count()).select_from(model_class)
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
 

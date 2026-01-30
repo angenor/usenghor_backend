@@ -31,8 +31,9 @@ async def list_programs(
         search=search,
         program_type=program_type,
         department_id=department_id,
+        skip_order_by=True,  # Let paginate handle ORDER BY
     )
-    return await paginate(db, query, pagination, Program)
+    return await paginate(db, query, pagination, Program, ProgramPublic)
 
 
 @router.get("/featured", response_model=list[ProgramPublic])
