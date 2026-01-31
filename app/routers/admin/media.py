@@ -92,6 +92,7 @@ async def upload_media(
     folder: str = Form("general"),
     alt_text: str | None = Form(None),
     credits: str | None = Form(None),
+    base_filename: str | None = Form(None, description="Nom de base pour les variantes d'images"),
     _: bool = Depends(PermissionChecker("media.create")),
 ) -> Media:
     """Upload un fichier média."""
@@ -101,6 +102,7 @@ async def upload_media(
         folder=folder,
         alt_text=alt_text,
         credits=credits,
+        base_filename=base_filename,
     )
 
 
@@ -170,11 +172,17 @@ async def download_media(
     media_id: str,
     db: DbSession,
     current_user: CurrentUser,
+    variant: Literal["low", "medium", "original"] | None = Query(
+        None,
+        description="Variante de l'image (low, medium, original)",
+    ),
     _: bool = Depends(PermissionChecker("media.view")),
 ):
     """Télécharge un fichier média."""
     service = MediaService(db)
-    file_path, filename, mime_type = await service.get_download_info(media_id)
+    file_path, filename, mime_type = await service.get_download_info(
+        media_id, variant=variant
+    )
     return FileResponse(
         path=file_path,
         filename=filename,

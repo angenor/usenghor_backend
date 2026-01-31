@@ -119,9 +119,26 @@ class MediaService:
         ext = Path(filename).suffix.lower()
         return EXTENSION_TO_MEDIA_TYPE.get(ext, MediaType.DOCUMENT)
 
-    def _generate_unique_filename(self, original_filename: str) -> str:
-        """Génère un nom de fichier unique."""
+    def _generate_unique_filename(self, original_filename: str, base_filename: str | None = None) -> str:
+        """
+        Génère un nom de fichier unique.
+
+        Args:
+            original_filename: Nom du fichier original (pour extension).
+            base_filename: Si fourni, utilise ce nom de base au lieu d'en générer un nouveau.
+                          Utile pour les variantes d'images (low, medium) qui doivent
+                          partager le même nom de base que l'original.
+        """
         ext = Path(original_filename).suffix.lower()
+
+        if base_filename:
+            # Utiliser le nom de base fourni (pour variantes)
+            # S'assurer que le base_filename n'a pas déjà l'extension
+            if base_filename.lower().endswith(ext):
+                return base_filename
+            return f"{base_filename}{ext}"
+
+        # Générer un nouveau nom unique
         unique_id = str(uuid4())[:8]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_name = "".join(c for c in Path(original_filename).stem if c.isalnum() or c in "-_")[:50]
@@ -197,6 +214,7 @@ class MediaService:
         folder: str = "general",
         alt_text: str | None = None,
         credits: str | None = None,
+        base_filename: str | None = None,
     ) -> Media:
         """
         Upload un fichier et crée l'entrée média correspondante.
@@ -206,6 +224,9 @@ class MediaService:
             folder: Dossier de destination.
             alt_text: Texte alternatif.
             credits: Crédits.
+            base_filename: Nom de base à utiliser au lieu d'en générer un nouveau.
+                          Utile pour les variantes d'images qui doivent partager
+                          le même nom de base.
 
         Returns:
             Média créé.
@@ -228,7 +249,7 @@ class MediaService:
 
         # Générer un nom unique
         original_filename = file.filename or "unnamed"
-        unique_filename = self._generate_unique_filename(original_filename)
+        unique_filename = self._generate_unique_filename(original_filename, base_filename)
 
         # Créer le répertoire et sauvegarder le fichier
         upload_dir = self._ensure_storage_dir(folder)
@@ -380,12 +401,16 @@ class MediaService:
                 continue
         return count
 
-    async def get_download_info(self, media_id: str) -> tuple[Path, str, str]:
+    async def get_download_info(
+        self, media_id: str, variant: str | None = None
+    ) -> tuple[Path, str, str]:
         """
         Récupère les informations de téléchargement d'un média.
 
         Args:
             media_id: ID du média.
+            variant: Variante de l'image ('low', 'medium', 'original' ou None).
+                    Si spécifié, cherche la version redimensionnée.
 
         Returns:
             Tuple (chemin du fichier, nom du fichier, type MIME).
@@ -400,7 +425,7 @@ class MediaService:
         if media.is_external_url:
             raise NotFoundException("Ce média est une URL externe et ne peut pas être téléchargé")
 
-        # Construire le chemin du fichier
+        # Construire le chemin du fichier original
         # L'URL est stockée comme /uploads/folder/filename
         # storage_path est le répertoire uploads (/var/www/uploads ou ./uploads)
         # On extrait folder/filename de l'URL pour construire le chemin complet
@@ -414,10 +439,41 @@ class MediaService:
             relative_path = media.url.lstrip("/")
             file_path = self.storage_path.parent / relative_path
 
+        # Si une variante est demandée, calculer le chemin de la variante
+        if variant and variant in ("low", "medium") and media.type == MediaType.IMAGE:
+            variant_path = self._get_variant_path(file_path, variant)
+            if variant_path.exists():
+                file_path = variant_path
+            # Si la variante n'existe pas, on retourne l'original (fallback gracieux)
+
         if not file_path.exists():
             raise NotFoundException(f"Fichier non trouvé sur le serveur: {file_path}")
 
         return file_path, media.name, media.mime_type or "application/octet-stream"
+
+    def _get_variant_path(self, original_path: Path, variant: str) -> Path:
+        """
+        Calcule le chemin d'une variante d'image à partir du chemin original.
+
+        Convention:
+        - Original: /uploads/folder/20240115_143022_image_a1b2c3d4.jpg
+        - Low:      /uploads/folder/low/20240115_143022_image_a1b2c3d4_low.jpg
+        - Medium:   /uploads/folder/medium/20240115_143022_image_a1b2c3d4_medium.jpg
+
+        Args:
+            original_path: Chemin du fichier original.
+            variant: Nom de la variante ('low' ou 'medium').
+
+        Returns:
+            Chemin de la variante.
+        """
+        parent = original_path.parent
+        stem = original_path.stem  # Nom sans extension
+        suffix = original_path.suffix  # Extension avec le point
+
+        # Construire le nouveau chemin: parent/variant/stem_variant.ext
+        variant_filename = f"{stem}_{variant}{suffix}"
+        return parent / variant / variant_filename
 
     async def get_media_statistics(self) -> dict:
         """Récupère les statistiques des médias."""
