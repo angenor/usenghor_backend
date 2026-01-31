@@ -132,7 +132,7 @@ class ProjectService:
         status: ProjectStatus | None = None,
         publication_status: PublicationStatus | None = None,
         category_id: str | None = None,
-        department_external_id: str | None = None,
+        sector_external_id: str | None = None,
     ) -> select:
         """Construit une requête pour lister les projets."""
         query = select(Project).options(selectinload(Project.categories))
@@ -157,9 +157,9 @@ class ProjectService:
                 ProjectCategoryLink.category_id == category_id
             )
 
-        if department_external_id:
+        if sector_external_id:
             query = query.where(
-                Project.department_external_id == department_external_id
+                Project.sector_external_id == sector_external_id
             )
 
         query = query.order_by(Project.created_at.desc())

@@ -71,7 +71,7 @@ class ProjectCreate(ProjectBase):
     """Schéma pour la création d'un projet."""
 
     cover_image_external_id: str | None = Field(None, description="ID image couverture")
-    department_external_id: str | None = Field(None, description="ID département")
+    sector_external_id: str | None = Field(None, description="ID département")
     manager_external_id: str | None = Field(None, description="ID responsable")
     album_external_id: str | None = Field(None, description="ID album principal")
     start_date: date | None = Field(None, description="Date de début")
@@ -95,7 +95,7 @@ class ProjectUpdate(BaseModel):
     summary: str | None = None
     description: str | None = None
     cover_image_external_id: str | None = None
-    department_external_id: str | None = None
+    sector_external_id: str | None = None
     manager_external_id: str | None = None
     album_external_id: str | None = None
     start_date: date | None = None
@@ -114,7 +114,7 @@ class ProjectRead(ProjectBase):
 
     id: str
     cover_image_external_id: str | None
-    department_external_id: str | None
+    sector_external_id: str | None
     manager_external_id: str | None
     album_external_id: str | None
     start_date: date | None

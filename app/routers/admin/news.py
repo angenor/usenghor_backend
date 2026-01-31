@@ -90,7 +90,7 @@ async def create_news(
         highlight_status=news_data.highlight_status,
         cover_image_external_id=news_data.cover_image_external_id,
         campus_external_id=news_data.campus_external_id,
-        department_external_id=news_data.department_external_id,
+        sector_external_id=news_data.sector_external_id,
         service_external_id=news_data.service_external_id,
         event_external_id=news_data.event_external_id,
         project_external_id=news_data.project_external_id,

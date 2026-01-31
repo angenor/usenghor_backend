@@ -81,7 +81,7 @@ class Project(Base, UUIDMixin, TimestampMixin):
 
     # Références externes (sans FK)
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
-    department_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    sector_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     manager_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     album_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 

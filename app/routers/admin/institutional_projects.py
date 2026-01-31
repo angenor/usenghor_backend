@@ -130,7 +130,7 @@ async def list_projects(
         None, description="Statut publication"
     ),
     category_id: str | None = Query(None, description="Catégorie"),
-    department_external_id: str | None = Query(None, description="Département"),
+    sector_external_id: str | None = Query(None, description="Département"),
     _: bool = Depends(PermissionChecker("project.view")),
 ) -> dict:
     """Liste les projets avec pagination et filtres."""
@@ -140,7 +140,7 @@ async def list_projects(
         status=status,
         publication_status=publication_status,
         category_id=category_id,
-        department_external_id=department_external_id,
+        sector_external_id=sector_external_id,
     )
     return await paginate(db, query, pagination, Project, ProjectReadWithRelations)
 

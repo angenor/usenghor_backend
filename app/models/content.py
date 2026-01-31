@@ -87,7 +87,7 @@ class Event(Base, UUIDMixin, TimestampMixin):
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     country_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     campus_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
-    department_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    sector_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     project_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     organizer_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     album_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -195,7 +195,7 @@ class News(Base, UUIDMixin, TimestampMixin):
     # Références externes (pas de FK) - UUID pour correspondre au schéma SQL
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     campus_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
-    department_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    sector_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     service_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     event_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     project_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))

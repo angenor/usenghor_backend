@@ -313,7 +313,7 @@ class ContentService:
             cover_image_external_id=event.cover_image_external_id,
             country_external_id=event.country_external_id,
             campus_external_id=event.campus_external_id,
-            department_external_id=event.department_external_id,
+            sector_external_id=event.sector_external_id,
             status=PublicationStatus.DRAFT,
         )
         self.db.add(new_event)
@@ -626,7 +626,7 @@ class ContentService:
             video_url=news.video_url,
             cover_image_external_id=news.cover_image_external_id,
             campus_external_id=news.campus_external_id,
-            department_external_id=news.department_external_id,
+            sector_external_id=news.sector_external_id,
             service_external_id=news.service_external_id,
             highlight_status=news.highlight_status,
             status=PublicationStatus.DRAFT,
