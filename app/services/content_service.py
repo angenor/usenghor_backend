@@ -8,8 +8,7 @@ Logique métier pour la gestion des actualités et événements.
 from datetime import datetime
 from uuid import uuid4
 
-from dateutil.relativedelta import relativedelta
-from sqlalchemy import delete, extract, func, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -27,6 +26,17 @@ from app.models.content import (
     RegistrationStatus,
     Tag,
 )
+
+
+def add_months(date: datetime, months: int) -> datetime:
+    """Ajoute des mois à une date (sans dateutil)."""
+    month = date.month - 1 + months
+    year = date.year + month // 12
+    month = month % 12 + 1
+    # Gérer les jours qui dépassent le mois
+    day = min(date.day, [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28,
+                         31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1])
+    return date.replace(year=year, month=month, day=day)
 
 
 class ContentService:
@@ -748,12 +758,12 @@ class ContentService:
 
         # Timeline - événements créés par mois (derniers N mois)
         timeline = []
-        start_date = now - relativedelta(months=months - 1)
+        start_date = add_months(now, -(months - 1))
         start_date = start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
         for i in range(months):
-            period_start = start_date + relativedelta(months=i)
-            period_end = period_start + relativedelta(months=1)
+            period_start = add_months(start_date, i)
+            period_end = add_months(period_start, 1)
 
             count_result = await self.db.execute(
                 select(func.count(Event.id)).where(
@@ -820,12 +830,12 @@ class ContentService:
 
         # Timeline - publications par mois (derniers N mois)
         timeline = []
-        start_date = now - relativedelta(months=months - 1)
+        start_date = add_months(now, -(months - 1))
         start_date = start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
         for i in range(months):
-            period_start = start_date + relativedelta(months=i)
-            period_end = period_start + relativedelta(months=1)
+            period_start = add_months(start_date, i)
+            period_end = add_months(period_start, 1)
 
             count_result = await self.db.execute(
                 select(func.count(News.id)).where(
