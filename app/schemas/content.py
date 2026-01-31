@@ -342,3 +342,44 @@ class NewsPublish(BaseModel):
     """Schéma pour publier/dépublier une actualité."""
 
     published_at: datetime | None = Field(None, description="Date de publication")
+
+
+# =============================================================================
+# STATISTICS
+# =============================================================================
+
+
+class TimelineDataPoint(BaseModel):
+    """Point de données pour les graphiques de tendance."""
+
+    period: str = Field(..., description="Période (ex: '2025-01')")
+    count: int = Field(..., description="Nombre d'éléments")
+
+
+class EventStatistics(BaseModel):
+    """Statistiques des événements."""
+
+    total: int = Field(0, description="Total des événements")
+    published: int = Field(0, description="Événements publiés")
+    draft: int = Field(0, description="Événements en brouillon")
+    archived: int = Field(0, description="Événements archivés")
+    upcoming: int = Field(0, description="Événements à venir")
+    past: int = Field(0, description="Événements passés")
+    by_type: dict[str, int] = Field(default_factory=dict, description="Par type")
+    timeline: list[TimelineDataPoint] = Field(
+        default_factory=list, description="Tendance par mois"
+    )
+
+
+class NewsStatistics(BaseModel):
+    """Statistiques des actualités."""
+
+    total: int = Field(0, description="Total des actualités")
+    published: int = Field(0, description="Actualités publiées")
+    draft: int = Field(0, description="Actualités en brouillon")
+    archived: int = Field(0, description="Actualités archivées")
+    headline: int = Field(0, description="Actualités à la une")
+    featured: int = Field(0, description="Actualités mises en avant")
+    timeline: list[TimelineDataPoint] = Field(
+        default_factory=list, description="Publications par mois"
+    )

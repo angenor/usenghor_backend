@@ -18,12 +18,25 @@ from app.schemas.common import IdResponse, MessageResponse
 from app.schemas.content import (
     EventCreate,
     EventRead,
+    EventStatistics,
     EventUpdate,
     EventWithRegistrations,
 )
 from app.services.content_service import ContentService
 
 router = APIRouter(prefix="/events", tags=["Events"])
+
+
+@router.get("/statistics", response_model=EventStatistics)
+async def get_events_statistics(
+    db: DbSession,
+    current_user: CurrentUser,
+    months: int = Query(12, ge=1, le=24, description="Nombre de mois pour la timeline"),
+    _: bool = Depends(PermissionChecker("events.view")),
+) -> EventStatistics:
+    """Récupère les statistiques des événements."""
+    service = ContentService(db)
+    return await service.get_events_statistics(months=months)
 
 
 @router.get("", response_model=dict)

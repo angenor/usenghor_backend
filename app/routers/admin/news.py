@@ -19,12 +19,25 @@ from app.schemas.content import (
     NewsCreate,
     NewsPublish,
     NewsRead,
+    NewsStatistics,
     NewsUpdate,
     NewsWithTags,
 )
 from app.services.content_service import ContentService
 
 router = APIRouter(prefix="/news", tags=["News"])
+
+
+@router.get("/statistics", response_model=NewsStatistics)
+async def get_news_statistics(
+    db: DbSession,
+    current_user: CurrentUser,
+    months: int = Query(6, ge=1, le=24, description="Nombre de mois pour la timeline"),
+    _: bool = Depends(PermissionChecker("news.view")),
+) -> NewsStatistics:
+    """Récupère les statistiques des actualités."""
+    service = ContentService(db)
+    return await service.get_news_statistics(months=months)
 
 
 @router.get("", response_model=dict)

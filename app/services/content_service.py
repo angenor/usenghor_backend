@@ -8,7 +8,8 @@ Logique métier pour la gestion des actualités et événements.
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import delete, func, or_, select, update
+from dateutil.relativedelta import relativedelta
+from sqlalchemy import delete, extract, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -20,6 +21,7 @@ from app.models.content import (
     EventPartner,
     EventRegistration,
     News,
+    NewsHighlightStatus,
     NewsMedia,
     NewsTag,
     RegistrationStatus,
@@ -691,3 +693,159 @@ class ContentService:
             )
         )
         await self.db.flush()
+
+    # =========================================================================
+    # STATISTICS
+    # =========================================================================
+
+    async def get_events_statistics(self, months: int = 12) -> dict:
+        """Calcule les statistiques des événements."""
+        now = datetime.now()
+
+        # Comptage par statut
+        total_result = await self.db.execute(select(func.count(Event.id)))
+        total = total_result.scalar() or 0
+
+        published_result = await self.db.execute(
+            select(func.count(Event.id)).where(Event.status == PublicationStatus.PUBLISHED)
+        )
+        published = published_result.scalar() or 0
+
+        draft_result = await self.db.execute(
+            select(func.count(Event.id)).where(Event.status == PublicationStatus.DRAFT)
+        )
+        draft = draft_result.scalar() or 0
+
+        archived_result = await self.db.execute(
+            select(func.count(Event.id)).where(Event.status == PublicationStatus.ARCHIVED)
+        )
+        archived = archived_result.scalar() or 0
+
+        # Événements à venir vs passés
+        upcoming_result = await self.db.execute(
+            select(func.count(Event.id)).where(
+                Event.start_date >= now,
+                Event.status == PublicationStatus.PUBLISHED,
+            )
+        )
+        upcoming = upcoming_result.scalar() or 0
+
+        past_result = await self.db.execute(
+            select(func.count(Event.id)).where(
+                Event.start_date < now,
+                Event.status == PublicationStatus.PUBLISHED,
+            )
+        )
+        past = past_result.scalar() or 0
+
+        # Comptage par type
+        type_results = await self.db.execute(
+            select(Event.type, func.count(Event.id))
+            .where(Event.status == PublicationStatus.PUBLISHED)
+            .group_by(Event.type)
+        )
+        by_type = {row[0]: row[1] for row in type_results.all()}
+
+        # Timeline - événements créés par mois (derniers N mois)
+        timeline = []
+        start_date = now - relativedelta(months=months - 1)
+        start_date = start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        for i in range(months):
+            period_start = start_date + relativedelta(months=i)
+            period_end = period_start + relativedelta(months=1)
+
+            count_result = await self.db.execute(
+                select(func.count(Event.id)).where(
+                    Event.start_date >= period_start,
+                    Event.start_date < period_end,
+                )
+            )
+            count = count_result.scalar() or 0
+            timeline.append({
+                "period": period_start.strftime("%Y-%m"),
+                "count": count,
+            })
+
+        return {
+            "total": total,
+            "published": published,
+            "draft": draft,
+            "archived": archived,
+            "upcoming": upcoming,
+            "past": past,
+            "by_type": by_type,
+            "timeline": timeline,
+        }
+
+    async def get_news_statistics(self, months: int = 6) -> dict:
+        """Calcule les statistiques des actualités."""
+        now = datetime.now()
+
+        # Comptage par statut
+        total_result = await self.db.execute(select(func.count(News.id)))
+        total = total_result.scalar() or 0
+
+        published_result = await self.db.execute(
+            select(func.count(News.id)).where(News.status == PublicationStatus.PUBLISHED)
+        )
+        published = published_result.scalar() or 0
+
+        draft_result = await self.db.execute(
+            select(func.count(News.id)).where(News.status == PublicationStatus.DRAFT)
+        )
+        draft = draft_result.scalar() or 0
+
+        archived_result = await self.db.execute(
+            select(func.count(News.id)).where(News.status == PublicationStatus.ARCHIVED)
+        )
+        archived = archived_result.scalar() or 0
+
+        # Comptage par highlight status
+        headline_result = await self.db.execute(
+            select(func.count(News.id)).where(
+                News.status == PublicationStatus.PUBLISHED,
+                News.highlight_status == NewsHighlightStatus.HEADLINE,
+            )
+        )
+        headline = headline_result.scalar() or 0
+
+        featured_result = await self.db.execute(
+            select(func.count(News.id)).where(
+                News.status == PublicationStatus.PUBLISHED,
+                News.highlight_status == NewsHighlightStatus.FEATURED,
+            )
+        )
+        featured = featured_result.scalar() or 0
+
+        # Timeline - publications par mois (derniers N mois)
+        timeline = []
+        start_date = now - relativedelta(months=months - 1)
+        start_date = start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        for i in range(months):
+            period_start = start_date + relativedelta(months=i)
+            period_end = period_start + relativedelta(months=1)
+
+            count_result = await self.db.execute(
+                select(func.count(News.id)).where(
+                    News.published_at >= period_start,
+                    News.published_at < period_end,
+                    News.status == PublicationStatus.PUBLISHED,
+                )
+            )
+            count = count_result.scalar() or 0
+            timeline.append({
+                "period": period_start.strftime("%Y-%m"),
+                "count": count,
+            })
+
+        return {
+            "total": total,
+            "published": published,
+            "draft": draft,
+            "archived": archived,
+            "headline": headline,
+            "featured": featured,
+            "timeline": timeline,
+        }
