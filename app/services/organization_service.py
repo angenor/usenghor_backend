@@ -224,6 +224,46 @@ class OrganizationService:
         )
         return list(result.scalars().all())
 
+    async def duplicate_sector(self, sector_id: str, new_code: str) -> Sector:
+        """
+        Duplique un secteur avec un nouveau code.
+
+        Args:
+            sector_id: ID du secteur à dupliquer.
+            new_code: Code unique pour le nouveau secteur.
+
+        Returns:
+            Nouveau secteur créé.
+
+        Raises:
+            NotFoundException: Si le secteur source n'existe pas.
+            ConflictException: Si le nouveau code existe déjà.
+        """
+        sector = await self.get_sector_by_id(sector_id)
+        if not sector:
+            raise NotFoundException("Secteur non trouvé")
+
+        new_code = new_code.upper()
+        existing = await self.get_sector_by_code(new_code)
+        if existing:
+            raise ConflictException(f"Un secteur avec le code '{new_code}' existe déjà")
+
+        new_sector = Sector(
+            id=str(uuid4()),
+            code=new_code,
+            name=f"{sector.name} (copie)",
+            description=sector.description,
+            mission=sector.mission,
+            icon_external_id=sector.icon_external_id,
+            cover_image_external_id=sector.cover_image_external_id,
+            head_external_id=sector.head_external_id,
+            display_order=sector.display_order + 1,
+            active=False,  # Désactivé par défaut
+        )
+        self.db.add(new_sector)
+        await self.db.flush()
+        return new_sector
+
     # =========================================================================
     # SECTORS - PUBLIC METHODS
     # =========================================================================
@@ -432,6 +472,54 @@ class OrganizationService:
             .order_by(Service.display_order)
         )
         return list(result.scalars().all())
+
+    async def duplicate_service(self, service_id: str, new_name: str) -> Service:
+        """
+        Duplique un service avec un nouveau nom.
+
+        Args:
+            service_id: ID du service à dupliquer.
+            new_name: Nom pour le nouveau service.
+
+        Returns:
+            Nouveau service créé.
+
+        Raises:
+            NotFoundException: Si le service source n'existe pas.
+        """
+        service = await self.get_service_by_id(service_id)
+        if not service:
+            raise NotFoundException("Service non trouvé")
+
+        new_service = Service(
+            id=str(uuid4()),
+            sector_id=service.sector_id,
+            name=new_name,
+            description=service.description,
+            mission=service.mission,
+            head_external_id=service.head_external_id,
+            album_external_id=service.album_external_id,
+            email=service.email,
+            phone=service.phone,
+            display_order=service.display_order + 1,
+            active=False,  # Désactivé par défaut
+        )
+        self.db.add(new_service)
+        await self.db.flush()
+
+        # Dupliquer les objectifs
+        for obj in service.objectives:
+            new_obj = ServiceObjective(
+                id=str(uuid4()),
+                service_id=new_service.id,
+                title=obj.title,
+                description=obj.description,
+                display_order=obj.display_order,
+            )
+            self.db.add(new_obj)
+
+        await self.db.flush()
+        return await self.get_service_by_id(new_service.id)
 
     # =========================================================================
     # SERVICES - PUBLIC METHODS

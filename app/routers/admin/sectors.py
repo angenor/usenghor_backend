@@ -117,6 +117,20 @@ async def toggle_sector_active(
     return await service.toggle_sector_active(sector_id)
 
 
+@router.post("/{sector_id}/duplicate", response_model=IdResponse, status_code=status.HTTP_201_CREATED)
+async def duplicate_sector(
+    sector_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    new_code: str = Query(..., description="Code unique pour le nouveau secteur"),
+    _: bool = Depends(PermissionChecker("organization.edit")),
+) -> IdResponse:
+    """Duplique un secteur avec un nouveau code."""
+    service = OrganizationService(db)
+    sector = await service.duplicate_sector(sector_id, new_code)
+    return IdResponse(id=sector.id, message="Secteur dupliqué avec succès")
+
+
 @router.put("/reorder", response_model=list[SectorRead])
 async def reorder_sectors(
     reorder_data: SectorReorder,

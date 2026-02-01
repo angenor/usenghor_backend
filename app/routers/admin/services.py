@@ -134,6 +134,20 @@ async def toggle_service_active(
     return await org_service.toggle_service_active(service_id)
 
 
+@router.post("/{service_id}/duplicate", response_model=IdResponse, status_code=status.HTTP_201_CREATED)
+async def duplicate_service(
+    service_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    new_name: str = Query(..., description="Nom pour le nouveau service"),
+    _: bool = Depends(PermissionChecker("organization.edit")),
+) -> IdResponse:
+    """Duplique un service avec un nouveau nom."""
+    org_service = OrganizationService(db)
+    svc = await org_service.duplicate_service(service_id, new_name)
+    return IdResponse(id=svc.id, message="Service dupliqué avec succès")
+
+
 @router.put("/reorder", response_model=list[ServiceRead])
 async def reorder_services(
     reorder_data: ServiceReorder,
