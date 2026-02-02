@@ -35,7 +35,7 @@ async def list_countries(
     """Liste les pays avec pagination et filtres."""
     service = CoreService(db)
     query = await service.get_countries(search=search, active=active)
-    return await paginate(db, query, pagination, Country)
+    return await paginate(db, query, pagination, Country, CountryRead)
 
 
 @router.get("/{country_id}", response_model=CountryRead)
