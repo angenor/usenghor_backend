@@ -136,6 +136,49 @@ class ServiceProjectRead(ServiceProjectBase):
 
 
 # =============================================================================
+# SERVICE TEAM
+# =============================================================================
+
+
+class ServiceTeamBase(BaseModel):
+    """Schéma de base pour les membres d'équipe d'un service."""
+
+    user_external_id: str = Field(..., description="ID externe de l'utilisateur")
+    position: str = Field(..., min_length=1, max_length=255, description="Poste/fonction")
+    display_order: int = Field(0, ge=0, description="Ordre d'affichage")
+    start_date: date | None = Field(None, description="Date de début")
+    end_date: date | None = Field(None, description="Date de fin")
+    active: bool = Field(True, description="Membre actif")
+
+
+class ServiceTeamCreate(ServiceTeamBase):
+    """Schéma pour l'ajout d'un membre à l'équipe."""
+
+    pass
+
+
+class ServiceTeamUpdate(BaseModel):
+    """Schéma pour la mise à jour d'un membre de l'équipe."""
+
+    user_external_id: str | None = None
+    position: str | None = Field(None, min_length=1, max_length=255)
+    display_order: int | None = Field(None, ge=0)
+    start_date: date | None = None
+    end_date: date | None = None
+    active: bool | None = None
+
+
+class ServiceTeamRead(ServiceTeamBase):
+    """Schéma pour la lecture d'un membre de l'équipe."""
+
+    id: str
+    service_id: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# =============================================================================
 # SERVICES
 # =============================================================================
 
@@ -188,11 +231,12 @@ class ServiceRead(ServiceBase):
 
 
 class ServiceWithDetails(ServiceRead):
-    """Schéma pour un service avec ses détails (objectifs, réalisations, projets)."""
+    """Schéma pour un service avec ses détails (objectifs, réalisations, projets, équipe)."""
 
     objectives: list[ServiceObjectiveRead] = []
     achievements: list[ServiceAchievementRead] = []
     projects: list[ServiceProjectRead] = []
+    team: list[ServiceTeamRead] = []
 
 
 class ServiceReorder(BaseModel):
@@ -305,6 +349,7 @@ class ServicePublicWithDetails(ServicePublic):
     objectives: list[ServiceObjectiveRead] = []
     achievements: list[ServiceAchievementRead] = []
     projects: list[ServiceProjectRead] = []
+    team: list[ServiceTeamRead] = []
 
 
 class SectorPublicWithServices(SectorPublic):

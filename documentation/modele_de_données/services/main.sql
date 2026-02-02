@@ -121,8 +121,9 @@
 -- ├─────────────────┼────────────────────────────────────────────────────────────┤
 -- │ 03_media        │ media, albums, album_media                                  │
 -- ├─────────────────┼────────────────────────────────────────────────────────────┤
--- │ 04_organization │ departments, services, service_objectives,                  │
--- │                 │ service_achievements, service_projects, service_media_library│
+-- │ 04_organization │ sectors, services, service_objectives,                       │
+-- │                 │ service_achievements, service_projects, service_media_library,│
+-- │                 │ service_team                                                  │
 -- ├─────────────────┼────────────────────────────────────────────────────────────┤
 -- │ 05_campus       │ campuses, campus_partners, campus_team, campus_media_library│
 -- ├─────────────────┼────────────────────────────────────────────────────────────┤

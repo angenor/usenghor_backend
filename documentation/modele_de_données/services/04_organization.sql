@@ -97,10 +97,28 @@ CREATE TABLE service_media_library (
     PRIMARY KEY (service_id, album_external_id)
 );
 
+-- Équipe d'un service
+CREATE TABLE service_team (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    service_id UUID REFERENCES services(id) ON DELETE CASCADE,
+    user_external_id UUID NOT NULL,  -- → IDENTITY.users.id
+    position VARCHAR(255) NOT NULL,
+    display_order INT DEFAULT 0,
+    start_date DATE,
+    end_date DATE,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_service_team_service ON service_team(service_id);
+CREATE INDEX idx_service_team_user ON service_team(user_external_id);
+
 COMMENT ON TABLE sectors IS '[ORGANIZATION] Secteurs de l''université';
 COMMENT ON TABLE services IS '[ORGANIZATION] Services rattachés aux secteurs';
+COMMENT ON TABLE service_team IS '[ORGANIZATION] Équipe d''un service';
 COMMENT ON COLUMN sectors.head_external_id IS 'Référence externe vers IDENTITY.users.id';
 COMMENT ON COLUMN services.album_external_id IS 'Référence externe vers MEDIA.albums.id';
+COMMENT ON COLUMN service_team.user_external_id IS 'Référence externe vers IDENTITY.users.id';
 
 -- ============================================================================
 -- FIN DU SERVICE ORGANIZATION

@@ -19,6 +19,7 @@ from app.models.organization import (
     ServiceMediaLibrary,
     ServiceObjective,
     ServiceProject,
+    ServiceTeam,
 )
 
 
@@ -318,6 +319,7 @@ class OrganizationService:
             selectinload(Service.objectives),
             selectinload(Service.achievements),
             selectinload(Service.projects),
+            selectinload(Service.team),
         )
 
         if search:
@@ -347,6 +349,7 @@ class OrganizationService:
                 selectinload(Service.objectives),
                 selectinload(Service.achievements),
                 selectinload(Service.projects),
+                selectinload(Service.team),
             )
             .where(Service.id == service_id)
         )
@@ -548,7 +551,7 @@ class OrganizationService:
 
     async def get_service_with_details(self, service_id: str) -> Service | None:
         """
-        Récupère un service avec ses objectifs, réalisations et projets.
+        Récupère un service avec ses objectifs, réalisations, projets et équipe.
 
         Args:
             service_id: ID du service.
@@ -562,6 +565,7 @@ class OrganizationService:
                 selectinload(Service.objectives),
                 selectinload(Service.achievements),
                 selectinload(Service.projects),
+                selectinload(Service.team),
             )
             .where(Service.id == service_id, Service.active == True)
         )
@@ -853,3 +857,86 @@ class OrganizationService:
             )
         )
         return [row[0] for row in result.all()]
+
+    # =========================================================================
+    # SERVICE TEAM
+    # =========================================================================
+
+    async def get_service_team(self, service_id: str) -> list[ServiceTeam]:
+        """Récupère les membres de l'équipe d'un service."""
+        service = await self.get_service_by_id(service_id)
+        if not service:
+            raise NotFoundException("Service non trouvé")
+
+        result = await self.db.execute(
+            select(ServiceTeam)
+            .where(ServiceTeam.service_id == service_id)
+            .order_by(ServiceTeam.display_order, ServiceTeam.created_at)
+        )
+        return list(result.scalars().all())
+
+    async def get_service_team_member(self, member_id: str) -> ServiceTeam | None:
+        """Récupère un membre de l'équipe par son ID."""
+        result = await self.db.execute(
+            select(ServiceTeam).where(ServiceTeam.id == member_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def create_service_team_member(
+        self,
+        service_id: str,
+        user_external_id: str,
+        position: str,
+        **kwargs,
+    ) -> ServiceTeam:
+        """Ajoute un membre à l'équipe d'un service."""
+        service = await self.get_service_by_id(service_id)
+        if not service:
+            raise NotFoundException("Service non trouvé")
+
+        member = ServiceTeam(
+            id=str(uuid4()),
+            service_id=service_id,
+            user_external_id=user_external_id,
+            position=position,
+            **kwargs,
+        )
+        self.db.add(member)
+        await self.db.flush()
+        return member
+
+    async def update_service_team_member(
+        self, member_id: str, **kwargs
+    ) -> ServiceTeam:
+        """Met à jour un membre de l'équipe."""
+        result = await self.db.execute(
+            select(ServiceTeam).where(ServiceTeam.id == member_id)
+        )
+        member = result.scalar_one_or_none()
+        if not member:
+            raise NotFoundException("Membre non trouvé")
+
+        await self.db.execute(
+            update(ServiceTeam)
+            .where(ServiceTeam.id == member_id)
+            .values(**kwargs)
+        )
+        await self.db.flush()
+
+        result = await self.db.execute(
+            select(ServiceTeam).where(ServiceTeam.id == member_id)
+        )
+        return result.scalar_one()
+
+    async def delete_service_team_member(self, member_id: str) -> None:
+        """Supprime un membre de l'équipe."""
+        result = await self.db.execute(
+            select(ServiceTeam).where(ServiceTeam.id == member_id)
+        )
+        if not result.scalar_one_or_none():
+            raise NotFoundException("Membre non trouvé")
+
+        await self.db.execute(
+            delete(ServiceTeam).where(ServiceTeam.id == member_id)
+        )
+        await self.db.flush()

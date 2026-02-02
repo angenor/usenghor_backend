@@ -25,6 +25,9 @@ from app.schemas.organization import (
     ServiceProjectUpdate,
     ServiceRead,
     ServiceReorder,
+    ServiceTeamCreate,
+    ServiceTeamRead,
+    ServiceTeamUpdate,
     ServiceUpdate,
     ServiceWithDetails,
 )
@@ -419,3 +422,74 @@ async def remove_album_from_service(
     org_service = OrganizationService(db)
     await org_service.remove_album_from_service(service_id, album_id)
     return MessageResponse(message="Album retiré du service avec succès")
+
+
+# =============================================================================
+# SERVICE TEAM
+# =============================================================================
+
+
+@router.get("/{service_id}/team", response_model=list[ServiceTeamRead])
+async def get_service_team(
+    service_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.view")),
+) -> list:
+    """Récupère les membres de l'équipe d'un service."""
+    org_service = OrganizationService(db)
+    return await org_service.get_service_team(service_id)
+
+
+@router.post(
+    "/{service_id}/team",
+    response_model=ServiceTeamRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_service_team_member(
+    service_id: str,
+    member_data: ServiceTeamCreate,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.edit")),
+):
+    """Ajoute un membre à l'équipe d'un service."""
+    org_service = OrganizationService(db)
+    return await org_service.create_service_team_member(
+        service_id=service_id,
+        user_external_id=member_data.user_external_id,
+        position=member_data.position,
+        display_order=member_data.display_order,
+        start_date=member_data.start_date,
+        end_date=member_data.end_date,
+        active=member_data.active,
+    )
+
+
+@router.put("/{service_id}/team/{member_id}", response_model=ServiceTeamRead)
+async def update_service_team_member(
+    service_id: str,
+    member_id: str,
+    member_data: ServiceTeamUpdate,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.edit")),
+):
+    """Met à jour un membre de l'équipe."""
+    org_service = OrganizationService(db)
+    update_dict = member_data.model_dump(exclude_unset=True)
+    return await org_service.update_service_team_member(member_id, **update_dict)
+
+
+@router.delete("/{service_id}/team/{member_id}", response_model=MessageResponse)
+async def delete_service_team_member(
+    service_id: str,
+    member_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.edit")),
+) -> MessageResponse:
+    """Supprime un membre de l'équipe."""
+    org_service = OrganizationService(db)
+    await org_service.delete_service_team_member(member_id)
+    return MessageResponse(message="Membre supprimé avec succès")

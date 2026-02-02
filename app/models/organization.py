@@ -96,6 +96,12 @@ class Service(Base, UUIDMixin, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    team: Mapped[list["ServiceTeam"]] = relationship(
+        "ServiceTeam",
+        back_populates="service",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
 
 class ServiceObjective(Base, UUIDMixin):
@@ -182,3 +188,31 @@ class ServiceMediaLibrary(Base):
         ForeignKey("services.id", ondelete="CASCADE"), primary_key=True
     )
     album_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+
+
+class ServiceTeam(Base, UUIDMixin):
+    """Membre de l'équipe d'un service."""
+
+    __tablename__ = "service_team"
+
+    service_id: Mapped[str] = mapped_column(
+        ForeignKey("services.id", ondelete="CASCADE"), nullable=False
+    )
+    user_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
+    position: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0)
+    start_date: Mapped[str | None] = mapped_column(Date)
+    end_date: Mapped[str | None] = mapped_column(Date)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Seulement created_at (pas de updated_at selon le schéma SQL)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    # Relation
+    service: Mapped["Service"] = relationship(
+        "Service", back_populates="team"
+    )
