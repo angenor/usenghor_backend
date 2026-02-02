@@ -325,7 +325,7 @@ class ContentService:
             cover_image_external_id=event.cover_image_external_id,
             country_external_id=event.country_external_id,
             campus_external_id=event.campus_external_id,
-            sector_external_id=event.sector_external_id,
+            service_external_id=event.service_external_id,
             status=PublicationStatus.DRAFT,
         )
         self.db.add(new_event)

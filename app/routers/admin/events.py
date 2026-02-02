@@ -119,7 +119,7 @@ async def create_event(
         cover_image_external_id=event_data.cover_image_external_id,
         country_external_id=event_data.country_external_id,
         campus_external_id=event_data.campus_external_id,
-        sector_external_id=event_data.sector_external_id,
+        service_external_id=event_data.service_external_id,
         project_external_id=event_data.project_external_id,
         organizer_external_id=event_data.organizer_external_id,
         album_external_id=event_data.album_external_id,

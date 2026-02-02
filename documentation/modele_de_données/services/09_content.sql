@@ -29,7 +29,7 @@ CREATE TABLE events (
     cover_image_external_id UUID,  -- → MEDIA.media.id
     country_external_id UUID,      -- → CORE.countries.id
     campus_external_id UUID,       -- → CAMPUS.campuses.id
-    sector_external_id UUID,        -- → ORGANIZATION.sectors.id
+    service_external_id UUID,        -- → ORGANIZATION.services.id
     project_external_id UUID,       -- → PROJECT.projects.id
     organizer_external_id UUID,    -- → IDENTITY.users.id
     album_external_id UUID,        -- → MEDIA.albums.id
@@ -57,7 +57,7 @@ CREATE INDEX idx_events_project ON events(project_external_id);
 CREATE INDEX idx_events_type ON events(type);
 CREATE INDEX idx_events_slug ON events(slug);
 CREATE INDEX idx_events_campus ON events(campus_external_id);
-CREATE INDEX idx_events_sector ON events(sector_external_id);
+CREATE INDEX idx_events_service ON events(service_external_id);
 
 -- Partenaires d'un événement
 CREATE TABLE event_partners (

@@ -148,7 +148,7 @@ class EventCreate(EventBase):
     cover_image_external_id: str | None = None
     country_external_id: str | None = None
     campus_external_id: str | None = None
-    sector_external_id: str | None = None
+    service_external_id: str | None = None
     project_external_id: str | None = None
     organizer_external_id: str | None = None
     album_external_id: str | None = None
@@ -185,7 +185,7 @@ class EventUpdate(BaseModel):
     cover_image_external_id: str | None = None
     country_external_id: str | None = None
     campus_external_id: str | None = None
-    sector_external_id: str | None = None
+    service_external_id: str | None = None
     project_external_id: str | None = None
     organizer_external_id: str | None = None
     album_external_id: str | None = None
@@ -199,7 +199,7 @@ class EventRead(EventBase):
     cover_image_external_id: str | None
     country_external_id: str | None
     campus_external_id: str | None
-    sector_external_id: str | None
+    service_external_id: str | None
     project_external_id: str | None
     organizer_external_id: str | None
     album_external_id: str | None
