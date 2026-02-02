@@ -36,7 +36,7 @@ async def list_permissions(
     """Liste les permissions avec pagination et filtres."""
     service = IdentityService(db)
     query = await service.get_permissions(search=search, category=category)
-    return await paginate(db, query, pagination, Permission)
+    return await paginate(db, query, pagination, Permission, PermissionRead)
 
 
 @router.get("/matrix", response_model=PermissionMatrix)
