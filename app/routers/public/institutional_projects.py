@@ -53,7 +53,7 @@ async def list_projects(
         status=status,
         category_slug=category,
     )
-    return await paginate(db, query, pagination, Project)
+    return await paginate(db, query, pagination, Project, schema_class=ProjectPublic)
 
 
 @router.get("/by-slug/{slug}", response_model=ProjectReadWithRelations)
