@@ -5,6 +5,7 @@ Public routers - Routes sans authentification
 from fastapi import APIRouter
 
 from app.routers.public import (
+    albums,
     application_calls,
     campuses,
     countries,
@@ -23,6 +24,7 @@ from app.routers.public import (
 router = APIRouter(prefix="/api/public", tags=["Public"])
 
 # Inclusion des sous-routers
+router.include_router(albums.router)
 router.include_router(campuses.router)
 router.include_router(countries.router)
 router.include_router(news.router)

@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import ConflictException, NotFoundException
 from app.models.base import PublicationStatus
+from app.models.campus import Campus
 from app.models.content import (
     Event,
     EventMediaLibrary,
@@ -26,6 +27,9 @@ from app.models.content import (
     RegistrationStatus,
     Tag,
 )
+from app.models.identity import User
+from app.models.organization import Sector, Service
+from app.models.project import Project
 
 
 def add_months(date: datetime, months: int) -> datetime:
@@ -474,6 +478,10 @@ class ContentService:
         highlight_status: str | None = None,
         tag_id: str | None = None,
         campus_id: str | None = None,
+        sector_id: str | None = None,
+        service_id: str | None = None,
+        project_id: str | None = None,
+        event_id: str | None = None,
         from_date: datetime | None = None,
         to_date: datetime | None = None,
     ) -> select:
@@ -501,6 +509,18 @@ class ContentService:
         if campus_id:
             query = query.where(News.campus_external_id == campus_id)
 
+        if sector_id:
+            query = query.where(News.sector_external_id == sector_id)
+
+        if service_id:
+            query = query.where(News.service_external_id == service_id)
+
+        if project_id:
+            query = query.where(News.project_external_id == project_id)
+
+        if event_id:
+            query = query.where(News.event_external_id == event_id)
+
         if from_date:
             query = query.where(News.published_at >= from_date)
 
@@ -509,6 +529,124 @@ class ContentService:
 
         query = query.order_by(News.published_at.desc().nullsfirst(), News.created_at.desc())
         return query
+
+    async def enrich_news_with_names(self, news_list: list[News]) -> list[dict]:
+        """Enrichit une liste d'actualités avec les noms des entités associées.
+
+        Cette méthode effectue des requêtes batch pour éviter les problèmes N+1.
+
+        Args:
+            news_list: Liste des actualités à enrichir
+
+        Returns:
+            Liste de dictionnaires avec les actualités enrichies
+        """
+        if not news_list:
+            return []
+
+        # 1. Collecter tous les IDs uniques
+        campus_ids = {n.campus_external_id for n in news_list if n.campus_external_id}
+        sector_ids = {n.sector_external_id for n in news_list if n.sector_external_id}
+        service_ids = {n.service_external_id for n in news_list if n.service_external_id}
+        project_ids = {n.project_external_id for n in news_list if n.project_external_id}
+        event_ids = {n.event_external_id for n in news_list if n.event_external_id}
+        author_ids = {n.author_external_id for n in news_list if n.author_external_id}
+
+        # 2. Charger les entités en batch (éviter N+1 queries)
+        campus_map: dict[str, str] = {}
+        sector_map: dict[str, str] = {}
+        service_map: dict[str, str] = {}
+        project_map: dict[str, str] = {}
+        event_map: dict[str, str] = {}
+        author_map: dict[str, str] = {}
+
+        if campus_ids:
+            result = await self.db.execute(
+                select(Campus.id, Campus.name).where(Campus.id.in_(campus_ids))
+            )
+            campus_map = {str(row.id): row.name for row in result.fetchall()}
+
+        if sector_ids:
+            result = await self.db.execute(
+                select(Sector.id, Sector.name).where(Sector.id.in_(sector_ids))
+            )
+            sector_map = {str(row.id): row.name for row in result.fetchall()}
+
+        if service_ids:
+            result = await self.db.execute(
+                select(Service.id, Service.name).where(Service.id.in_(service_ids))
+            )
+            service_map = {str(row.id): row.name for row in result.fetchall()}
+
+        if project_ids:
+            result = await self.db.execute(
+                select(Project.id, Project.title).where(Project.id.in_(project_ids))
+            )
+            project_map = {str(row.id): row.title for row in result.fetchall()}
+
+        if event_ids:
+            result = await self.db.execute(
+                select(Event.id, Event.title).where(Event.id.in_(event_ids))
+            )
+            event_map = {str(row.id): row.title for row in result.fetchall()}
+
+        if author_ids:
+            result = await self.db.execute(
+                select(User.id, User.first_name, User.last_name).where(User.id.in_(author_ids))
+            )
+            author_map = {
+                str(row.id): f"{row.first_name} {row.last_name}".strip()
+                for row in result.fetchall()
+            }
+
+        # 3. Mapper les noms sur les actualités
+        enriched_list = []
+        for news in news_list:
+            # Convertir les tags en dictionnaires
+            tags_data = [
+                {
+                    "id": tag.id,
+                    "name": tag.name,
+                    "slug": tag.slug,
+                    "icon": tag.icon,
+                    "description": tag.description,
+                    "created_at": tag.created_at,
+                }
+                for tag in news.tags
+            ]
+
+            enriched = {
+                "id": news.id,
+                "title": news.title,
+                "slug": news.slug,
+                "summary": news.summary,
+                "content": news.content,
+                "video_url": news.video_url,
+                "highlight_status": news.highlight_status,
+                "cover_image_external_id": news.cover_image_external_id,
+                "campus_external_id": news.campus_external_id,
+                "sector_external_id": news.sector_external_id,
+                "service_external_id": news.service_external_id,
+                "event_external_id": news.event_external_id,
+                "project_external_id": news.project_external_id,
+                "author_external_id": news.author_external_id,
+                "status": news.status,
+                "published_at": news.published_at,
+                "visible_from": news.visible_from,
+                "created_at": news.created_at,
+                "updated_at": news.updated_at,
+                "tags": tags_data,
+                # Noms résolus
+                "campus_name": campus_map.get(news.campus_external_id) if news.campus_external_id else None,
+                "sector_name": sector_map.get(news.sector_external_id) if news.sector_external_id else None,
+                "service_name": service_map.get(news.service_external_id) if news.service_external_id else None,
+                "project_name": project_map.get(news.project_external_id) if news.project_external_id else None,
+                "event_name": event_map.get(news.event_external_id) if news.event_external_id else None,
+                "author_name": author_map.get(news.author_external_id) if news.author_external_id else None,
+            }
+            enriched_list.append(enriched)
+
+        return enriched_list
 
     async def get_news_by_id(self, news_id: str) -> News | None:
         """Récupère une actualité par son ID."""

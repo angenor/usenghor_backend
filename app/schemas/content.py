@@ -321,6 +321,17 @@ class NewsWithTags(NewsRead):
     tags: list[TagRead] = []
 
 
+class NewsPublicEnriched(NewsWithTags):
+    """Schéma public enrichi avec les noms des entités associées résolus."""
+
+    campus_name: str | None = None
+    sector_name: str | None = None
+    service_name: str | None = None
+    project_name: str | None = None
+    event_name: str | None = None
+    author_name: str | None = None
+
+
 class NewsPublic(BaseModel):
     """Schéma public pour les actualités."""
 
