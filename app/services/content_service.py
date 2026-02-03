@@ -636,13 +636,13 @@ class ContentService:
                 "created_at": news.created_at,
                 "updated_at": news.updated_at,
                 "tags": tags_data,
-                # Noms résolus
-                "campus_name": campus_map.get(news.campus_external_id) if news.campus_external_id else None,
-                "sector_name": sector_map.get(news.sector_external_id) if news.sector_external_id else None,
-                "service_name": service_map.get(news.service_external_id) if news.service_external_id else None,
-                "project_name": project_map.get(news.project_external_id) if news.project_external_id else None,
-                "event_name": event_map.get(news.event_external_id) if news.event_external_id else None,
-                "author_name": author_map.get(news.author_external_id) if news.author_external_id else None,
+                # Noms résolus (conversion en str pour correspondre aux clés du map)
+                "campus_name": campus_map.get(str(news.campus_external_id)) if news.campus_external_id else None,
+                "sector_name": sector_map.get(str(news.sector_external_id)) if news.sector_external_id else None,
+                "service_name": service_map.get(str(news.service_external_id)) if news.service_external_id else None,
+                "project_name": project_map.get(str(news.project_external_id)) if news.project_external_id else None,
+                "event_name": event_map.get(str(news.event_external_id)) if news.event_external_id else None,
+                "author_name": author_map.get(str(news.author_external_id)) if news.author_external_id else None,
             }
             enriched_list.append(enriched)
 
