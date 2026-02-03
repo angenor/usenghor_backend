@@ -30,14 +30,15 @@ async def list_partners(
         country_id=country_id,
         active=True,  # Seulement les partenaires actifs
     )
-    return await paginate(db, query, pagination, Partner)
+    return await paginate(db, query, pagination, Partner, PartnerPublic)
 
 
 @router.get("/by-type/{partner_type}", response_model=list[PartnerPublic])
 async def list_partners_by_type(
     partner_type: PartnerType,
     db: DbSession,
-) -> list[Partner]:
+) -> list[PartnerPublic]:
     """Liste les partenaires actifs d'un type donné."""
     service = PartnerService(db)
-    return await service.get_partners_by_type(partner_type)
+    partners = await service.get_partners_by_type(partner_type)
+    return [PartnerPublic.model_validate(p) for p in partners]
