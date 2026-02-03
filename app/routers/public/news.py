@@ -5,7 +5,7 @@ Router Public - Actualités
 Endpoints publics pour les actualités.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from math import ceil
 
 from fastapi import APIRouter, Depends, Query
@@ -102,7 +102,7 @@ async def get_news_by_slug(
         raise NotFoundException("Actualité non trouvée")
 
     # Vérifier la date de visibilité
-    if news.visible_from and news.visible_from > datetime.now():
+    if news.visible_from and news.visible_from > datetime.now(timezone.utc):
         raise NotFoundException("Actualité non trouvée")
 
     # Enrichir avec les noms des entités associées
