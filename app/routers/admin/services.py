@@ -429,6 +429,18 @@ async def remove_album_from_service(
 # =============================================================================
 
 
+@router.get("/team/user/{user_id}", response_model=list[ServiceTeamRead])
+async def get_user_service_affectations(
+    user_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.view")),
+) -> list:
+    """Récupère les affectations service d'un utilisateur."""
+    org_service = OrganizationService(db)
+    return await org_service.get_user_service_affectations(user_id)
+
+
 @router.get("/{service_id}/team", response_model=list[ServiceTeamRead])
 async def get_service_team(
     service_id: str,

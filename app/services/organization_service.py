@@ -940,3 +940,12 @@ class OrganizationService:
             delete(ServiceTeam).where(ServiceTeam.id == member_id)
         )
         await self.db.flush()
+
+    async def get_user_service_affectations(self, user_id: str) -> list[ServiceTeam]:
+        """Récupère les affectations service d'un utilisateur."""
+        result = await self.db.execute(
+            select(ServiceTeam)
+            .where(ServiceTeam.user_external_id == user_id)
+            .order_by(ServiceTeam.created_at.desc())
+        )
+        return list(result.scalars().all())

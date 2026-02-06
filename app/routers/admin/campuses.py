@@ -18,7 +18,9 @@ from app.schemas.campus import (
     CampusPartnerRead,
     CampusPartnerUpdate,
     CampusRead,
+    CampusTeamCreate,
     CampusTeamRead,
+    CampusTeamUpdate,
     CampusUpdate,
     CampusWithTeam,
 )
@@ -139,6 +141,23 @@ async def toggle_campus_active(
 # =============================================================================
 
 
+@router.get("/team/user/{user_id}", response_model=list[CampusTeamRead])
+async def get_user_campus_affectations(
+    user_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("campuses.view")),
+) -> list:
+    """Récupère les affectations campus d'un utilisateur."""
+    from app.models.campus import CampusTeam
+
+    service = CampusService(db)
+    query = await service.get_campus_team()
+    query = query.where(CampusTeam.user_external_id == user_id)
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
 @router.get("/{campus_id}/team", response_model=list[CampusTeamRead])
 async def get_campus_team(
     campus_id: str,
@@ -158,6 +177,75 @@ async def get_campus_team(
     query = await service.get_campus_team(campus_id=campus_id, active=active)
     result = await db.execute(query)
     return list(result.scalars().all())
+
+
+@router.post("/{campus_id}/team", response_model=IdResponse, status_code=status.HTTP_201_CREATED)
+async def add_campus_team_member(
+    campus_id: str,
+    team_data: CampusTeamCreate,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("campuses.edit")),
+) -> IdResponse:
+    """Ajoute un membre à l'équipe d'un campus."""
+    service = CampusService(db)
+
+    # Vérifier que le campus existe
+    campus = await service.get_campus_by_id(campus_id)
+    if not campus:
+        raise NotFoundException("Campus non trouvé")
+
+    team_member = await service.create_team_member(
+        campus_id=campus_id,
+        user_external_id=team_data.user_external_id,
+        position=team_data.position,
+        display_order=team_data.display_order,
+        start_date=team_data.start_date,
+        end_date=team_data.end_date,
+        active=team_data.active,
+    )
+    return IdResponse(id=team_member.id, message="Membre ajouté à l'équipe avec succès")
+
+
+@router.put("/{campus_id}/team/{member_id}", response_model=CampusTeamRead)
+async def update_campus_team_member(
+    campus_id: str,
+    member_id: str,
+    team_data: CampusTeamUpdate,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("campuses.edit")),
+) -> CampusTeamRead:
+    """Met à jour un membre de l'équipe d'un campus."""
+    service = CampusService(db)
+
+    # Vérifier que le campus existe
+    campus = await service.get_campus_by_id(campus_id)
+    if not campus:
+        raise NotFoundException("Campus non trouvé")
+
+    update_dict = team_data.model_dump(exclude_unset=True)
+    return await service.update_team_member(member_id, **update_dict)
+
+
+@router.delete("/{campus_id}/team/{member_id}", response_model=MessageResponse)
+async def delete_campus_team_member(
+    campus_id: str,
+    member_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("campuses.edit")),
+) -> MessageResponse:
+    """Supprime un membre de l'équipe d'un campus."""
+    service = CampusService(db)
+
+    # Vérifier que le campus existe
+    campus = await service.get_campus_by_id(campus_id)
+    if not campus:
+        raise NotFoundException("Campus non trouvé")
+
+    await service.delete_team_member(member_id)
+    return MessageResponse(message="Membre retiré de l'équipe avec succès")
 
 
 # =============================================================================
