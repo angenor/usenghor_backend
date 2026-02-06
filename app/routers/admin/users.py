@@ -78,6 +78,7 @@ async def create_user(
         linkedin=user_data.linkedin,
         city=user_data.city,
         address=user_data.address,
+        photo_external_id=user_data.photo_external_id,
     )
     return IdResponse(id=user.id, message="Utilisateur créé avec succès")
 

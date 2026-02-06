@@ -147,6 +147,7 @@ class UserCreate(UserBase):
     """Création d'utilisateur."""
 
     password: str = Field(min_length=8)
+    photo_external_id: str | None = None
 
 
 class UserUpdate(BaseModel):
@@ -163,6 +164,7 @@ class UserUpdate(BaseModel):
     city: str | None = None
     address: str | None = None
     active: bool | None = None
+    photo_external_id: str | None = None
 
 
 class UserRead(UserBase):
