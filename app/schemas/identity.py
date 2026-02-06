@@ -69,6 +69,28 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=8)
 
 
+class RegisterRequest(BaseModel):
+    """Requête d'inscription publique."""
+
+    email: EmailStr
+    password: str = Field(min_length=8)
+    last_name: str = Field(min_length=1, max_length=100)
+    first_name: str = Field(min_length=1, max_length=100)
+    salutation: str | None = None
+    # Affectation organisationnelle (obligatoire pour le personnel)
+    sector_id: str = Field(min_length=1)
+    service_id: str = Field(min_length=1)
+    campus_id: str = Field(min_length=1)
+
+
+class RegisterResponse(BaseModel):
+    """Réponse d'inscription."""
+
+    id: str
+    email: str
+    message: str = "Inscription réussie. Un administrateur doit vérifier votre email avant que vous puissiez vous connecter."
+
+
 # =============================================================================
 # Permission Schemas
 # =============================================================================

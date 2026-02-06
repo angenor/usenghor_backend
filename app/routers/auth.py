@@ -23,11 +23,15 @@ from app.core.security import (
     verify_password,
 )
 from app.models.identity import Role, User
+from app.models.organization import ServiceTeam
+from app.models.campus import CampusTeam
 from app.schemas.common import MessageResponse
 from app.schemas.identity import (
     ChangePasswordRequest,
     LoginRequest,
     RefreshTokenRequest,
+    RegisterRequest,
+    RegisterResponse,
     Token,
     UserMe,
     UserMeUpdate,
@@ -67,6 +71,9 @@ async def login(
 
     if not user.active:
         raise CredentialsException("Compte désactivé")
+
+    if not user.email_verified:
+        raise CredentialsException("Votre compte n'a pas encore été validé par un administrateur")
 
     # Mettre à jour last_login_at
     await db.execute(
@@ -113,6 +120,9 @@ async def login_json(
 
     if not user.active:
         raise CredentialsException("Compte désactivé")
+
+    if not user.email_verified:
+        raise CredentialsException("Votre compte n'a pas encore été validé par un administrateur")
 
     # Mettre à jour last_login_at
     await db.execute(
@@ -238,3 +248,64 @@ async def change_password(
     )
 
     return MessageResponse(message="Mot de passe modifié avec succès")
+
+
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+async def register(
+    request: RegisterRequest,
+    db: DbSession = None,
+) -> RegisterResponse:
+    """
+    Inscription publique d'un nouvel utilisateur.
+
+    Le compte sera créé avec email_verified=False.
+    Un administrateur devra vérifier l'email avant que l'utilisateur puisse se connecter.
+    """
+    # Vérifier si l'email existe déjà
+    result = await db.execute(select(User).where(User.email == request.email))
+    existing_user = result.scalar_one_or_none()
+
+    if existing_user:
+        raise CredentialsException("Un compte avec cet email existe déjà")
+
+    # Créer le nouvel utilisateur
+    password_hash = get_password_hash(request.password)
+
+    new_user = User(
+        email=request.email,
+        password_hash=password_hash,
+        last_name=request.last_name,
+        first_name=request.first_name,
+        salutation=request.salutation,
+        active=True,  # Compte actif
+        email_verified=False,  # En attente de validation par un admin
+    )
+
+    db.add(new_user)
+    await db.flush()
+    await db.refresh(new_user)
+
+    # Créer l'affectation service
+    service_team = ServiceTeam(
+        service_id=request.service_id,
+        user_external_id=str(new_user.id),
+        position="Membre",
+        active=True,
+    )
+    db.add(service_team)
+
+    # Créer l'affectation campus
+    campus_team = CampusTeam(
+        campus_id=request.campus_id,
+        user_external_id=str(new_user.id),
+        position="Membre",
+        active=True,
+    )
+    db.add(campus_team)
+
+    await db.flush()
+
+    return RegisterResponse(
+        id=str(new_user.id),
+        email=new_user.email,
+    )
