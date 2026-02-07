@@ -527,7 +527,7 @@ class ContentService:
         if to_date:
             query = query.where(News.published_at <= to_date)
 
-        query = query.order_by(News.published_at.desc().nullsfirst(), News.created_at.desc())
+        query = query.order_by(News.published_at.desc().nullslast(), News.created_at.desc())
         return query
 
     async def enrich_news_with_names(self, news_list: list[News]) -> list[dict]:

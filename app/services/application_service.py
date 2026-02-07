@@ -92,7 +92,7 @@ class ApplicationService:
         if campus_id:
             query = query.where(ApplicationCall.campus_external_id == campus_id)
 
-        query = query.order_by(ApplicationCall.deadline.desc(), ApplicationCall.title)
+        query = query.order_by(ApplicationCall.created_at.desc(), ApplicationCall.deadline.desc())
         return query
 
     async def get_published_calls(
