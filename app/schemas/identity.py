@@ -81,6 +81,11 @@ class RegisterRequest(BaseModel):
     sector_id: str = Field(min_length=1)
     service_id: str = Field(min_length=1)
     campus_id: str = Field(min_length=1)
+    # Champs optionnels
+    biography: str | None = None
+    linkedin_url: str | None = None
+    facebook_url: str | None = None
+    photo_base64: str | None = None
 
 
 class RegisterResponse(BaseModel):
@@ -161,6 +166,8 @@ class UserBase(BaseModel):
     phone: str | None = None
     phone_whatsapp: str | None = None
     linkedin: str | None = None
+    facebook: str | None = None
+    biography: str | None = None
     city: str | None = None
     address: str | None = None
 
@@ -183,6 +190,8 @@ class UserUpdate(BaseModel):
     phone: str | None = None
     phone_whatsapp: str | None = None
     linkedin: str | None = None
+    facebook: str | None = None
+    biography: str | None = None
     city: str | None = None
     address: str | None = None
     active: bool | None = None
@@ -236,6 +245,8 @@ class UserMeUpdate(BaseModel):
     phone: str | None = None
     phone_whatsapp: str | None = None
     linkedin: str | None = None
+    facebook: str | None = None
+    biography: str | None = None
     city: str | None = None
     address: str | None = None
 

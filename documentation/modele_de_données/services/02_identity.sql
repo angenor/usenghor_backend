@@ -52,6 +52,8 @@ CREATE TABLE users (
     phone VARCHAR(30),
     phone_whatsapp VARCHAR(30),
     linkedin VARCHAR(255),
+    facebook VARCHAR(255),
+    biography TEXT,
     -- Références INTER-SERVICE (pas de FK)
     photo_external_id UUID,              -- → MEDIA.media.id
     nationality_external_id UUID,        -- → CORE.countries.id

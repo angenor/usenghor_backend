@@ -97,6 +97,8 @@ class User(Base, UUIDMixin, TimestampMixin):
     phone: Mapped[str | None] = mapped_column(String(30))
     phone_whatsapp: Mapped[str | None] = mapped_column(String(30))
     linkedin: Mapped[str | None] = mapped_column(String(255))
+    facebook: Mapped[str | None] = mapped_column(String(255))
+    biography: Mapped[str | None] = mapped_column(Text)
 
     # Références INTER-SERVICE (pas de FK)
     photo_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))

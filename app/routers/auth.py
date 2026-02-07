@@ -277,6 +277,9 @@ async def register(
         last_name=request.last_name,
         first_name=request.first_name,
         salutation=request.salutation,
+        biography=request.biography,
+        linkedin=request.linkedin_url,
+        facebook=request.facebook_url,
         active=True,  # Compte actif
         email_verified=False,  # En attente de validation par un admin
     )
