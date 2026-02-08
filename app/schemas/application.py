@@ -189,6 +189,8 @@ class ApplicationCallBase(BaseModel):
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     program_external_id: str | None = Field(None, description="ID du programme associé")
     campus_external_id: str | None = Field(None, description="ID du campus")
+    country_external_id: str | None = Field(None, description="ID du pays du lieu de formation/exercice")
+    location_address: str | None = Field(None, description="Adresse exacte du lieu de formation/exercice")
     type: CallType = Field(..., description="Type d'appel")
     status: CallStatus = Field(CallStatus.UPCOMING, description="Statut de l'appel")
     opening_date: date | None = Field(None, description="Date d'ouverture")
@@ -220,6 +222,8 @@ class ApplicationCallUpdate(BaseModel):
     cover_image_external_id: str | None = None
     program_external_id: str | None = None
     campus_external_id: str | None = None
+    country_external_id: str | None = None
+    location_address: str | None = None
     type: CallType | None = None
     status: CallStatus | None = None
     opening_date: date | None = None
@@ -265,6 +269,8 @@ class ApplicationCallPublic(BaseModel):
     cover_image_external_id: str | None
     program_external_id: str | None
     campus_external_id: str | None
+    country_external_id: str | None
+    location_address: str | None
     type: CallType
     status: CallStatus
     opening_date: date | None

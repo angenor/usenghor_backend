@@ -38,6 +38,28 @@ class ApplicationService:
     # APPLICATION CALLS
     # =========================================================================
 
+    async def auto_close_expired_calls(self) -> int:
+        """
+        Ferme automatiquement les appels 'ongoing' dont la deadline est passée.
+
+        Returns:
+            Nombre d'appels mis à jour.
+        """
+        now = datetime.utcnow()
+        stmt = (
+            update(ApplicationCall)
+            .where(
+                ApplicationCall.status == CallStatus.ONGOING,
+                ApplicationCall.deadline.isnot(None),
+                ApplicationCall.deadline < now,
+            )
+            .values(status=CallStatus.CLOSED)
+        )
+        result = await self.db.execute(stmt)
+        if result.rowcount > 0:
+            await self.db.commit()
+        return result.rowcount
+
     async def get_calls(
         self,
         search: str | None = None,
@@ -61,6 +83,9 @@ class ApplicationService:
         Returns:
             Requête SQLAlchemy Select.
         """
+        # Fermer automatiquement les appels expirés avant de lister
+        await self.auto_close_expired_calls()
+
         query = select(ApplicationCall).options(
             selectinload(ApplicationCall.eligibility_criteria),
             selectinload(ApplicationCall.coverage),

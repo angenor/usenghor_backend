@@ -102,7 +102,10 @@ class ApplicationCall(Base, UUIDMixin, TimestampMixin):
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     program_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     campus_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    country_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     created_by_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+
+    location_address: Mapped[str | None] = mapped_column(Text)
 
     type: Mapped[CallType] = mapped_column(
         Enum(CallType, name="call_type", create_type=False, values_callable=lambda x: [e.value for e in x]),
