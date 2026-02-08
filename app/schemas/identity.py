@@ -249,6 +249,8 @@ class UserMeUpdate(BaseModel):
     biography: str | None = None
     city: str | None = None
     address: str | None = None
+    photo_external_id: str | None = None
+    nationality_external_id: str | None = None
 
 
 # =============================================================================
