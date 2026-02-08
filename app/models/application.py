@@ -167,6 +167,11 @@ class ApplicationCall(Base, UUIDMixin, TimestampMixin):
         back_populates="call",
         lazy="selectin",
     )
+    media_library: Mapped[list["ApplicationCallMediaLibrary"]] = relationship(
+        "ApplicationCallMediaLibrary",
+        back_populates="call",
+        cascade="all, delete-orphan",
+    )
 
 
 class CallEligibilityCriteria(Base, UUIDMixin):
@@ -419,4 +424,20 @@ class ApplicationDocument(Base, UUIDMixin):
     )
     required_document: Mapped["CallRequiredDocument | None"] = relationship(
         "CallRequiredDocument"
+    )
+
+
+class ApplicationCallMediaLibrary(Base):
+    """Table de liaison appel à candidature - albums."""
+
+    __tablename__ = "application_call_media_library"
+
+    call_id: Mapped[str] = mapped_column(
+        ForeignKey("application_calls.id", ondelete="CASCADE"), primary_key=True
+    )
+    album_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+
+    # Relations
+    call: Mapped["ApplicationCall"] = relationship(
+        "ApplicationCall", back_populates="media_library"
     )

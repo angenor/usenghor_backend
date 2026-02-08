@@ -52,6 +52,7 @@ async def list_news(
     ),
     tag_id: str | None = Query(None, description="Filtrer par tag"),
     campus_id: str | None = Query(None, description="Filtrer par campus"),
+    call_id: str | None = Query(None, description="Filtrer par appel"),
     from_date: datetime | None = Query(None, description="Date de début"),
     to_date: datetime | None = Query(None, description="Date de fin"),
     _: bool = Depends(PermissionChecker("news.view")),
@@ -64,6 +65,7 @@ async def list_news(
         highlight_status=highlight_status.value if highlight_status else None,
         tag_id=tag_id,
         campus_id=campus_id,
+        call_id=call_id,
         from_date=from_date,
         to_date=to_date,
     )
@@ -107,6 +109,7 @@ async def create_news(
         service_external_id=news_data.service_external_id,
         event_external_id=news_data.event_external_id,
         project_external_id=news_data.project_external_id,
+        call_external_id=news_data.call_external_id,
         author_external_id=news_data.author_external_id,
         status=news_data.status,
         published_at=news_data.published_at,

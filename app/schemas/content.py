@@ -265,6 +265,7 @@ class NewsCreate(NewsBase):
     service_external_id: str | None = None
     event_external_id: str | None = None
     project_external_id: str | None = None
+    call_external_id: str | None = None
     author_external_id: str | None = None
     status: PublicationStatus = PublicationStatus.DRAFT
     published_at: datetime | None = None
@@ -288,6 +289,7 @@ class NewsUpdate(BaseModel):
     service_external_id: str | None = None
     event_external_id: str | None = None
     project_external_id: str | None = None
+    call_external_id: str | None = None
     author_external_id: str | None = None
     status: PublicationStatus | None = None
     published_at: datetime | None = None
@@ -305,6 +307,7 @@ class NewsRead(NewsBase):
     service_external_id: str | None
     event_external_id: str | None
     project_external_id: str | None
+    call_external_id: str | None
     author_external_id: str | None
     status: PublicationStatus
     published_at: datetime | None
@@ -328,6 +331,7 @@ class NewsPublicEnriched(NewsWithTags):
     sector_name: str | None = None
     service_name: str | None = None
     project_name: str | None = None
+    call_name: str | None = None
     event_name: str | None = None
     author_name: str | None = None
 

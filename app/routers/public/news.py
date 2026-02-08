@@ -32,6 +32,7 @@ async def list_news(
     service_id: str | None = Query(None, description="Filtrer par service"),
     project_id: str | None = Query(None, description="Filtrer par projet"),
     event_id: str | None = Query(None, description="Filtrer par événement"),
+    call_id: str | None = Query(None, description="Filtrer par appel"),
 ) -> dict:
     """Liste les actualités publiées avec les noms des entités associées résolus."""
     service = ContentService(db)
@@ -43,6 +44,7 @@ async def list_news(
         service_id=service_id,
         project_id=project_id,
         event_id=event_id,
+        call_id=call_id,
     )
 
     # Compter le total
@@ -60,6 +62,8 @@ async def list_news(
         count_query = count_query.where(News.project_external_id == project_id)
     if event_id:
         count_query = count_query.where(News.event_external_id == event_id)
+    if call_id:
+        count_query = count_query.where(News.call_external_id == call_id)
 
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0

@@ -116,6 +116,7 @@ CREATE TABLE news (
     service_external_id UUID,       -- → ORGANIZATION.services.id
     event_external_id UUID,        -- → CONTENT.events.id (même service, peut être FK si souhaité)
     project_external_id UUID,      -- → PROJECT.projects.id
+    call_external_id UUID,         -- → APPLICATION.application_calls.id
     author_external_id UUID,       -- → IDENTITY.users.id
     highlight_status news_highlight_status DEFAULT 'standard',
     status publication_status DEFAULT 'draft',
@@ -129,6 +130,7 @@ CREATE INDEX idx_news_published_at ON news(published_at);
 CREATE INDEX idx_news_status ON news(status, highlight_status);
 CREATE INDEX idx_news_slug ON news(slug);
 CREATE INDEX idx_news_project ON news(project_external_id);
+CREATE INDEX idx_news_call ON news(call_external_id);
 CREATE INDEX idx_news_campus ON news(campus_external_id);
 
 -- Photos d'une actualité

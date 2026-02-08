@@ -16,6 +16,7 @@ from app.core.exceptions import ConflictException, NotFoundException
 from app.models.application import (
     Application,
     ApplicationCall,
+    ApplicationCallMediaLibrary,
     ApplicationDegree,
     ApplicationDocument,
     CallCoverage,
@@ -1033,3 +1034,50 @@ class ApplicationService:
             }
             for row in rows
         ]
+
+    # =========================================================================
+    # APPLICATION CALL MEDIA LIBRARY
+    # =========================================================================
+
+    async def get_call_albums(self, call_id: str) -> list[str]:
+        """Récupère les IDs des albums associés à un appel."""
+        result = await self.db.execute(
+            select(ApplicationCallMediaLibrary.album_external_id).where(
+                ApplicationCallMediaLibrary.call_id == call_id
+            )
+        )
+        return [str(row[0]) for row in result.fetchall()]
+
+    async def add_album_to_call(self, call_id: str, album_external_id: str) -> None:
+        """Associe un album à un appel."""
+        call = await self.get_call_by_id(call_id)
+        if not call:
+            raise NotFoundException("Appel non trouvé")
+
+        # Vérifier si l'association existe déjà
+        result = await self.db.execute(
+            select(ApplicationCallMediaLibrary).where(
+                ApplicationCallMediaLibrary.call_id == call_id,
+                ApplicationCallMediaLibrary.album_external_id == album_external_id,
+            )
+        )
+        if result.scalar_one_or_none():
+            raise ConflictException("Cet album est déjà associé à cet appel")
+
+        entry = ApplicationCallMediaLibrary(
+            call_id=call_id,
+            album_external_id=album_external_id,
+        )
+        self.db.add(entry)
+        await self.db.flush()
+
+    async def remove_album_from_call(self, call_id: str, album_external_id: str) -> None:
+        """Supprime l'association d'un album à un appel."""
+        result = await self.db.execute(
+            delete(ApplicationCallMediaLibrary).where(
+                ApplicationCallMediaLibrary.call_id == call_id,
+                ApplicationCallMediaLibrary.album_external_id == album_external_id,
+            )
+        )
+        if result.rowcount == 0:
+            raise NotFoundException("Association non trouvée")

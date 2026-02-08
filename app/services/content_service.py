@@ -27,6 +27,7 @@ from app.models.content import (
     RegistrationStatus,
     Tag,
 )
+from app.models.application import ApplicationCall
 from app.models.identity import User
 from app.models.organization import Sector, Service
 from app.models.project import Project
@@ -482,6 +483,7 @@ class ContentService:
         service_id: str | None = None,
         project_id: str | None = None,
         event_id: str | None = None,
+        call_id: str | None = None,
         from_date: datetime | None = None,
         to_date: datetime | None = None,
     ) -> select:
@@ -521,6 +523,9 @@ class ContentService:
         if event_id:
             query = query.where(News.event_external_id == event_id)
 
+        if call_id:
+            query = query.where(News.call_external_id == call_id)
+
         if from_date:
             query = query.where(News.published_at >= from_date)
 
@@ -549,6 +554,7 @@ class ContentService:
         sector_ids = {n.sector_external_id for n in news_list if n.sector_external_id}
         service_ids = {n.service_external_id for n in news_list if n.service_external_id}
         project_ids = {n.project_external_id for n in news_list if n.project_external_id}
+        call_ids = {n.call_external_id for n in news_list if n.call_external_id}
         event_ids = {n.event_external_id for n in news_list if n.event_external_id}
         author_ids = {n.author_external_id for n in news_list if n.author_external_id}
 
@@ -557,6 +563,7 @@ class ContentService:
         sector_map: dict[str, str] = {}
         service_map: dict[str, str] = {}
         project_map: dict[str, str] = {}
+        call_map: dict[str, str] = {}
         event_map: dict[str, str] = {}
         author_map: dict[str, str] = {}
 
@@ -583,6 +590,12 @@ class ContentService:
                 select(Project.id, Project.title).where(Project.id.in_(project_ids))
             )
             project_map = {str(row.id): row.title for row in result.fetchall()}
+
+        if call_ids:
+            result = await self.db.execute(
+                select(ApplicationCall.id, ApplicationCall.title).where(ApplicationCall.id.in_(call_ids))
+            )
+            call_map = {str(row.id): row.title for row in result.fetchall()}
 
         if event_ids:
             result = await self.db.execute(
@@ -629,6 +642,7 @@ class ContentService:
                 "service_external_id": news.service_external_id,
                 "event_external_id": news.event_external_id,
                 "project_external_id": news.project_external_id,
+                "call_external_id": news.call_external_id,
                 "author_external_id": news.author_external_id,
                 "status": news.status,
                 "published_at": news.published_at,
@@ -641,6 +655,7 @@ class ContentService:
                 "sector_name": sector_map.get(str(news.sector_external_id)) if news.sector_external_id else None,
                 "service_name": service_map.get(str(news.service_external_id)) if news.service_external_id else None,
                 "project_name": project_map.get(str(news.project_external_id)) if news.project_external_id else None,
+                "call_name": call_map.get(str(news.call_external_id)) if news.call_external_id else None,
                 "event_name": event_map.get(str(news.event_external_id)) if news.event_external_id else None,
                 "author_name": author_map.get(str(news.author_external_id)) if news.author_external_id else None,
             }
@@ -778,6 +793,10 @@ class ContentService:
             campus_external_id=news.campus_external_id,
             sector_external_id=news.sector_external_id,
             service_external_id=news.service_external_id,
+            event_external_id=news.event_external_id,
+            project_external_id=news.project_external_id,
+            call_external_id=news.call_external_id,
+            author_external_id=news.author_external_id,
             highlight_status=news.highlight_status,
             status=PublicationStatus.DRAFT,
         )

@@ -18,7 +18,9 @@ from app.schemas.application import (
     ApplicationCreate,
 )
 from app.schemas.common import IdResponse
+from app.schemas.content import NewsPublicEnriched
 from app.services.application_service import ApplicationService
+from app.services.content_service import ContentService
 
 router = APIRouter(prefix="/application-calls", tags=["Application Calls"])
 
@@ -142,3 +144,40 @@ async def submit_application(
 
     application = await service.create_application(data)
     return IdResponse(id=application.id, message="Candidature soumise avec succès")
+
+
+@router.get("/{slug}/news", response_model=list[NewsPublicEnriched])
+async def get_call_news(
+    slug: str,
+    db: DbSession,
+) -> list[NewsPublicEnriched]:
+    """Récupère les actualités publiées associées à un appel."""
+    app_service = ApplicationService(db)
+    call = await app_service.get_call_by_slug(slug)
+    if not call or call.publication_status != PublicationStatus.PUBLISHED:
+        raise NotFoundException("Appel à candidature non trouvé")
+
+    content_service = ContentService(db)
+    query = await content_service.get_news(
+        status=PublicationStatus.PUBLISHED,
+        call_id=call.id,
+    )
+    result = await db.execute(query)
+    news_list = list(result.scalars().all())
+
+    enriched_items = await content_service.enrich_news_with_names(news_list)
+    return [NewsPublicEnriched.model_validate(item) for item in enriched_items]
+
+
+@router.get("/{slug}/media-library", response_model=list[str])
+async def get_call_media_library(
+    slug: str,
+    db: DbSession,
+) -> list[str]:
+    """Récupère les IDs des albums de la médiathèque associés à un appel."""
+    service = ApplicationService(db)
+    call = await service.get_call_by_slug(slug)
+    if not call or call.publication_status != PublicationStatus.PUBLISHED:
+        raise NotFoundException("Appel à candidature non trouvé")
+
+    return await service.get_call_albums(call.id)

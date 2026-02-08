@@ -8,8 +8,8 @@
 -- SERVICE: APPLICATION (Appels à candidature et candidatures)
 -- ============================================================================
 -- Tables: application_calls, call_eligibility_criteria, call_coverage,
---         call_required_documents, call_schedule, applications,
---         application_degrees, application_documents
+--         call_required_documents, call_schedule, application_call_media_library,
+--         applications, application_degrees, application_documents
 -- Dépendances externes: ACADEMIC (program_id), CAMPUS (campus_id),
 --                       IDENTITY (user_id, reviewer_id), MEDIA (cover_image_id),
 --                       CORE (countries)
@@ -98,6 +98,13 @@ CREATE TABLE call_schedule (
     end_date DATE,
     description TEXT,
     display_order INT DEFAULT 0
+);
+
+-- Médiathèque d'un appel à candidature (plusieurs albums possibles)
+CREATE TABLE application_call_media_library (
+    call_id UUID REFERENCES application_calls(id) ON DELETE CASCADE,
+    album_external_id UUID NOT NULL,  -- → MEDIA.albums.id
+    PRIMARY KEY (call_id, album_external_id)
 );
 
 -- Candidatures soumises

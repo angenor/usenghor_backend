@@ -19,6 +19,7 @@ from app.routers.public import (
     programs,
     sectors,
     services,
+    users,
 )
 
 router = APIRouter(prefix="/api/public", tags=["Public"])
@@ -38,5 +39,6 @@ router.include_router(institutional_projects.router)
 router.include_router(media.router)
 router.include_router(sectors.router)
 router.include_router(services.router)
+router.include_router(users.router)
 
 __all__ = ["router"]

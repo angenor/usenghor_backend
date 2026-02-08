@@ -411,3 +411,52 @@ async def delete_schedule(
     service = ApplicationService(db)
     await service.delete_schedule(schedule_id)
     return MessageResponse(message="Étape supprimée avec succès")
+
+
+# =============================================================================
+# MEDIA LIBRARY
+# =============================================================================
+
+
+@router.get("/{call_id}/media-library", response_model=list[str])
+async def get_call_media_library(
+    call_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("applications.view")),
+) -> list[str]:
+    """Récupère les IDs des albums associés à un appel."""
+    service = ApplicationService(db)
+    return await service.get_call_albums(call_id)
+
+
+@router.post(
+    "/{call_id}/media-library",
+    response_model=MessageResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_album_to_call(
+    call_id: str,
+    album_external_id: str = Query(..., description="ID de l'album à associer"),
+    db: DbSession = None,
+    current_user: CurrentUser = None,
+    _: bool = Depends(PermissionChecker("applications.edit")),
+) -> MessageResponse:
+    """Associe un album à un appel."""
+    service = ApplicationService(db)
+    await service.add_album_to_call(call_id, album_external_id)
+    return MessageResponse(message="Album associé avec succès")
+
+
+@router.delete("/{call_id}/media-library/{album_id}", response_model=MessageResponse)
+async def remove_album_from_call(
+    call_id: str,
+    album_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("applications.edit")),
+) -> MessageResponse:
+    """Supprime l'association d'un album à un appel."""
+    service = ApplicationService(db)
+    await service.remove_album_from_call(call_id, album_id)
+    return MessageResponse(message="Album dissocié avec succès")

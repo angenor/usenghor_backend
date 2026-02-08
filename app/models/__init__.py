@@ -62,6 +62,7 @@ from app.models.academic import (
 from app.models.application import (
     Application,
     ApplicationCall,
+    ApplicationCallMediaLibrary,
     ApplicationDegree,
     ApplicationDocument,
     CallCoverage,
@@ -166,6 +167,7 @@ __all__ = [
     "EmploymentStatus",
     "ExperienceDuration",
     "ApplicationCall",
+    "ApplicationCallMediaLibrary",
     "CallEligibilityCriteria",
     "CallCoverage",
     "CallRequiredDocument",

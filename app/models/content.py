@@ -199,6 +199,7 @@ class News(Base, UUIDMixin, TimestampMixin):
     service_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     event_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     project_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    call_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     author_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     highlight_status: Mapped[NewsHighlightStatus] = mapped_column(
