@@ -16,6 +16,7 @@ from app.routers.public import (
     news,
     newsletter,
     partners,
+    program_fields,
     programs,
     sectors,
     services,
@@ -31,6 +32,7 @@ router.include_router(countries.router)
 router.include_router(news.router)
 router.include_router(events.router)
 router.include_router(partners.router)
+router.include_router(program_fields.router)
 router.include_router(programs.router)
 router.include_router(application_calls.router)
 router.include_router(newsletter.router)
