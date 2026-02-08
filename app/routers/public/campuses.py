@@ -80,6 +80,34 @@ class CampusTeamMemberPublic(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CampusTeamMemberWithCampus(CampusTeamMemberPublic):
+    """Membre d'équipe avec informations du campus (pour listing global)."""
+
+    user_id: str
+    campus_id: str
+    campus_name: str
+    campus_code: str
+    salutation: str | None = None
+
+
+class CampusInfoPublic(BaseModel):
+    """Informations minimales d'un campus pour les filtres."""
+
+    id: str
+    name: str
+    code: str
+    is_headquarters: bool
+
+    model_config = {"from_attributes": True}
+
+
+class AllCampusTeamResponse(BaseModel):
+    """Réponse pour le listing global des équipes campus."""
+
+    members: list[CampusTeamMemberWithCampus]
+    campuses: list[CampusInfoPublic]
+
+
 class MediaPublic(BaseModel):
     """Schéma public pour un média dans un album."""
 
@@ -171,6 +199,71 @@ async def list_all_campuses(
         ))
 
     return campuses
+
+
+@router.get("/team/all", response_model=AllCampusTeamResponse)
+async def get_all_campus_team_members(
+    db: DbSession,
+) -> AllCampusTeamResponse:
+    """
+    Récupère tous les membres actifs des équipes de tous les campus.
+
+    Retourne les membres enrichis avec les informations de campus,
+    utilisé pour la page publique d'équipe.
+    """
+    # Récupérer tous les membres actifs avec jointures
+    query = (
+        select(CampusTeam, User, Media, Campus)
+        .join(User, CampusTeam.user_external_id == User.id)
+        .join(Campus, CampusTeam.campus_id == Campus.id)
+        .outerjoin(Media, User.photo_external_id == Media.id)
+        .where(
+            CampusTeam.active == True,
+            User.active == True,
+            Campus.active == True,
+        )
+        .order_by(CampusTeam.display_order, User.last_name)
+    )
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    members = []
+    campus_ids_seen = set()
+    campuses_list = []
+
+    for team_member, user, photo_media, campus in rows:
+        members.append(CampusTeamMemberWithCampus(
+            id=team_member.id,
+            user_id=user.id,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            salutation=user.salutation,
+            position=team_member.position,
+            photo_url=resolve_media_url(photo_media),
+            email=user.email,
+            display_order=team_member.display_order,
+            campus_id=campus.id,
+            campus_name=campus.name,
+            campus_code=campus.code,
+        ))
+
+        if campus.id not in campus_ids_seen:
+            campus_ids_seen.add(campus.id)
+            campuses_list.append(CampusInfoPublic(
+                id=campus.id,
+                name=campus.name,
+                code=campus.code,
+                is_headquarters=campus.is_headquarters,
+            ))
+
+    # Trier les campus : siège en premier, puis par nom
+    campuses_list.sort(key=lambda c: (not c.is_headquarters, c.name))
+
+    return AllCampusTeamResponse(
+        members=members,
+        campuses=campuses_list,
+    )
 
 
 @router.get("/{code}", response_model=CampusPublicEnriched)
