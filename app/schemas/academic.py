@@ -384,6 +384,7 @@ class ProgramPublic(BaseModel):
     cover_image_external_id: str | None
     sector_external_id: str | None
     field_id: str | None = None
+    field_name: str | None = None
     type: ProgramType
     duration_months: int | None
     credits: int | None

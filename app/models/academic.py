@@ -125,6 +125,11 @@ class Program(Base, UUIDMixin, TimestampMixin):
         "ProgramField", back_populates="programs", lazy="selectin"
     )
 
+    @property
+    def field_name(self) -> str | None:
+        """Nom du champ disciplinaire (résolu depuis la relation)."""
+        return self.field.name if self.field else None
+
 
 class ProgramCampus(Base):
     """Table de liaison programme-campus."""
