@@ -42,6 +42,7 @@ async def list_programs(
     program_type: ProgramType | None = Query(None, alias="type", description="Filtrer par type"),
     sector_id: str | None = Query(None, alias="sector_external_id", description="Filtrer par département"),
     publication_status: PublicationStatus | None = Query(None, alias="status", description="Filtrer par statut"),
+    field_id: str | None = Query(None, description="Filtrer par champ disciplinaire"),
     _: bool = Depends(PermissionChecker("programs.view")),
 ) -> dict:
     """Liste les programmes avec pagination et filtres."""
@@ -51,6 +52,7 @@ async def list_programs(
         program_type=program_type,
         sector_id=sector_id,
         status=publication_status,
+        field_id=field_id,
     )
     return await paginate(db, query, pagination, Program, ProgramRead)
 
@@ -90,6 +92,7 @@ async def create_program(
         cover_image_external_id=program_data.cover_image_external_id,
         sector_external_id=program_data.sector_external_id,
         coordinator_external_id=program_data.coordinator_external_id,
+        field_id=program_data.field_id,
         duration_months=program_data.duration_months,
         credits=program_data.credits,
         degree_awarded=program_data.degree_awarded,

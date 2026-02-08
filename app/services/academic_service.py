@@ -17,6 +17,7 @@ from app.models.academic import (
     ProgramCampus,
     ProgramCareerOpportunity,
     ProgramCourse,
+    ProgramField,
     ProgramPartner,
     ProgramSemester,
     ProgramSkill,
@@ -40,6 +41,7 @@ class AcademicService:
         program_type: str | None = None,
         sector_id: str | None = None,
         status: PublicationStatus | None = None,
+        field_id: str | None = None,
     ) -> select:
         """
         Construit une requête pour lister les programmes.
@@ -49,6 +51,7 @@ class AcademicService:
             program_type: Filtrer par type de programme.
             sector_id: Filtrer par département.
             status: Filtrer par statut de publication.
+            field_id: Filtrer par champ disciplinaire.
 
         Returns:
             Requête SQLAlchemy Select.
@@ -77,6 +80,9 @@ class AcademicService:
 
         if status:
             query = query.where(Program.status == status)
+
+        if field_id:
+            query = query.where(Program.field_id == field_id)
 
         query = query.order_by(Program.display_order, Program.title)
         return query
@@ -340,6 +346,7 @@ class AcademicService:
             cover_image_external_id=program.cover_image_external_id,
             sector_external_id=program.sector_external_id,
             coordinator_external_id=program.coordinator_external_id,
+            field_id=program.field_id,
             duration_months=program.duration_months,
             credits=program.credits,
             degree_awarded=program.degree_awarded,
@@ -422,6 +429,99 @@ class AcademicService:
             select(Program)
             .where(Program.id.in_(program_ids))
             .order_by(Program.display_order)
+        )
+        return list(result.scalars().all())
+
+    # =========================================================================
+    # PROGRAM FIELDS (Champs disciplinaires)
+    # =========================================================================
+
+    async def get_fields(self) -> select:
+        """Construit une requête pour lister les champs disciplinaires."""
+        return select(ProgramField).order_by(
+            ProgramField.display_order, ProgramField.name
+        )
+
+    async def get_field_by_id(self, field_id: str) -> ProgramField | None:
+        """Récupère un champ par son ID."""
+        result = await self.db.execute(
+            select(ProgramField).where(ProgramField.id == field_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_field_by_slug(self, slug: str) -> ProgramField | None:
+        """Récupère un champ par son slug."""
+        result = await self.db.execute(
+            select(ProgramField).where(ProgramField.slug == slug)
+        )
+        return result.scalar_one_or_none()
+
+    async def create_field(
+        self,
+        name: str,
+        slug: str,
+        **kwargs,
+    ) -> ProgramField:
+        """Crée un nouveau champ disciplinaire."""
+        existing = await self.get_field_by_slug(slug)
+        if existing:
+            raise ConflictException(f"Un champ avec le slug '{slug}' existe déjà")
+
+        field = ProgramField(
+            id=str(uuid4()),
+            name=name,
+            slug=slug,
+            **kwargs,
+        )
+        self.db.add(field)
+        await self.db.flush()
+        return field
+
+    async def update_field(self, field_id: str, **kwargs) -> ProgramField:
+        """Met à jour un champ disciplinaire."""
+        field = await self.get_field_by_id(field_id)
+        if not field:
+            raise NotFoundException("Champ non trouvé")
+
+        # Vérifier l'unicité du slug si modifié
+        if "slug" in kwargs and kwargs["slug"] and kwargs["slug"] != field.slug:
+            existing = await self.get_field_by_slug(kwargs["slug"])
+            if existing:
+                raise ConflictException(
+                    f"Un champ avec le slug '{kwargs['slug']}' existe déjà"
+                )
+
+        await self.db.execute(
+            update(ProgramField).where(ProgramField.id == field_id).values(**kwargs)
+        )
+        await self.db.flush()
+        return await self.get_field_by_id(field_id)
+
+    async def delete_field(self, field_id: str) -> None:
+        """Supprime un champ disciplinaire."""
+        field = await self.get_field_by_id(field_id)
+        if not field:
+            raise NotFoundException("Champ non trouvé")
+
+        await self.db.execute(
+            delete(ProgramField).where(ProgramField.id == field_id)
+        )
+        await self.db.flush()
+
+    async def reorder_fields(self, field_ids: list[str]) -> list[ProgramField]:
+        """Réordonne les champs disciplinaires."""
+        for index, field_id in enumerate(field_ids):
+            await self.db.execute(
+                update(ProgramField)
+                .where(ProgramField.id == field_id)
+                .values(display_order=index)
+            )
+        await self.db.flush()
+
+        result = await self.db.execute(
+            select(ProgramField)
+            .where(ProgramField.id.in_(field_ids))
+            .order_by(ProgramField.display_order)
         )
         return list(result.scalars().all())
 

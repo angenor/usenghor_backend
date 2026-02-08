@@ -19,22 +19,8 @@ from app.models.core import Country
 from app.models.identity import User
 from app.models.media import Album, AlbumMedia, Media, PublicationStatus
 from app.models.partner import Partner, PartnerType
+from app.core.media_utils import resolve_media_url
 from app.services.campus_service import CampusService
-
-
-def resolve_media_url(media: Media | None) -> str | None:
-    """
-    Résout l'URL d'un média.
-
-    Retourne l'URL relative de l'endpoint de téléchargement public.
-    Le frontend préfixera avec son apiBase configuré.
-    """
-    if not media:
-        return None
-    if media.is_external_url:
-        return media.url
-    # Pour les fichiers locaux, retourner l'URL de l'endpoint de téléchargement
-    return f"/api/public/media/{media.id}/download"
 
 
 # =============================================================================

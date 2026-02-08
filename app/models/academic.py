@@ -33,6 +33,24 @@ class ProgramType(str, enum.Enum):
     CERTIFICATE = "certificate"
 
 
+class ProgramField(Base, UUIDMixin, TimestampMixin):
+    """Champ disciplinaire pour les certificats."""
+
+    __tablename__ = "program_fields"
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    display_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Relation inverse
+    programs: Mapped[list["Program"]] = relationship(
+        "Program",
+        back_populates="field",
+        lazy="selectin",
+    )
+
+
 class Program(Base, UUIDMixin, TimestampMixin):
     """Programme de formation."""
 
@@ -49,6 +67,11 @@ class Program(Base, UUIDMixin, TimestampMixin):
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     sector_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     coordinator_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+
+    # Champ disciplinaire (uniquement pour les certificats)
+    field_id: Mapped[str | None] = mapped_column(
+        ForeignKey("program_fields.id", ondelete="SET NULL")
+    )
 
     type: Mapped[ProgramType] = mapped_column(
         Enum(
@@ -97,6 +120,9 @@ class Program(Base, UUIDMixin, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="selectin",
         order_by="ProgramCareerOpportunity.display_order",
+    )
+    field: Mapped["ProgramField | None"] = relationship(
+        "ProgramField", back_populates="programs", lazy="selectin"
     )
 
 

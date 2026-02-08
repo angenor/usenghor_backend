@@ -197,6 +197,51 @@ class ProgramCareerOpportunityReorder(BaseModel):
 
 
 # =============================================================================
+# PROGRAM FIELD (Champs disciplinaires)
+# =============================================================================
+
+
+class ProgramFieldBase(BaseModel):
+    """Schéma de base pour les champs disciplinaires."""
+
+    name: str = Field(..., min_length=1, max_length=255, description="Nom du champ")
+    slug: str = Field(..., min_length=1, max_length=255, description="Slug URL")
+    description: str | None = Field(None, description="Description du champ")
+    display_order: int = Field(0, ge=0, description="Ordre d'affichage")
+
+
+class ProgramFieldCreate(ProgramFieldBase):
+    """Schéma pour la création d'un champ."""
+
+    pass
+
+
+class ProgramFieldUpdate(BaseModel):
+    """Schéma pour la mise à jour d'un champ."""
+
+    name: str | None = Field(None, min_length=1, max_length=255)
+    slug: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = None
+    display_order: int | None = Field(None, ge=0)
+
+
+class ProgramFieldRead(ProgramFieldBase):
+    """Schéma pour la lecture d'un champ."""
+
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ProgramFieldReorder(BaseModel):
+    """Schéma pour le réordonnancement des champs."""
+
+    field_ids: list[str] = Field(..., min_length=1, description="Liste ordonnée des IDs")
+
+
+# =============================================================================
 # PROGRAM CAMPUS
 # =============================================================================
 
@@ -265,6 +310,7 @@ class ProgramBase(BaseModel):
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     sector_external_id: str | None = Field(None, description="ID du département")
     coordinator_external_id: str | None = Field(None, description="ID du coordinateur")
+    field_id: str | None = Field(None, description="ID du champ disciplinaire (certificats)")
     type: ProgramType = Field(..., description="Type de programme")
     duration_months: int | None = Field(None, ge=1, description="Durée en mois")
     credits: int | None = Field(None, ge=0, description="Crédits ECTS")
@@ -294,6 +340,7 @@ class ProgramUpdate(BaseModel):
     cover_image_external_id: str | None = None
     sector_external_id: str | None = None
     coordinator_external_id: str | None = None
+    field_id: str | None = None
     type: ProgramType | None = None
     duration_months: int | None = Field(None, ge=1)
     credits: int | None = Field(None, ge=0)
@@ -336,6 +383,7 @@ class ProgramPublic(BaseModel):
     teaching_methods: str | None
     cover_image_external_id: str | None
     sector_external_id: str | None
+    field_id: str | None = None
     type: ProgramType
     duration_months: int | None
     credits: int | None

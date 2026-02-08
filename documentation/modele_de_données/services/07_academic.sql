@@ -7,14 +7,27 @@
 -- ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚═╝     ╚═╝╚═╝ ╚═════╝
 -- SERVICE: ACADEMIC (Formations et programmes)
 -- ============================================================================
--- Tables: programs, program_campuses, program_partners, program_semesters,
---         program_courses, program_career_opportunities, program_skills
+-- Tables: program_fields, programs, program_campuses, program_partners,
+--         program_semesters, program_courses, program_career_opportunities, program_skills
 -- Dépendances externes: ORGANIZATION (sector_id), IDENTITY (coordinator_id),
 --                       MEDIA (cover_image_id), CAMPUS (campus_id), PARTNER (partner_id)
 -- ============================================================================
 
 -- Types ENUM spécifiques à ce service
 CREATE TYPE program_type AS ENUM ('master', 'doctorate', 'university_diploma', 'certificate');
+
+-- Champs disciplinaires (pour les certificats)
+CREATE TABLE program_fields (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_program_fields_slug ON program_fields(slug);
 
 CREATE TABLE programs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -28,6 +41,7 @@ CREATE TABLE programs (
     cover_image_external_id UUID,  -- → MEDIA.media.id
     sector_external_id UUID,        -- → ORGANIZATION.sectors.id
     coordinator_external_id UUID,  -- → IDENTITY.users.id
+    field_id UUID REFERENCES program_fields(id) ON DELETE SET NULL,  -- Champ disciplinaire (certificats)
     type program_type NOT NULL,
     duration_months INT,
     credits INT,
@@ -43,6 +57,7 @@ CREATE TABLE programs (
 CREATE INDEX idx_programs_type ON programs(type);
 CREATE INDEX idx_programs_slug ON programs(slug);
 CREATE INDEX idx_programs_sector ON programs(sector_external_id);
+CREATE INDEX idx_programs_field ON programs(field_id);
 CREATE INDEX idx_programs_featured ON programs(is_featured) WHERE is_featured = TRUE;
 
 -- Campus où se déroule une formation
@@ -104,7 +119,9 @@ CREATE TABLE program_skills (
     display_order INT DEFAULT 0
 );
 
+COMMENT ON TABLE program_fields IS '[ACADEMIC] Champs disciplinaires pour les certificats';
 COMMENT ON TABLE programs IS '[ACADEMIC] Formations proposées par l''Université Senghor';
+COMMENT ON COLUMN programs.field_id IS 'Champ disciplinaire (uniquement pour les certificats)';
 COMMENT ON COLUMN programs.sector_external_id IS 'Référence externe vers ORGANIZATION.sectors.id';
 COMMENT ON COLUMN programs.coordinator_external_id IS 'Référence externe vers IDENTITY.users.id';
 COMMENT ON COLUMN programs.is_featured IS 'Formation mise à la une sur la page d''accueil';

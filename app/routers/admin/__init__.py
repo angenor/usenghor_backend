@@ -23,6 +23,7 @@ from app.routers.admin import (
     news,
     partners,
     permissions,
+    program_fields,
     programs,
     program_semesters,
     program_skills,
@@ -57,6 +58,7 @@ router.include_router(partners.router)
 router.include_router(programs.router)
 router.include_router(program_semesters.router)
 router.include_router(program_skills.router)
+router.include_router(program_fields.router)
 router.include_router(career_opportunities.router)
 router.include_router(application_calls.router)
 router.include_router(applications.router)
