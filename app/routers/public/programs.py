@@ -11,8 +11,11 @@ from app.core.dependencies import DbSession
 from app.core.exceptions import NotFoundException
 from app.core.pagination import PaginationParams, paginate
 from app.models.academic import Program, ProgramType
+from app.models.base import PublicationStatus
 from app.schemas.academic import ProgramPublic, ProgramPublicWithDetails
+from app.schemas.content import NewsPublicEnriched
 from app.services.academic_service import AcademicService
+from app.services.content_service import ContentService
 
 router = APIRouter(prefix="/programs", tags=["Programs"])
 
@@ -47,6 +50,43 @@ async def list_featured_programs(
     return programs
 
 
+@router.get("/{slug}/news", response_model=list[NewsPublicEnriched])
+async def get_program_news(
+    slug: str,
+    db: DbSession,
+) -> list[NewsPublicEnriched]:
+    """Récupère les actualités publiées associées à un programme."""
+    academic_service = AcademicService(db)
+    program = await academic_service.get_program_by_slug(slug)
+    if not program or program.status != PublicationStatus.PUBLISHED:
+        raise NotFoundException("Programme non trouvé")
+
+    content_service = ContentService(db)
+    query = await content_service.get_news(
+        status=PublicationStatus.PUBLISHED,
+        program_id=program.id,
+    )
+    result = await db.execute(query)
+    news_list = list(result.scalars().all())
+
+    enriched_items = await content_service.enrich_news_with_names(news_list)
+    return [NewsPublicEnriched.model_validate(item) for item in enriched_items]
+
+
+@router.get("/{slug}/media-library", response_model=list[str])
+async def get_program_media_library(
+    slug: str,
+    db: DbSession,
+) -> list[str]:
+    """Récupère les IDs des albums de la médiathèque associés à un programme."""
+    service = AcademicService(db)
+    program = await service.get_program_by_slug(slug)
+    if not program or program.status != PublicationStatus.PUBLISHED:
+        raise NotFoundException("Programme non trouvé")
+
+    return await service.get_program_albums(program.id)
+
+
 @router.get("/{slug}", response_model=ProgramPublicWithDetails)
 async def get_program_by_slug(
     slug: str,
@@ -58,8 +98,6 @@ async def get_program_by_slug(
     if not program:
         raise NotFoundException("Programme non trouvé")
 
-    # Vérifier que le programme est publié
-    from app.models.base import PublicationStatus
     if program.status != PublicationStatus.PUBLISHED:
         raise NotFoundException("Programme non trouvé")
 

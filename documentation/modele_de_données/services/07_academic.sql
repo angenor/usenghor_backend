@@ -128,6 +128,15 @@ COMMENT ON COLUMN programs.is_featured IS 'Formation mise à la une sur la page 
 COMMENT ON COLUMN program_campuses.campus_external_id IS 'Référence externe vers CAMPUS.campuses.id';
 COMMENT ON COLUMN program_partners.partner_external_id IS 'Référence externe vers PARTNER.partners.id';
 
+-- Médiathèque des programmes (albums associés)
+CREATE TABLE program_media_library (
+    program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+    album_external_id UUID NOT NULL,  -- → MEDIA.albums.id
+    PRIMARY KEY (program_id, album_external_id)
+);
+
+COMMENT ON TABLE program_media_library IS '[ACADEMIC] Albums de la médiathèque associés à un programme';
+
 -- ============================================================================
 -- FIN DU SERVICE ACADEMIC
 -- ============================================================================

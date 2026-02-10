@@ -124,6 +124,11 @@ class Program(Base, UUIDMixin, TimestampMixin):
     field: Mapped["ProgramField | None"] = relationship(
         "ProgramField", back_populates="programs", lazy="selectin"
     )
+    media_library: Mapped[list["ProgramMediaLibrary"]] = relationship(
+        "ProgramMediaLibrary",
+        back_populates="program",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def field_name(self) -> str | None:
@@ -234,3 +239,19 @@ class ProgramSkill(Base, UUIDMixin):
 
     # Relations
     program: Mapped["Program"] = relationship("Program", back_populates="skills")
+
+
+class ProgramMediaLibrary(Base):
+    """Table de liaison programme-albums."""
+
+    __tablename__ = "program_media_library"
+
+    program_id: Mapped[str] = mapped_column(
+        ForeignKey("programs.id", ondelete="CASCADE"), primary_key=True
+    )
+    album_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+
+    # Relations
+    program: Mapped["Program"] = relationship(
+        "Program", back_populates="media_library"
+    )

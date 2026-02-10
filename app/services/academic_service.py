@@ -18,6 +18,7 @@ from app.models.academic import (
     ProgramCareerOpportunity,
     ProgramCourse,
     ProgramField,
+    ProgramMediaLibrary,
     ProgramPartner,
     ProgramSemester,
     ProgramSkill,
@@ -1275,3 +1276,50 @@ class AcademicService:
             )
         )
         await self.db.flush()
+
+    # =========================================================================
+    # PROGRAM MEDIA LIBRARY
+    # =========================================================================
+
+    async def get_program_albums(self, program_id: str) -> list[str]:
+        """Récupère les IDs des albums associés à un programme."""
+        result = await self.db.execute(
+            select(ProgramMediaLibrary.album_external_id).where(
+                ProgramMediaLibrary.program_id == program_id
+            )
+        )
+        return [str(row[0]) for row in result.fetchall()]
+
+    async def add_album_to_program(self, program_id: str, album_external_id: str) -> None:
+        """Associe un album à un programme."""
+        program = await self.get_program_by_id(program_id)
+        if not program:
+            raise NotFoundException("Programme non trouvé")
+
+        # Vérifier si l'association existe déjà
+        result = await self.db.execute(
+            select(ProgramMediaLibrary).where(
+                ProgramMediaLibrary.program_id == program_id,
+                ProgramMediaLibrary.album_external_id == album_external_id,
+            )
+        )
+        if result.scalar_one_or_none():
+            raise ConflictException("Cet album est déjà associé à ce programme")
+
+        entry = ProgramMediaLibrary(
+            program_id=program_id,
+            album_external_id=album_external_id,
+        )
+        self.db.add(entry)
+        await self.db.flush()
+
+    async def remove_album_from_program(self, program_id: str, album_external_id: str) -> None:
+        """Supprime l'association d'un album à un programme."""
+        result = await self.db.execute(
+            delete(ProgramMediaLibrary).where(
+                ProgramMediaLibrary.program_id == program_id,
+                ProgramMediaLibrary.album_external_id == album_external_id,
+            )
+        )
+        if result.rowcount == 0:
+            raise NotFoundException("Association non trouvée")

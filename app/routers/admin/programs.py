@@ -345,3 +345,52 @@ async def remove_partner_from_program(
     service = AcademicService(db)
     await service.remove_partner_from_program(program_id, partner_id)
     return MessageResponse(message="Partenaire retiré du programme avec succès")
+
+
+# =============================================================================
+# PROGRAM MEDIA LIBRARY
+# =============================================================================
+
+
+@router.get("/{program_id}/media-library", response_model=list[str])
+async def get_program_media_library(
+    program_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("programs.view")),
+) -> list[str]:
+    """Récupère les IDs des albums associés à un programme."""
+    service = AcademicService(db)
+    return await service.get_program_albums(program_id)
+
+
+@router.post(
+    "/{program_id}/media-library",
+    response_model=MessageResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_album_to_program(
+    program_id: str,
+    album_external_id: str = Query(..., description="ID de l'album à associer"),
+    db: DbSession = Depends(),
+    current_user: CurrentUser = Depends(),
+    _: bool = Depends(PermissionChecker("programs.edit")),
+) -> MessageResponse:
+    """Associe un album à un programme."""
+    service = AcademicService(db)
+    await service.add_album_to_program(program_id, album_external_id)
+    return MessageResponse(message="Album associé au programme avec succès")
+
+
+@router.delete("/{program_id}/media-library/{album_id}", response_model=MessageResponse)
+async def remove_album_from_program(
+    program_id: str,
+    album_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("programs.edit")),
+) -> MessageResponse:
+    """Supprime l'association d'un album à un programme."""
+    service = AcademicService(db)
+    await service.remove_album_from_program(program_id, album_id)
+    return MessageResponse(message="Album dissocié du programme avec succès")
