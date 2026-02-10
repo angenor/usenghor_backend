@@ -49,6 +49,11 @@ from app.models.campus import (
     CampusTeam,
 )
 from app.models.partner import Partner, PartnerType
+from app.models.partnership_request import (
+    PartnershipRequest,
+    PartnershipRequestStatus,
+    PartnershipRequestType,
+)
 from app.models.academic import (
     Program,
     ProgramCampus,
@@ -150,6 +155,10 @@ __all__ = [
     # Partner
     "PartnerType",
     "Partner",
+    # Partnership Requests
+    "PartnershipRequestType",
+    "PartnershipRequestStatus",
+    "PartnershipRequest",
     # Academic
     "ProgramType",
     "Program",

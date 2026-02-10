@@ -39,5 +39,35 @@ COMMENT ON COLUMN partners.logo_external_id IS 'Référence externe vers MEDIA.m
 COMMENT ON COLUMN partners.country_external_id IS 'Référence externe vers CORE.countries.id';
 
 -- ============================================================================
+-- DEMANDES DE PARTENARIAT (formulaire public "Devenir partenaire")
+-- ============================================================================
+
+CREATE TYPE partnership_request_type AS ENUM ('academic', 'institutional', 'business', 'other');
+CREATE TYPE partnership_request_status AS ENUM ('pending', 'approved', 'rejected');
+
+CREATE TABLE partnership_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    contact_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    organization VARCHAR(255) NOT NULL,
+    type partnership_request_type NOT NULL,
+    message TEXT,
+    status partnership_request_status NOT NULL DEFAULT 'pending',
+    rejection_reason TEXT,
+    reviewed_by_external_id UUID,  -- → IDENTITY.users.id
+    reviewed_at TIMESTAMPTZ,
+    partner_external_id UUID,      -- → PARTNER.partners.id
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_partnership_requests_status ON partnership_requests(status);
+CREATE INDEX idx_partnership_requests_email ON partnership_requests(email);
+
+COMMENT ON TABLE partnership_requests IS '[PARTNER] Demandes de partenariat soumises via le formulaire public';
+COMMENT ON COLUMN partnership_requests.reviewed_by_external_id IS 'Référence externe vers IDENTITY.users.id';
+COMMENT ON COLUMN partnership_requests.partner_external_id IS 'Référence vers PARTNER.partners.id (créé lors de l''approbation)';
+
+-- ============================================================================
 -- FIN DU SERVICE PARTNER
 -- ============================================================================
