@@ -372,8 +372,8 @@ async def get_program_media_library(
 async def add_album_to_program(
     program_id: str,
     album_external_id: str = Query(..., description="ID de l'album à associer"),
-    db: DbSession = Depends(),
-    current_user: CurrentUser = Depends(),
+    db: DbSession,
+    current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("programs.edit")),
 ) -> MessageResponse:
     """Associe un album à un programme."""
