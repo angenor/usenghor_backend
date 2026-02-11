@@ -41,7 +41,7 @@ async def list_subscribers(
         active=active,
         source=source,
     )
-    return await paginate(db, query, pagination, NewsletterSubscriber)
+    return await paginate(db, query, pagination, NewsletterSubscriber, SubscriberRead)
 
 
 @router.get("/{subscriber_id}", response_model=SubscriberRead)

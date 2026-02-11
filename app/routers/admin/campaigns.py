@@ -41,7 +41,7 @@ async def list_campaigns(
         search=search,
         status=status,
     )
-    return await paginate(db, query, pagination, NewsletterCampaign)
+    return await paginate(db, query, pagination, NewsletterCampaign, CampaignRead)
 
 
 @router.get("/statistics", response_model=NewsletterStatistics)
