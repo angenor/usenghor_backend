@@ -9,6 +9,7 @@ import enum
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -40,7 +41,7 @@ class NewsletterSubscriber(Base, UUIDMixin):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     last_name: Mapped[str | None] = mapped_column(String(100))
     first_name: Mapped[str | None] = mapped_column(String(100))
-    user_external_id: Mapped[str | None] = mapped_column(String(36))
+    user_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     active: Mapped[bool] = mapped_column(default=True)
     unsubscribe_token: Mapped[str | None] = mapped_column(String(255), unique=True)
     source: Mapped[str | None] = mapped_column(String(100))
@@ -81,7 +82,7 @@ class NewsletterCampaign(Base, UUIDMixin, TimestampMixin):
     recipient_count: Mapped[int] = mapped_column(Integer, default=0)
     open_count: Mapped[int] = mapped_column(Integer, default=0)
     click_count: Mapped[int] = mapped_column(Integer, default=0)
-    created_by_external_id: Mapped[str | None] = mapped_column(String(36))
+    created_by_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     # Relations
     sends: Mapped[list["NewsletterSend"]] = relationship(
