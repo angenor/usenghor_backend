@@ -85,6 +85,8 @@ class ProjectCreate(ProjectBase):
     )
     category_ids: list[str] | None = Field(None, description="IDs catégories")
     country_ids: list[str] | None = Field(None, description="IDs pays")
+    is_fundraising_featured: bool = Field(False, description="Mis en avant levée de fonds")
+    fundraising_display_order: int = Field(0, ge=0, description="Ordre d'affichage levée de fonds")
 
 
 class ProjectUpdate(BaseModel):
@@ -107,6 +109,8 @@ class ProjectUpdate(BaseModel):
     publication_status: PublicationStatus | None = None
     category_ids: list[str] | None = None
     country_ids: list[str] | None = None
+    is_fundraising_featured: bool | None = None
+    fundraising_display_order: int | None = Field(None, ge=0)
 
 
 class ProjectRead(ProjectBase):
@@ -124,6 +128,8 @@ class ProjectRead(ProjectBase):
     beneficiaries: str | None
     status: ProjectStatus
     publication_status: PublicationStatus
+    is_fundraising_featured: bool
+    fundraising_display_order: int
     created_at: datetime
     updated_at: datetime
 
@@ -148,6 +154,22 @@ class ProjectPublic(BaseModel):
     start_date: date | None
     end_date: date | None
     status: ProjectStatus
+
+    model_config = {"from_attributes": True}
+
+
+class ProjectFundraisingPublic(BaseModel):
+    """Schéma public pour les projets de levée de fonds. Inclut budget/currency."""
+
+    id: str
+    title: str
+    slug: str
+    summary: str | None
+    cover_image_external_id: str | None
+    budget: Decimal | None
+    currency: str
+    status: ProjectStatus
+    fundraising_display_order: int
 
     model_config = {"from_attributes": True}
 

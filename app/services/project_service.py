@@ -599,6 +599,25 @@ class ProjectService:
         )
         return result.scalar_one_or_none()
 
+    async def get_fundraising_featured_projects(
+        self, limit: int = 4
+    ) -> list[Project]:
+        """Récupère les projets publiés mis en avant pour la levée de fonds."""
+        result = await self.db.execute(
+            select(Project)
+            .options(selectinload(Project.categories))
+            .where(
+                Project.publication_status == PublicationStatus.PUBLISHED,
+                Project.is_fundraising_featured == True,  # noqa: E712
+            )
+            .order_by(
+                Project.fundraising_display_order.asc(),
+                Project.created_at.desc(),
+            )
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
     async def get_public_calls(
         self, status: ProjectCallStatus | None = None
     ) -> list[ProjectCall]:
