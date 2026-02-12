@@ -224,6 +224,7 @@ class EventPublic(BaseModel):
     title: str
     slug: str
     description: str | None
+    content: str | None
     type: EventType
     type_other: str | None
     start_date: datetime
@@ -231,7 +232,9 @@ class EventPublic(BaseModel):
     venue: str | None
     city: str | None
     is_online: bool
+    video_conference_link: str | None
     registration_required: bool
+    registration_link: str | None
     max_attendees: int | None
     cover_image_external_id: str | None
 
