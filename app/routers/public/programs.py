@@ -126,3 +126,15 @@ async def list_programs_by_sector(
     query = await service.get_published_programs(sector_id=sector_id)
     result = await db.execute(query)
     return list(result.scalars().all())
+
+
+@router.get("/by-service/{service_id}", response_model=list[ProgramPublic])
+async def list_programs_by_service(
+    service_id: str,
+    db: DbSession,
+) -> list[Program]:
+    """Liste les programmes publiés associés à un service donné."""
+    service = AcademicService(db)
+    query = await service.get_published_programs(service_id=service_id)
+    result = await db.execute(query)
+    return list(result.scalars().all())

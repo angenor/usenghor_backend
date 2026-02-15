@@ -93,6 +93,7 @@ class AcademicService:
         search: str | None = None,
         program_type: str | None = None,
         sector_id: str | None = None,
+        service_id: str | None = None,
         skip_order_by: bool = False,
     ) -> select:
         """
@@ -102,6 +103,7 @@ class AcademicService:
             search: Recherche sur code, titre ou description.
             program_type: Filtrer par type de programme.
             sector_id: Filtrer par département.
+            service_id: Filtrer par service.
             skip_order_by: Ne pas ajouter de clause ORDER BY (utile pour pagination).
 
         Returns:
@@ -128,6 +130,9 @@ class AcademicService:
 
         if sector_id:
             query = query.where(Program.sector_external_id == sector_id)
+
+        if service_id:
+            query = query.where(Program.service_external_id == service_id)
 
         if not skip_order_by:
             query = query.order_by(Program.display_order, Program.title)
