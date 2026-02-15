@@ -59,6 +59,20 @@ async def list_services(
     return await paginate(db, query, pagination, Service, ServiceRead)
 
 
+# NOTE: /reorder DOIT être avant /{service_id} pour éviter que FastAPI
+# ne matche "reorder" comme un service_id dynamique.
+@router.put("/reorder", response_model=list[ServiceRead])
+async def reorder_services(
+    reorder_data: ServiceReorder,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.edit")),
+) -> list[Service]:
+    """Réordonne les services."""
+    org_service = OrganizationService(db)
+    return await org_service.reorder_services(reorder_data.service_ids)
+
+
 @router.get("/{service_id}", response_model=ServiceWithDetails)
 async def get_service(
     service_id: str,
@@ -149,18 +163,6 @@ async def duplicate_service(
     org_service = OrganizationService(db)
     svc = await org_service.duplicate_service(service_id, new_name)
     return IdResponse(id=svc.id, message="Service dupliqué avec succès")
-
-
-@router.put("/reorder", response_model=list[ServiceRead])
-async def reorder_services(
-    reorder_data: ServiceReorder,
-    db: DbSession,
-    current_user: CurrentUser,
-    _: bool = Depends(PermissionChecker("organization.edit")),
-) -> list[Service]:
-    """Réordonne les services."""
-    org_service = OrganizationService(db)
-    return await org_service.reorder_services(reorder_data.service_ids)
 
 
 # =============================================================================
