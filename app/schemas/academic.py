@@ -308,7 +308,9 @@ class ProgramBase(BaseModel):
     description: str | None = Field(None, description="Description du programme")
     teaching_methods: str | None = Field(None, description="Méthodes pédagogiques")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
-    sector_external_id: str | None = Field(None, description="ID du département")
+    sector_external_id: str | None = Field(None, description="ID du secteur")
+    campus_external_id: str | None = Field(None, description="ID du campus")
+    service_external_id: str | None = Field(None, description="ID du service")
     coordinator_external_id: str | None = Field(None, description="ID du coordinateur")
     field_id: str | None = Field(None, description="ID du champ disciplinaire (certificats)")
     type: ProgramType = Field(..., description="Type de programme")
@@ -339,6 +341,8 @@ class ProgramUpdate(BaseModel):
     teaching_methods: str | None = None
     cover_image_external_id: str | None = None
     sector_external_id: str | None = None
+    campus_external_id: str | None = None
+    service_external_id: str | None = None
     coordinator_external_id: str | None = None
     field_id: str | None = None
     type: ProgramType | None = None

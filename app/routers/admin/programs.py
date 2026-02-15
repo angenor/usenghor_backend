@@ -91,6 +91,8 @@ async def create_program(
         teaching_methods=program_data.teaching_methods,
         cover_image_external_id=program_data.cover_image_external_id,
         sector_external_id=program_data.sector_external_id,
+        campus_external_id=program_data.campus_external_id,
+        service_external_id=program_data.service_external_id,
         coordinator_external_id=program_data.coordinator_external_id,
         field_id=program_data.field_id,
         duration_months=program_data.duration_months,
