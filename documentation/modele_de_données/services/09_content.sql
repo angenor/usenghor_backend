@@ -8,7 +8,7 @@
 -- SERVICE: CONTENT (Actualités & Événements)
 -- ============================================================================
 -- Tables: events, event_partners, event_registrations, event_media_library,
---         news, news_media, tags, news_tags
+--         news, news_media, tags, news_tags, news_campuses, news_services
 -- Dépendances externes: CORE (countries), IDENTITY (users), MEDIA (media, albums),
 --                       CAMPUS (campuses), ORGANIZATION (sectors, services),
 --                       PARTNER (partners), PROJECT (projects)
@@ -111,9 +111,7 @@ CREATE TABLE news (
     video_url VARCHAR(500),
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
-    campus_external_id UUID,       -- → CAMPUS.campuses.id
     sector_external_id UUID,        -- → ORGANIZATION.sectors.id
-    service_external_id UUID,       -- → ORGANIZATION.services.id
     event_external_id UUID,        -- → CONTENT.events.id (même service, peut être FK si souhaité)
     project_external_id UUID,      -- → PROJECT.projects.id
     call_external_id UUID,         -- → APPLICATION.application_calls.id
@@ -133,7 +131,6 @@ CREATE INDEX idx_news_slug ON news(slug);
 CREATE INDEX idx_news_project ON news(project_external_id);
 CREATE INDEX idx_news_call ON news(call_external_id);
 CREATE INDEX idx_news_program ON news(program_external_id);
-CREATE INDEX idx_news_campus ON news(campus_external_id);
 
 -- Photos d'une actualité
 CREATE TABLE news_media (
@@ -148,6 +145,20 @@ CREATE TABLE news_tags (
     news_id UUID REFERENCES news(id) ON DELETE CASCADE,
     tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
     PRIMARY KEY (news_id, tag_id)
+);
+
+-- Relation actualités <-> campus (N:N)
+CREATE TABLE news_campuses (
+    news_id UUID REFERENCES news(id) ON DELETE CASCADE,
+    campus_external_id UUID NOT NULL,  -- → CAMPUS.campuses.id (inter-service, pas de FK)
+    PRIMARY KEY (news_id, campus_external_id)
+);
+
+-- Relation actualités <-> services (N:N)
+CREATE TABLE news_services (
+    news_id UUID REFERENCES news(id) ON DELETE CASCADE,
+    service_external_id UUID NOT NULL,  -- → ORGANIZATION.services.id (inter-service, pas de FK)
+    PRIMARY KEY (news_id, service_external_id)
 );
 
 COMMENT ON TABLE events IS '[CONTENT] Événements organisés par l''université';

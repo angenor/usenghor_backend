@@ -39,6 +39,8 @@ CREATE TABLE services (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sector_id UUID REFERENCES sectors(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
+    sigle VARCHAR(50),
+    color VARCHAR(7),
     description TEXT,
     mission TEXT,
     -- Références INTER-SERVICE (pas de FK)

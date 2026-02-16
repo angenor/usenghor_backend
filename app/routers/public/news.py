@@ -53,11 +53,13 @@ async def list_news(
         from app.models.content import NewsTag
         count_query = count_query.join(NewsTag).where(NewsTag.tag_id == tag_id)
     if campus_id:
-        count_query = count_query.where(News.campus_external_id == campus_id)
+        from app.models.content import NewsCampus
+        count_query = count_query.join(NewsCampus).where(NewsCampus.campus_external_id == campus_id)
     if sector_id:
         count_query = count_query.where(News.sector_external_id == sector_id)
     if service_id:
-        count_query = count_query.where(News.service_external_id == service_id)
+        from app.models.content import NewsService
+        count_query = count_query.join(NewsService).where(NewsService.service_external_id == service_id)
     if project_id:
         count_query = count_query.where(News.project_external_id == project_id)
     if event_id:

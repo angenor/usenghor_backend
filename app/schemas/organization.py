@@ -187,6 +187,8 @@ class ServiceBase(BaseModel):
     """Schéma de base pour les services."""
 
     name: str = Field(..., min_length=1, max_length=255, description="Nom du service")
+    sigle: str | None = Field(None, max_length=50, description="Sigle / abréviation du service")
+    color: str | None = Field(None, max_length=7, description="Couleur du service (hex, ex: #FF0000)")
     description: str | None = Field(None, description="Description du service")
     mission: str | None = Field(None, description="Mission du service")
     email: EmailStr | None = Field(None, description="Email du service")
@@ -207,6 +209,8 @@ class ServiceUpdate(BaseModel):
     """Schéma pour la mise à jour d'un service."""
 
     name: str | None = Field(None, min_length=1, max_length=255)
+    sigle: str | None = Field(None, max_length=50)
+    color: str | None = Field(None, max_length=7)
     description: str | None = None
     mission: str | None = None
     email: EmailStr | None = None
@@ -331,6 +335,8 @@ class ServicePublic(BaseModel):
 
     id: str
     name: str
+    sigle: str | None
+    color: str | None
     description: str | None
     mission: str | None
     email: str | None

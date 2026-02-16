@@ -263,9 +263,7 @@ class NewsCreate(NewsBase):
     """Schéma pour la création d'une actualité."""
 
     cover_image_external_id: str | None = None
-    campus_external_id: str | None = None
     sector_external_id: str | None = None
-    service_external_id: str | None = None
     event_external_id: str | None = None
     project_external_id: str | None = None
     call_external_id: str | None = None
@@ -275,6 +273,8 @@ class NewsCreate(NewsBase):
     published_at: datetime | None = None
     visible_from: datetime | None = None
     tag_ids: list[str] = Field(default_factory=list, description="IDs des tags")
+    campus_external_ids: list[str] = Field(default_factory=list, description="IDs des campus")
+    service_external_ids: list[str] = Field(default_factory=list, description="IDs des services")
 
 
 class NewsUpdate(BaseModel):
@@ -288,9 +288,7 @@ class NewsUpdate(BaseModel):
     highlight_status: NewsHighlightStatus | None = None
 
     cover_image_external_id: str | None = None
-    campus_external_id: str | None = None
     sector_external_id: str | None = None
-    service_external_id: str | None = None
     event_external_id: str | None = None
     project_external_id: str | None = None
     call_external_id: str | None = None
@@ -300,6 +298,8 @@ class NewsUpdate(BaseModel):
     published_at: datetime | None = None
     visible_from: datetime | None = None
     tag_ids: list[str] | None = None
+    campus_external_ids: list[str] | None = None
+    service_external_ids: list[str] | None = None
 
 
 class NewsRead(NewsBase):
@@ -307,14 +307,14 @@ class NewsRead(NewsBase):
 
     id: str
     cover_image_external_id: str | None
-    campus_external_id: str | None
     sector_external_id: str | None
-    service_external_id: str | None
     event_external_id: str | None
     project_external_id: str | None
     call_external_id: str | None
     program_external_id: str | None
     author_external_id: str | None
+    campus_external_ids: list[str] = []
+    service_external_ids: list[str] = []
     status: PublicationStatus
     published_at: datetime | None
     visible_from: datetime | None
@@ -333,9 +333,9 @@ class NewsWithTags(NewsRead):
 class NewsPublicEnriched(NewsWithTags):
     """Schéma public enrichi avec les noms des entités associées résolus."""
 
-    campus_name: str | None = None
+    campus_names: list[str] = []
     sector_name: str | None = None
-    service_name: str | None = None
+    service_names: list[str] = []
     project_name: str | None = None
     call_name: str | None = None
     program_name: str | None = None

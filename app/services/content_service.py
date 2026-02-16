@@ -21,8 +21,10 @@ from app.models.content import (
     EventPartner,
     EventRegistration,
     News,
+    NewsCampus,
     NewsHighlightStatus,
     NewsMedia,
+    NewsService,
     NewsTag,
     RegistrationStatus,
     Tag,
@@ -511,13 +513,13 @@ class ContentService:
             query = query.join(NewsTag).where(NewsTag.tag_id == tag_id)
 
         if campus_id:
-            query = query.where(News.campus_external_id == campus_id)
+            query = query.join(NewsCampus).where(NewsCampus.campus_external_id == campus_id)
 
         if sector_id:
             query = query.where(News.sector_external_id == sector_id)
 
         if service_id:
-            query = query.where(News.service_external_id == service_id)
+            query = query.join(NewsService).where(NewsService.service_external_id == service_id)
 
         if project_id:
             query = query.where(News.project_external_id == project_id)
@@ -537,7 +539,7 @@ class ContentService:
         if to_date:
             query = query.where(News.published_at <= to_date)
 
-        query = query.order_by(News.published_at.desc().nullslast(), News.created_at.desc())
+        query = query.distinct().order_by(News.published_at.desc().nullslast(), News.created_at.desc())
         return query
 
     async def enrich_news_with_names(self, news_list: list[News]) -> list[dict]:
@@ -555,9 +557,13 @@ class ContentService:
             return []
 
         # 1. Collecter tous les IDs uniques
-        campus_ids = {n.campus_external_id for n in news_list if n.campus_external_id}
+        campus_ids: set[str] = set()
+        for n in news_list:
+            campus_ids.update(n.campus_external_ids)
         sector_ids = {n.sector_external_id for n in news_list if n.sector_external_id}
-        service_ids = {n.service_external_id for n in news_list if n.service_external_id}
+        service_ids: set[str] = set()
+        for n in news_list:
+            service_ids.update(n.service_external_ids)
         project_ids = {n.project_external_id for n in news_list if n.project_external_id}
         call_ids = {n.call_external_id for n in news_list if n.call_external_id}
         program_ids = {n.program_external_id for n in news_list if n.program_external_id}
@@ -650,9 +656,9 @@ class ContentService:
                 "video_url": news.video_url,
                 "highlight_status": news.highlight_status,
                 "cover_image_external_id": news.cover_image_external_id,
-                "campus_external_id": news.campus_external_id,
+                "campus_external_ids": news.campus_external_ids,
                 "sector_external_id": news.sector_external_id,
-                "service_external_id": news.service_external_id,
+                "service_external_ids": news.service_external_ids,
                 "event_external_id": news.event_external_id,
                 "project_external_id": news.project_external_id,
                 "call_external_id": news.call_external_id,
@@ -664,10 +670,10 @@ class ContentService:
                 "created_at": news.created_at,
                 "updated_at": news.updated_at,
                 "tags": tags_data,
-                # Noms résolus (conversion en str pour correspondre aux clés du map)
-                "campus_name": campus_map.get(str(news.campus_external_id)) if news.campus_external_id else None,
+                # Noms résolus
+                "campus_names": [campus_map.get(str(cid), str(cid)) for cid in news.campus_external_ids],
                 "sector_name": sector_map.get(str(news.sector_external_id)) if news.sector_external_id else None,
-                "service_name": service_map.get(str(news.service_external_id)) if news.service_external_id else None,
+                "service_names": [service_map.get(str(sid), str(sid)) for sid in news.service_external_ids],
                 "project_name": project_map.get(str(news.project_external_id)) if news.project_external_id else None,
                 "call_name": call_map.get(str(news.call_external_id)) if news.call_external_id else None,
                 "program_name": program_map.get(str(news.program_external_id)) if news.program_external_id else None,
@@ -681,19 +687,33 @@ class ContentService:
     async def get_news_by_id(self, news_id: str) -> News | None:
         """Récupère une actualité par son ID."""
         result = await self.db.execute(
-            select(News).options(selectinload(News.tags)).where(News.id == news_id)
+            select(News)
+            .options(selectinload(News.tags))
+            .options(selectinload(News.news_campuses))
+            .options(selectinload(News.news_services))
+            .where(News.id == news_id)
         )
         return result.scalar_one_or_none()
 
     async def get_news_by_slug(self, slug: str) -> News | None:
         """Récupère une actualité par son slug."""
         result = await self.db.execute(
-            select(News).options(selectinload(News.tags)).where(News.slug == slug)
+            select(News)
+            .options(selectinload(News.tags))
+            .options(selectinload(News.news_campuses))
+            .options(selectinload(News.news_services))
+            .where(News.slug == slug)
         )
         return result.scalar_one_or_none()
 
     async def create_news(
-        self, title: str, slug: str, tag_ids: list[str] | None = None, **kwargs
+        self,
+        title: str,
+        slug: str,
+        tag_ids: list[str] | None = None,
+        campus_external_ids: list[str] | None = None,
+        service_external_ids: list[str] | None = None,
+        **kwargs,
     ) -> News:
         """Crée une nouvelle actualité."""
         existing = await self.get_news_by_slug(slug)
@@ -711,10 +731,27 @@ class ContentService:
                 self.db.add(news_tag)
             await self.db.flush()
 
+        # Ajouter les campus
+        if campus_external_ids:
+            for campus_id in campus_external_ids:
+                self.db.add(NewsCampus(news_id=news.id, campus_external_id=campus_id))
+            await self.db.flush()
+
+        # Ajouter les services
+        if service_external_ids:
+            for service_id in service_external_ids:
+                self.db.add(NewsService(news_id=news.id, service_external_id=service_id))
+            await self.db.flush()
+
         return await self.get_news_by_id(news.id)
 
     async def update_news(
-        self, news_id: str, tag_ids: list[str] | None = None, **kwargs
+        self,
+        news_id: str,
+        tag_ids: list[str] | None = None,
+        campus_external_ids: list[str] | None = None,
+        service_external_ids: list[str] | None = None,
+        **kwargs,
     ) -> News:
         """Met à jour une actualité."""
         news = await self.get_news_by_id(news_id)
@@ -739,6 +776,18 @@ class ContentService:
             for tag_id in tag_ids:
                 news_tag = NewsTag(news_id=news_id, tag_id=tag_id)
                 self.db.add(news_tag)
+
+        # Mettre à jour les campus si fournis
+        if campus_external_ids is not None:
+            await self.db.execute(delete(NewsCampus).where(NewsCampus.news_id == news_id))
+            for campus_id in campus_external_ids:
+                self.db.add(NewsCampus(news_id=news_id, campus_external_id=campus_id))
+
+        # Mettre à jour les services si fournis
+        if service_external_ids is not None:
+            await self.db.execute(delete(NewsService).where(NewsService.news_id == news_id))
+            for service_id in service_external_ids:
+                self.db.add(NewsService(news_id=news_id, service_external_id=service_id))
 
         await self.db.flush()
         return await self.get_news_by_id(news_id)
@@ -805,9 +854,7 @@ class ContentService:
             content=news.content,
             video_url=news.video_url,
             cover_image_external_id=news.cover_image_external_id,
-            campus_external_id=news.campus_external_id,
             sector_external_id=news.sector_external_id,
-            service_external_id=news.service_external_id,
             event_external_id=news.event_external_id,
             project_external_id=news.project_external_id,
             call_external_id=news.call_external_id,
@@ -822,6 +869,14 @@ class ContentService:
         for tag in news.tags:
             news_tag = NewsTag(news_id=new_news.id, tag_id=tag.id)
             self.db.add(news_tag)
+
+        # Copier les campus
+        for nc in news.news_campuses:
+            self.db.add(NewsCampus(news_id=new_news.id, campus_external_id=nc.campus_external_id))
+
+        # Copier les services
+        for ns in news.news_services:
+            self.db.add(NewsService(news_id=new_news.id, service_external_id=ns.service_external_id))
 
         await self.db.flush()
         return await self.get_news_by_id(new_news.id)

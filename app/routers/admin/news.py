@@ -104,9 +104,7 @@ async def create_news(
         video_url=news_data.video_url,
         highlight_status=news_data.highlight_status,
         cover_image_external_id=news_data.cover_image_external_id,
-        campus_external_id=news_data.campus_external_id,
         sector_external_id=news_data.sector_external_id,
-        service_external_id=news_data.service_external_id,
         event_external_id=news_data.event_external_id,
         project_external_id=news_data.project_external_id,
         call_external_id=news_data.call_external_id,
@@ -115,6 +113,8 @@ async def create_news(
         published_at=news_data.published_at,
         visible_from=news_data.visible_from,
         tag_ids=news_data.tag_ids,
+        campus_external_ids=news_data.campus_external_ids,
+        service_external_ids=news_data.service_external_ids,
     )
     return IdResponse(id=news.id, message="Actualité créée avec succès")
 
@@ -131,7 +131,15 @@ async def update_news(
     service = ContentService(db)
     update_dict = news_data.model_dump(exclude_unset=True)
     tag_ids = update_dict.pop("tag_ids", None)
-    return await service.update_news(news_id, tag_ids=tag_ids, **update_dict)
+    campus_external_ids = update_dict.pop("campus_external_ids", None)
+    service_external_ids = update_dict.pop("service_external_ids", None)
+    return await service.update_news(
+        news_id,
+        tag_ids=tag_ids,
+        campus_external_ids=campus_external_ids,
+        service_external_ids=service_external_ids,
+        **update_dict,
+    )
 
 
 @router.delete("/{news_id}", response_model=MessageResponse)

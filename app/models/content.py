@@ -194,9 +194,7 @@ class News(Base, UUIDMixin, TimestampMixin):
 
     # Références externes (pas de FK) - UUID pour correspondre au schéma SQL
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
-    campus_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     sector_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
-    service_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     event_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     project_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     call_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -218,6 +216,22 @@ class News(Base, UUIDMixin, TimestampMixin):
     tags: Mapped[list["Tag"]] = relationship(
         "Tag", secondary="news_tags", back_populates="news_items"
     )
+    news_campuses: Mapped[list["NewsCampus"]] = relationship(
+        "NewsCampus", cascade="all, delete-orphan", lazy="selectin"
+    )
+    news_services: Mapped[list["NewsService"]] = relationship(
+        "NewsService", cascade="all, delete-orphan", lazy="selectin"
+    )
+
+    @property
+    def campus_external_ids(self) -> list[str]:
+        """Liste des IDs de campus associés."""
+        return [nc.campus_external_id for nc in self.news_campuses]
+
+    @property
+    def service_external_ids(self) -> list[str]:
+        """Liste des IDs de services associés."""
+        return [ns.service_external_id for ns in self.news_services]
 
 
 class NewsMedia(Base):
@@ -243,3 +257,25 @@ class NewsTag(Base):
     tag_id: Mapped[str] = mapped_column(
         ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True
     )
+
+
+class NewsCampus(Base):
+    """Table de liaison actualités-campus (N:N)."""
+
+    __tablename__ = "news_campuses"
+
+    news_id: Mapped[str] = mapped_column(
+        ForeignKey("news.id", ondelete="CASCADE"), primary_key=True
+    )
+    campus_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+
+
+class NewsService(Base):
+    """Table de liaison actualités-services (N:N)."""
+
+    __tablename__ = "news_services"
+
+    news_id: Mapped[str] = mapped_column(
+        ForeignKey("news.id", ondelete="CASCADE"), primary_key=True
+    )
+    service_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)

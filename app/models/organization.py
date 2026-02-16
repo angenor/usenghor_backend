@@ -61,6 +61,8 @@ class Service(Base, UUIDMixin, TimestampMixin):
         ForeignKey("sectors.id", ondelete="CASCADE")
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    sigle: Mapped[str | None] = mapped_column(String(50))
+    color: Mapped[str | None] = mapped_column(String(7))
     description: Mapped[str | None] = mapped_column(Text)
     mission: Mapped[str | None] = mapped_column(Text)
 
