@@ -5,9 +5,12 @@ Router d'authentification
 Endpoints pour l'authentification et la gestion du profil utilisateur.
 """
 
+import base64
+import logging
 from datetime import date, datetime, timezone
+from io import BytesIO
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +40,9 @@ from app.schemas.identity import (
     UserMeUpdate,
     UserRead,
 )
+from app.services.media_service import MediaService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -279,6 +285,39 @@ async def register(
         except ValueError:
             pass  # Date invalide (ex: 31 février), on ignore
 
+    # Traiter la photo base64 si fournie
+    photo_external_id = None
+    if request.photo_base64:
+        try:
+            media_service = MediaService(db)
+            # Parser le Data URL : "data:image/jpeg;base64,/9j/4AAQ..."
+            base64_str = request.photo_base64
+            if "," in base64_str:
+                mime_part, data_part = base64_str.split(",", 1)
+                mime_type = mime_part.split(":")[1].split(";")[0] if ":" in mime_part else "image/jpeg"
+            else:
+                data_part = base64_str
+                mime_type = "image/jpeg"
+
+            binary_data = base64.b64decode(data_part)
+            ext = ".png" if "png" in mime_type else ".jpg"
+            filename = f"avatar_register{ext}"
+
+            upload_file = UploadFile(
+                file=BytesIO(binary_data),
+                filename=filename,
+                size=len(binary_data),
+                headers={"content-type": mime_type},
+            )
+            media = await media_service.upload_file(
+                file=upload_file,
+                folder="users/avatars",
+                alt_text="Photo de profil",
+            )
+            photo_external_id = str(media.id)
+        except Exception as e:
+            logger.warning("Erreur lors du traitement de la photo d'inscription: %s", e)
+
     new_user = User(
         email=request.email,
         password_hash=password_hash,
@@ -289,6 +328,7 @@ async def register(
         biography=request.biography,
         linkedin=request.linkedin_url,
         facebook=request.facebook_url,
+        photo_external_id=photo_external_id,
         active=True,  # Compte actif
         email_verified=False,  # En attente de validation par un admin
     )
