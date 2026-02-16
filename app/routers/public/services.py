@@ -133,6 +133,8 @@ async def get_service(
     return ServicePublicWithDetailsEnriched(
         id=svc.id,
         name=svc.name,
+        sigle=svc.sigle,
+        color=svc.color,
         description=svc.description,
         mission=svc.mission,
         email=svc.email,

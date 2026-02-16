@@ -4,6 +4,9 @@
 
 BEGIN;
 
+-- 0. Supprimer la vue dépendante (utilise SELECT * sur news)
+DROP VIEW IF EXISTS v_published_news;
+
 -- 1. Créer la table de liaison news <-> campuses
 CREATE TABLE IF NOT EXISTS news_campuses (
     news_id UUID REFERENCES news(id) ON DELETE CASCADE,
@@ -37,5 +40,13 @@ ON CONFLICT DO NOTHING;
 DROP INDEX IF EXISTS idx_news_campus;
 ALTER TABLE news DROP COLUMN IF EXISTS campus_external_id;
 ALTER TABLE news DROP COLUMN IF EXISTS service_external_id;
+
+-- 5. Recréer la vue sans les colonnes supprimées
+CREATE VIEW v_published_news AS
+SELECT *
+FROM news
+WHERE status = 'published'
+AND (visible_from IS NULL OR visible_from <= NOW())
+ORDER BY published_at DESC;
 
 COMMIT;
