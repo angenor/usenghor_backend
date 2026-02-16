@@ -82,6 +82,8 @@ class RegisterRequest(BaseModel):
     service_id: str = Field(min_length=1)
     campus_id: str = Field(min_length=1)
     # Champs optionnels
+    birthday_day: int | None = Field(default=None, ge=1, le=31)
+    birthday_month: int | None = Field(default=None, ge=1, le=12)
     biography: str | None = None
     linkedin_url: str | None = None
     facebook_url: str | None = None

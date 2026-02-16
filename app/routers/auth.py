@@ -5,7 +5,7 @@ Router d'authentification
 Endpoints pour l'authentification et la gestion du profil utilisateur.
 """
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -271,12 +271,21 @@ async def register(
     # Créer le nouvel utilisateur
     password_hash = get_password_hash(request.password)
 
+    # Construire birth_date à partir du jour/mois d'anniversaire (année fixe 2000)
+    birth_date = None
+    if request.birthday_day and request.birthday_month:
+        try:
+            birth_date = date(2000, request.birthday_month, request.birthday_day)
+        except ValueError:
+            pass  # Date invalide (ex: 31 février), on ignore
+
     new_user = User(
         email=request.email,
         password_hash=password_hash,
         last_name=request.last_name,
         first_name=request.first_name,
         salutation=request.salutation,
+        birth_date=birth_date,
         biography=request.biography,
         linkedin=request.linkedin_url,
         facebook=request.facebook_url,
