@@ -126,6 +126,12 @@ class Program(Base, UUIDMixin, TimestampMixin):
     field: Mapped["ProgramField | None"] = relationship(
         "ProgramField", back_populates="programs", lazy="selectin"
     )
+    service_rel: Mapped["Service | None"] = relationship(
+        "Service",
+        primaryjoin="Program.service_external_id == foreign(Service.id)",
+        viewonly=True,
+        lazy="selectin",
+    )
     media_library: Mapped[list["ProgramMediaLibrary"]] = relationship(
         "ProgramMediaLibrary",
         back_populates="program",
@@ -136,6 +142,11 @@ class Program(Base, UUIDMixin, TimestampMixin):
     def field_name(self) -> str | None:
         """Nom du champ disciplinaire (résolu depuis la relation)."""
         return self.field.name if self.field else None
+
+    @property
+    def service_name(self) -> str | None:
+        """Nom du service (résolu depuis la relation)."""
+        return self.service_rel.name if self.service_rel else None
 
 
 class ProgramCampus(Base):
