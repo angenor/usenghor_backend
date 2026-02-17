@@ -220,6 +220,7 @@ async def get_all_campus_team_members(
         .where(
             CampusTeam.active == True,
             User.active == True,
+            User.email_verified == True,
             Campus.active == True,
         )
         .order_by(CampusTeam.display_order, User.last_name)
@@ -391,6 +392,7 @@ async def get_campus_team(
             CampusTeam.campus_id == campus_id,
             CampusTeam.active == True,
             User.active == True,
+            User.email_verified == True,
         )
         .order_by(CampusTeam.display_order, User.last_name)
     )

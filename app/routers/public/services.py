@@ -99,7 +99,7 @@ async def get_service(
         query = (
             select(User, Media)
             .outerjoin(Media, User.photo_external_id == Media.id)
-            .where(User.id.in_(user_ids))
+            .where(User.id.in_(user_ids), User.email_verified == True)
         )
         result = await db.execute(query)
         users_map: dict[str, tuple[User, Media | None]] = {}

@@ -86,7 +86,7 @@ async def get_user_profile(
         select(User, Media, Country)
         .outerjoin(Media, User.photo_external_id == Media.id)
         .outerjoin(Country, User.nationality_external_id == Country.id)
-        .where(User.id == user_id, User.active == True)
+        .where(User.id == user_id, User.active == True, User.email_verified == True)
     )
     result = await db.execute(query)
     row = result.one_or_none()
