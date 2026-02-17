@@ -341,7 +341,7 @@ async def register(
     service_team = ServiceTeam(
         service_id=request.service_id,
         user_external_id=str(new_user.id),
-        position="Membre",
+        position=request.position,
         active=True,
     )
     db.add(service_team)
@@ -350,7 +350,7 @@ async def register(
     campus_team = CampusTeam(
         campus_id=request.campus_id,
         user_external_id=str(new_user.id),
-        position="Membre",
+        position=request.position,
         active=True,
     )
     db.add(campus_team)

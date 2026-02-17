@@ -81,6 +81,7 @@ class RegisterRequest(BaseModel):
     sector_id: str = Field(min_length=1)
     service_id: str = Field(min_length=1)
     campus_id: str = Field(min_length=1)
+    position: str = Field(min_length=1, max_length=255)
     # Champs optionnels
     birthday_day: int | None = Field(default=None, ge=1, le=31)
     birthday_month: int | None = Field(default=None, ge=1, le=12)
