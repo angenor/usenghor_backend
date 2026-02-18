@@ -8,6 +8,7 @@ Endpoints CRUD pour la gestion des utilisateurs.
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.dependencies import CurrentUser, DbSession, PermissionChecker
+from app.core.security import get_password_hash
 from app.core.pagination import PaginationParams, paginate
 from app.models.identity import User
 from app.schemas.common import IdResponse, MessageResponse
@@ -94,6 +95,9 @@ async def update_user(
     """Met à jour un utilisateur."""
     service = IdentityService(db)
     update_dict = user_data.model_dump(exclude_unset=True)
+    # Hasher le mot de passe si fourni
+    if "password" in update_dict:
+        update_dict["password_hash"] = get_password_hash(update_dict.pop("password"))
     return await service.update_user(user_id, **update_dict)
 
 

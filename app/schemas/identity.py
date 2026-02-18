@@ -186,6 +186,7 @@ class UserUpdate(BaseModel):
     """Mise à jour d'utilisateur."""
 
     email: EmailStr | None = None
+    password: str | None = Field(None, min_length=8)
     last_name: str | None = None
     first_name: str | None = None
     salutation: str | None = None
