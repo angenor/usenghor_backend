@@ -14,12 +14,14 @@ from sqlalchemy import select
 from app.core.dependencies import DbSession
 from app.core.exceptions import NotFoundException
 from app.core.pagination import PaginationParams, paginate
+from app.models.academic import Program, ProgramCampus
 from app.models.campus import Campus, CampusMediaLibrary, CampusPartner, CampusTeam
 from app.models.core import Country
 from app.models.identity import User
 from app.models.media import Album, AlbumMedia, Media, PublicationStatus
 from app.models.partner import Partner, PartnerType
 from app.core.media_utils import resolve_media_url
+from app.schemas.academic import ProgramPublic
 from app.services.campus_service import CampusService
 
 
@@ -313,6 +315,40 @@ async def get_campus_by_code(
         country_iso_code=country.iso_code if country else None,
         country_name_fr=country.name_fr if country else None,
     )
+
+
+@router.get("/{campus_id}/programs", response_model=list[ProgramPublic])
+async def get_campus_programs(
+    campus_id: str,
+    db: DbSession,
+) -> list[ProgramPublic]:
+    """
+    Récupère les programmes publiés associés à un campus.
+
+    Retourne la liste des programmes via la table de liaison program_campuses.
+    """
+    # Vérifier que le campus existe
+    campus_result = await db.execute(
+        select(Campus).where(Campus.id == campus_id, Campus.active == True)
+    )
+    if not campus_result.scalar_one_or_none():
+        raise NotFoundException("Campus non trouvé")
+
+    # Récupérer les programmes publiés liés au campus
+    query = (
+        select(Program)
+        .join(ProgramCampus, ProgramCampus.program_id == Program.id)
+        .where(
+            ProgramCampus.campus_external_id == campus_id,
+            Program.status == PublicationStatus.PUBLISHED,
+        )
+        .order_by(Program.display_order, Program.title)
+    )
+
+    result = await db.execute(query)
+    programs = result.scalars().all()
+
+    return [ProgramPublic.model_validate(p) for p in programs]
 
 
 @router.get("/{campus_id}/partners", response_model=list[CampusPartnerPublic])
