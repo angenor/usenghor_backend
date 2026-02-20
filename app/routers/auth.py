@@ -10,7 +10,7 @@ import logging
 from datetime import date, datetime, timezone
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,11 +58,11 @@ async def login(
     - **username**: Email de l'utilisateur
     - **password**: Mot de passe
     """
-    # Rechercher l'utilisateur par email
+    # Rechercher l'utilisateur par email (insensible à la casse)
     result = await db.execute(
         select(User)
         .options(selectinload(User.roles).selectinload(Role.permissions))
-        .where(User.email == form_data.username)
+        .where(User.email == form_data.username.lower().strip())
     )
     user = result.scalar_one_or_none()
 
@@ -107,11 +107,11 @@ async def login_json(
 
     Alternative à /login pour les clients qui préfèrent JSON.
     """
-    # Rechercher l'utilisateur par email
+    # Rechercher l'utilisateur par email (insensible à la casse)
     result = await db.execute(
         select(User)
         .options(selectinload(User.roles).selectinload(Role.permissions))
-        .where(User.email == credentials.email)
+        .where(User.email == credentials.email.lower().strip())
     )
     user = result.scalar_one_or_none()
 
@@ -256,6 +256,64 @@ async def change_password(
     return MessageResponse(message="Mot de passe modifié avec succès")
 
 
+@router.post("/me/photo", status_code=status.HTTP_200_OK)
+async def upload_profile_photo(
+    current_user: CurrentUser,
+    db: DbSession = None,
+    original: UploadFile = File(..., description="Image originale"),
+    low: UploadFile = File(..., description="Variante basse résolution"),
+    medium: UploadFile = File(..., description="Variante moyenne résolution"),
+    folder: str = Form("users/avatars"),
+) -> dict:
+    """
+    Upload la photo de profil de l'utilisateur connecté (3 variantes).
+
+    Accessible sans permission admin — limité au profil de l'utilisateur courant.
+    """
+    service = MediaService(db)
+
+    # 1. Upload l'original
+    original_media = await service.upload_file(
+        file=original,
+        folder=folder,
+        alt_text="Photo de profil",
+    )
+
+    # 2. Extraire le nom de base pour les variantes
+    original_url = original_media.url
+    url_parts = original_url.split("/")
+    original_filename = url_parts[-1]
+    last_dot = original_filename.rfind(".")
+    original_stem = original_filename[:last_dot] if last_dot > -1 else original_filename
+
+    # 3. Upload les variantes avec le même nom de base
+    low_media = await service.upload_file(
+        file=low,
+        folder=f"{folder}/low",
+        alt_text="Photo de profil (basse résolution)",
+        base_filename=f"{original_stem}_low",
+    )
+    medium_media = await service.upload_file(
+        file=medium,
+        folder=f"{folder}/medium",
+        alt_text="Photo de profil (moyenne résolution)",
+        base_filename=f"{original_stem}_medium",
+    )
+
+    # 4. Mettre à jour le photo_external_id de l'utilisateur
+    await db.execute(
+        update(User)
+        .where(User.id == current_user.id)
+        .values(photo_external_id=str(original_media.id))
+    )
+
+    return {
+        "original": {"id": str(original_media.id), "url": original_media.url},
+        "low": {"id": str(low_media.id), "url": low_media.url},
+        "medium": {"id": str(medium_media.id), "url": medium_media.url},
+    }
+
+
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     request: RegisterRequest,
@@ -267,8 +325,11 @@ async def register(
     Le compte sera créé avec email_verified=False.
     Un administrateur devra vérifier l'email avant que l'utilisateur puisse se connecter.
     """
+    # Normaliser l'email en minuscules
+    normalized_email = request.email.lower().strip()
+
     # Vérifier si l'email existe déjà
-    result = await db.execute(select(User).where(User.email == request.email))
+    result = await db.execute(select(User).where(User.email == normalized_email))
     existing_user = result.scalar_one_or_none()
 
     if existing_user:
@@ -319,7 +380,7 @@ async def register(
             logger.warning("Erreur lors du traitement de la photo d'inscription: %s", e)
 
     new_user = User(
-        email=request.email,
+        email=normalized_email,
         password_hash=password_hash,
         last_name=request.last_name,
         first_name=request.first_name,

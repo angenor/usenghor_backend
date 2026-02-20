@@ -83,8 +83,8 @@ class IdentityService:
         return result.scalar_one_or_none()
 
     async def get_user_by_email(self, email: str) -> User | None:
-        """Récupère un utilisateur par son email."""
-        result = await self.db.execute(select(User).where(User.email == email))
+        """Récupère un utilisateur par son email (insensible à la casse)."""
+        result = await self.db.execute(select(User).where(User.email == email.lower().strip()))
         return result.scalar_one_or_none()
 
     async def create_user(
