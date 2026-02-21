@@ -240,6 +240,17 @@ class AcademicService:
         )
         self.db.add(program)
         await self.db.flush()
+
+        # Synchroniser la table de liaison program_campuses
+        campus_ext_id = kwargs.get("campus_external_id")
+        if campus_ext_id:
+            link = ProgramCampus(
+                program_id=program.id,
+                campus_external_id=campus_ext_id,
+            )
+            self.db.add(link)
+            await self.db.flush()
+
         return program
 
     async def update_program(self, program_id: str, **kwargs) -> Program:
@@ -284,6 +295,21 @@ class AcademicService:
             update(Program).where(Program.id == program_id).values(**kwargs)
         )
         await self.db.flush()
+
+        # Synchroniser la table de liaison program_campuses
+        if "campus_external_id" in kwargs:
+            await self.db.execute(
+                delete(ProgramCampus).where(ProgramCampus.program_id == program_id)
+            )
+            new_campus_id = kwargs["campus_external_id"]
+            if new_campus_id:
+                link = ProgramCampus(
+                    program_id=program_id,
+                    campus_external_id=new_campus_id,
+                )
+                self.db.add(link)
+            await self.db.flush()
+
         return await self.get_program_by_id(program_id)
 
     async def delete_program(self, program_id: str) -> None:
