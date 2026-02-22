@@ -389,6 +389,8 @@ class ProgramPublic(BaseModel):
     sector_external_id: str | None
     service_external_id: str | None = None
     service_name: str | None = None
+    campus_external_id: str | None = None
+    campus_name: str | None = None
     field_id: str | None = None
     field_name: str | None = None
     type: ProgramType
