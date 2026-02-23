@@ -431,6 +431,9 @@ class ApplicationBase(BaseModel):
     degree_date: date | None = Field(None, description="Date d'obtention")
     degree_location: str | None = Field(None, max_length=255, description="Lieu d'obtention")
 
+    # Motivation (candidatures spontanées)
+    motivation_text: str | None = Field(None, description="Lettre de motivation")
+
 
 class ApplicationCreate(ApplicationBase):
     """Schéma pour la création d'une candidature."""

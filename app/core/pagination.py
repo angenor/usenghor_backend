@@ -77,9 +77,10 @@ async def paginate(
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
 
-    # Appliquer le tri
+    # Appliquer le tri (reset l'ordre existant pour éviter les conflits)
     sort_column = getattr(model_class, pagination.sort_by, None)
     if sort_column is not None:
+        query = query.order_by(None)
         if pagination.sort_order == "desc":
             query = query.order_by(sort_column.desc())
         else:

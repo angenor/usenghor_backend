@@ -502,7 +502,9 @@ class ApplicationService:
                 )
             )
 
-        if call_id:
+        if call_id == "spontaneous":
+            query = query.where(Application.call_id.is_(None))
+        elif call_id:
             query = query.where(Application.call_id == call_id)
 
         if status:
@@ -755,7 +757,9 @@ class ApplicationService:
         """Récupère les statistiques des candidatures."""
         base_query = select(func.count(Application.id))
 
-        if call_id:
+        if call_id == "spontaneous":
+            base_query = base_query.where(Application.call_id.is_(None))
+        elif call_id:
             base_query = base_query.where(Application.call_id == call_id)
 
         # Total
@@ -840,7 +844,9 @@ class ApplicationService:
         """Comptages par statut avec filtres de date."""
         base_query = select(func.count(Application.id))
 
-        if call_id:
+        if call_id == "spontaneous":
+            base_query = base_query.where(Application.call_id.is_(None))
+        elif call_id:
             base_query = base_query.where(Application.call_id == call_id)
         if date_from:
             base_query = base_query.where(Application.submitted_at >= date_from)
@@ -889,7 +895,9 @@ class ApplicationService:
             func.count(Application.id).label("count"),
         )
 
-        if call_id:
+        if call_id == "spontaneous":
+            query = query.where(Application.call_id.is_(None))
+        elif call_id:
             query = query.where(Application.call_id == call_id)
         if date_from:
             query = query.where(Application.submitted_at >= date_from)
@@ -928,7 +936,9 @@ class ApplicationService:
             .join(ApplicationCall, Application.call_id == ApplicationCall.id)
         )
 
-        if call_id:
+        if call_id == "spontaneous":
+            query = query.where(Application.call_id.is_(None))
+        elif call_id:
             query = query.where(Application.call_id == call_id)
         if date_from:
             query = query.where(Application.submitted_at >= date_from)

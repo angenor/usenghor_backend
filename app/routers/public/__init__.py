@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.routers.public import (
     albums,
     application_calls,
+    applications,
     campuses,
     countries,
     editorial,
@@ -37,6 +38,7 @@ router.include_router(partnership_requests.router)
 router.include_router(program_fields.router)
 router.include_router(programs.router)
 router.include_router(application_calls.router)
+router.include_router(applications.router)
 router.include_router(newsletter.router)
 router.include_router(editorial.router)
 router.include_router(institutional_projects.router)

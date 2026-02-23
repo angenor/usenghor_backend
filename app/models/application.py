@@ -338,6 +338,9 @@ class Application(Base, UUIDMixin, TimestampMixin):
     degree_date: Mapped[date | None] = mapped_column(Date)
     degree_location: Mapped[str | None] = mapped_column(String(255))
 
+    # Motivation (candidatures spontanées)
+    motivation_text: Mapped[str | None] = mapped_column(Text)
+
     # Statut
     status: Mapped[SubmittedApplicationStatus] = mapped_column(
         Enum(

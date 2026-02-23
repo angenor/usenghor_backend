@@ -157,6 +157,9 @@ CREATE TABLE applications (
     degree_date DATE,
     degree_location VARCHAR(255),
 
+    -- Motivation (candidatures spontanées)
+    motivation_text TEXT,
+
     -- Statut
     status submitted_application_status DEFAULT 'submitted',
     submitted_at TIMESTAMPTZ DEFAULT NOW(),
