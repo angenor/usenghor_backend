@@ -37,6 +37,10 @@ CREATE TABLE programs (
     slug VARCHAR(255) UNIQUE NOT NULL,
     description TEXT,
     teaching_methods TEXT,
+    objectives TEXT,
+    target_audience TEXT,
+    format TEXT,
+    evaluation_methods TEXT,
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
     sector_external_id UUID,        -- → ORGANIZATION.sectors.id

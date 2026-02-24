@@ -62,6 +62,10 @@ class Program(Base, UUIDMixin, TimestampMixin):
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     teaching_methods: Mapped[str | None] = mapped_column(Text)
+    objectives: Mapped[str | None] = mapped_column(Text)
+    target_audience: Mapped[str | None] = mapped_column(Text)
+    format: Mapped[str | None] = mapped_column(Text)
+    evaluation_methods: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (pas de FK) - UUID pour compatibilité avec le schéma DB
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
