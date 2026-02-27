@@ -403,6 +403,8 @@ class ProgramPublic(BaseModel):
     service_name: str | None = None
     campus_external_id: str | None = None
     campus_name: str | None = None
+    campus_city: str | None = None
+    country_name: str | None = None
     field_id: str | None = None
     field_name: str | None = None
     type: ProgramType

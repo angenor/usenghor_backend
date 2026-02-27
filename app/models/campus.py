@@ -51,6 +51,17 @@ class Campus(Base, UUIDMixin, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    country_rel: Mapped["Country | None"] = relationship(
+        "Country",
+        primaryjoin="Campus.country_external_id == foreign(Country.id)",
+        viewonly=True,
+        lazy="selectin",
+    )
+
+    @property
+    def country_name_fr(self) -> str | None:
+        """Nom du pays en français (résolu depuis la relation)."""
+        return self.country_rel.name_fr if self.country_rel else None
 
 
 class CampusPartner(Base):

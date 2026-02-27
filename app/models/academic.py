@@ -163,6 +163,18 @@ class Program(Base, UUIDMixin, TimestampMixin):
         """Nom du campus (résolu depuis la relation)."""
         return self.campus_rel.name if self.campus_rel else None
 
+    @property
+    def campus_city(self) -> str | None:
+        """Ville du campus (résolu depuis la relation)."""
+        return self.campus_rel.city if self.campus_rel else None
+
+    @property
+    def country_name(self) -> str | None:
+        """Nom du pays du campus (résolu depuis la relation campus → country)."""
+        if self.campus_rel and self.campus_rel.country_rel:
+            return self.campus_rel.country_rel.name_fr
+        return None
+
 
 class ProgramCampus(Base):
     """Table de liaison programme-campus."""
