@@ -78,7 +78,7 @@ class ProjectCreate(ProjectBase):
     end_date: date | None = Field(None, description="Date de fin")
     budget: Decimal | None = Field(None, ge=0, description="Budget")
     currency: str = Field("EUR", max_length=10, description="Devise")
-    beneficiaries: str | None = Field(None, description="Bénéficiaires")
+    beneficiaries: list[str] | None = Field(None, description="Bénéficiaires")
     status: ProjectStatus = Field(ProjectStatus.PLANNED, description="Statut")
     publication_status: PublicationStatus = Field(
         PublicationStatus.DRAFT, description="Statut publication"
@@ -104,7 +104,7 @@ class ProjectUpdate(BaseModel):
     end_date: date | None = None
     budget: Decimal | None = Field(None, ge=0)
     currency: str | None = Field(None, max_length=10)
-    beneficiaries: str | None = None
+    beneficiaries: list[str] | None = None
     status: ProjectStatus | None = None
     publication_status: PublicationStatus | None = None
     category_ids: list[str] | None = None
@@ -125,7 +125,7 @@ class ProjectRead(ProjectBase):
     end_date: date | None
     budget: Decimal | None
     currency: str
-    beneficiaries: str | None
+    beneficiaries: list[str] | None
     status: ProjectStatus
     publication_status: PublicationStatus
     is_fundraising_featured: bool

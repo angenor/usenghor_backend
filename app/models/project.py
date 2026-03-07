@@ -21,6 +21,7 @@ from sqlalchemy import (
     Text,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -90,7 +91,7 @@ class Project(Base, UUIDMixin, TimestampMixin):
     end_date: Mapped[date | None] = mapped_column(Date)
     budget: Mapped[Decimal | None] = mapped_column(Numeric(15, 2))
     currency: Mapped[str] = mapped_column(String(10), default="EUR")
-    beneficiaries: Mapped[str | None] = mapped_column(Text)
+    beneficiaries: Mapped[list[str] | None] = mapped_column(JSONB)
 
     # Statuts
     status: Mapped[ProjectStatus] = mapped_column(

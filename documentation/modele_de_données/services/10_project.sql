@@ -41,7 +41,7 @@ CREATE TABLE projects (
     end_date DATE,
     budget DECIMAL(15, 2),
     currency VARCHAR(10) DEFAULT 'EUR',
-    beneficiaries TEXT,
+    beneficiaries JSONB,
     status project_status DEFAULT 'planned',
     publication_status publication_status DEFAULT 'draft',
     is_fundraising_featured BOOLEAN DEFAULT FALSE,
