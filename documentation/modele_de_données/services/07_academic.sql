@@ -37,7 +37,7 @@ CREATE TABLE programs (
     slug VARCHAR(255) UNIQUE NOT NULL,
     description TEXT,
     teaching_methods TEXT,
-    objectives TEXT,
+    objectives JSONB,
     target_audience JSONB,
     format TEXT,
     evaluation_methods TEXT,

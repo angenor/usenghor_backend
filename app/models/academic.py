@@ -62,7 +62,7 @@ class Program(Base, UUIDMixin, TimestampMixin):
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     teaching_methods: Mapped[str | None] = mapped_column(Text)
-    objectives: Mapped[str | None] = mapped_column(Text)
+    objectives: Mapped[list[str] | None] = mapped_column(JSONB)
     target_audience: Mapped[list[str] | None] = mapped_column(JSONB)
     format: Mapped[str | None] = mapped_column(Text)
     evaluation_methods: Mapped[str | None] = mapped_column(Text)
