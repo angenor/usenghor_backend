@@ -38,7 +38,7 @@ CREATE TABLE programs (
     description TEXT,
     teaching_methods TEXT,
     objectives TEXT,
-    target_audience TEXT,
+    target_audience JSONB,
     format TEXT,
     evaluation_methods TEXT,
     -- Références INTER-SERVICE (pas de FK)

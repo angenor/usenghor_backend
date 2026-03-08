@@ -17,7 +17,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -63,7 +63,7 @@ class Program(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
     teaching_methods: Mapped[str | None] = mapped_column(Text)
     objectives: Mapped[str | None] = mapped_column(Text)
-    target_audience: Mapped[str | None] = mapped_column(Text)
+    target_audience: Mapped[list[str] | None] = mapped_column(JSONB)
     format: Mapped[str | None] = mapped_column(Text)
     evaluation_methods: Mapped[str | None] = mapped_column(Text)
 
