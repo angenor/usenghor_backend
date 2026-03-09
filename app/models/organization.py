@@ -32,8 +32,10 @@ class Sector(Base, UUIDMixin, TimestampMixin):
 
     code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
-    mission: Mapped[str | None] = mapped_column(Text)
+    description_html: Mapped[str | None] = mapped_column(Text)
+    description_md: Mapped[str | None] = mapped_column(Text)
+    mission_html: Mapped[str | None] = mapped_column(Text)
+    mission_md: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (pas de FK, car cross-service) - UUID pour correspondre au schéma SQL
     icon_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -63,8 +65,10 @@ class Service(Base, UUIDMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     sigle: Mapped[str | None] = mapped_column(String(50))
     color: Mapped[str | None] = mapped_column(String(7))
-    description: Mapped[str | None] = mapped_column(Text)
-    mission: Mapped[str | None] = mapped_column(Text)
+    description_html: Mapped[str | None] = mapped_column(Text)
+    description_md: Mapped[str | None] = mapped_column(Text)
+    mission_html: Mapped[str | None] = mapped_column(Text)
+    mission_md: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (pas de FK) - UUID pour correspondre au schéma SQL
     head_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -115,7 +119,8 @@ class ServiceObjective(Base, UUIDMixin):
         ForeignKey("services.id", ondelete="CASCADE"), nullable=False
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
+    description_html: Mapped[str | None] = mapped_column(Text)
+    description_md: Mapped[str | None] = mapped_column(Text)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
 
     # Relation
@@ -133,7 +138,8 @@ class ServiceAchievement(Base, UUIDMixin):
         ForeignKey("services.id", ondelete="CASCADE"), nullable=False
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
+    description_html: Mapped[str | None] = mapped_column(Text)
+    description_md: Mapped[str | None] = mapped_column(Text)
     type: Mapped[str | None] = mapped_column(String(100))
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     achievement_date: Mapped[str | None] = mapped_column(Date)
@@ -160,7 +166,8 @@ class ServiceProject(Base, UUIDMixin, TimestampMixin):
         ForeignKey("services.id", ondelete="CASCADE"), nullable=False
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
+    description_html: Mapped[str | None] = mapped_column(Text)
+    description_md: Mapped[str | None] = mapped_column(Text)
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     progress: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[ProjectStatus] = mapped_column(

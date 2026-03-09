@@ -77,8 +77,10 @@ class Project(Base, UUIDMixin, TimestampMixin):
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    summary: Mapped[str | None] = mapped_column(Text)
-    description: Mapped[str | None] = mapped_column(Text)
+    summary_html: Mapped[str | None] = mapped_column(Text)
+    summary_md: Mapped[str | None] = mapped_column(Text)
+    description_html: Mapped[str | None] = mapped_column(Text)
+    description_md: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (sans FK)
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -204,7 +206,8 @@ class ProjectCall(Base, UUIDMixin, TimestampMixin):
         nullable=False,
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
+    description_html: Mapped[str | None] = mapped_column(Text)
+    description_md: Mapped[str | None] = mapped_column(Text)
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     status: Mapped[ProjectCallStatus] = mapped_column(
         Enum(
@@ -216,7 +219,8 @@ class ProjectCall(Base, UUIDMixin, TimestampMixin):
         default=ProjectCallStatus.UPCOMING,
         nullable=False,
     )
-    conditions: Mapped[str | None] = mapped_column(Text)
+    conditions_html: Mapped[str | None] = mapped_column(Text)
+    conditions_md: Mapped[str | None] = mapped_column(Text)
     type: Mapped[ProjectCallType | None] = mapped_column(
         Enum(
             ProjectCallType,

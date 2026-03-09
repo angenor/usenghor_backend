@@ -305,12 +305,16 @@ class ProgramBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255, description="Titre du programme")
     subtitle: str | None = Field(None, max_length=255, description="Sous-titre")
     slug: str = Field(..., min_length=1, max_length=255, description="Slug URL")
-    description: str | None = Field(None, description="Description du programme")
-    teaching_methods: str | None = Field(None, description="Méthodes pédagogiques")
+    description_html: str | None = Field(None, description="Description du programme (HTML)")
+    description_md: str | None = Field(None, description="Description du programme (Markdown)")
+    teaching_methods_html: str | None = Field(None, description="Méthodes pédagogiques (HTML)")
+    teaching_methods_md: str | None = Field(None, description="Méthodes pédagogiques (Markdown)")
     objectives: list[str] | None = Field(None, description="Objectifs de la formation")
     target_audience: list[str] | None = Field(None, description="Public cible")
-    format: str | None = Field(None, description="Format de la formation")
-    evaluation_methods: str | None = Field(None, description="Modalités d'évaluation")
+    format_html: str | None = Field(None, description="Format de la formation (HTML)")
+    format_md: str | None = Field(None, description="Format de la formation (Markdown)")
+    evaluation_methods_html: str | None = Field(None, description="Modalités d'évaluation (HTML)")
+    evaluation_methods_md: str | None = Field(None, description="Modalités d'évaluation (Markdown)")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     sector_external_id: str | None = Field(None, description="ID du secteur")
     campus_external_id: str | None = Field(None, description="ID du campus")
@@ -341,12 +345,16 @@ class ProgramUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=255)
     subtitle: str | None = Field(None, max_length=255)
     slug: str | None = Field(None, min_length=1, max_length=255)
-    description: str | None = None
-    teaching_methods: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+    teaching_methods_html: str | None = None
+    teaching_methods_md: str | None = None
     objectives: list[str] | None = None
     target_audience: list[str] | None = None
-    format: str | None = None
-    evaluation_methods: str | None = None
+    format_html: str | None = None
+    format_md: str | None = None
+    evaluation_methods_html: str | None = None
+    evaluation_methods_md: str | None = None
     cover_image_external_id: str | None = None
     sector_external_id: str | None = None
     campus_external_id: str | None = None
@@ -391,12 +399,16 @@ class ProgramPublic(BaseModel):
     title: str
     subtitle: str | None
     slug: str
-    description: str | None
-    teaching_methods: str | None
+    description_html: str | None
+    description_md: str | None
+    teaching_methods_html: str | None
+    teaching_methods_md: str | None
     objectives: list[str] | None = None
     target_audience: list[str] | None = None
-    format: str | None = None
-    evaluation_methods: str | None = None
+    format_html: str | None = None
+    format_md: str | None = None
+    evaluation_methods_html: str | None = None
+    evaluation_methods_md: str | None = None
     cover_image_external_id: str | None
     sector_external_id: str | None
     service_external_id: str | None = None

@@ -56,7 +56,7 @@ class OrganizationService:
                 or_(
                     Sector.code.ilike(search_filter),
                     Sector.name.ilike(search_filter),
-                    Sector.description.ilike(search_filter),
+                    Sector.description_html.ilike(search_filter),
                 )
             )
 
@@ -253,8 +253,10 @@ class OrganizationService:
             id=str(uuid4()),
             code=new_code,
             name=f"{sector.name} (copie)",
-            description=sector.description,
-            mission=sector.mission,
+            description_html=sector.description_html,
+            description_md=sector.description_md,
+            mission_html=sector.mission_html,
+            mission_md=sector.mission_md,
             icon_external_id=sector.icon_external_id,
             cover_image_external_id=sector.cover_image_external_id,
             head_external_id=sector.head_external_id,
@@ -327,8 +329,8 @@ class OrganizationService:
             query = query.where(
                 or_(
                     Service.name.ilike(search_filter),
-                    Service.description.ilike(search_filter),
-                    Service.mission.ilike(search_filter),
+                    Service.description_html.ilike(search_filter),
+                    Service.mission_html.ilike(search_filter),
                 )
             )
 
@@ -498,8 +500,10 @@ class OrganizationService:
             id=str(uuid4()),
             sector_id=service.sector_id,
             name=new_name,
-            description=service.description,
-            mission=service.mission,
+            description_html=service.description_html,
+            description_md=service.description_md,
+            mission_html=service.mission_html,
+            mission_md=service.mission_md,
             head_external_id=service.head_external_id,
             album_external_id=service.album_external_id,
             email=service.email,
@@ -516,7 +520,8 @@ class OrganizationService:
                 id=str(uuid4()),
                 service_id=new_service.id,
                 title=obj.title,
-                description=obj.description,
+                description_html=obj.description_html,
+                description_md=obj.description_md,
                 display_order=obj.display_order,
             )
             self.db.add(new_obj)

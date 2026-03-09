@@ -35,12 +35,16 @@ CREATE TABLE programs (
     title VARCHAR(255) NOT NULL,
     subtitle VARCHAR(255),
     slug VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    teaching_methods TEXT,
+    description_html TEXT,
+    description_md TEXT,
+    teaching_methods_html TEXT,
+    teaching_methods_md TEXT,
     objectives JSONB,
     target_audience JSONB,
-    format TEXT,
-    evaluation_methods TEXT,
+    format_html TEXT,
+    format_md TEXT,
+    evaluation_methods_html TEXT,
+    evaluation_methods_md TEXT,
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
     sector_external_id UUID,        -- → ORGANIZATION.sectors.id

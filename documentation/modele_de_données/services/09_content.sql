@@ -24,7 +24,8 @@ CREATE TABLE events (
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
     description TEXT,
-    content TEXT, -- Contenu riche
+    content_html TEXT, -- Contenu riche (HTML pour affichage public)
+    content_md TEXT,   -- Contenu riche (Markdown pour edition)
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
     country_external_id UUID,      -- → CORE.countries.id
@@ -107,7 +108,8 @@ CREATE TABLE news (
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
     summary TEXT,
-    content TEXT, -- Contenu riche (HTML/Markdown)
+    content_html TEXT, -- Contenu riche (HTML pour affichage public)
+    content_md TEXT,   -- Contenu riche (Markdown pour edition)
     video_url VARCHAR(500),
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id

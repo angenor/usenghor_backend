@@ -100,8 +100,10 @@ async def create_service(
     svc = await org_service.create_service(
         name=service_data.name,
         sector_id=service_data.sector_id,
-        description=service_data.description,
-        mission=service_data.mission,
+        description_html=service_data.description_html,
+        description_md=service_data.description_md,
+        mission_html=service_data.mission_html,
+        mission_md=service_data.mission_md,
         email=service_data.email,
         phone=service_data.phone,
         head_external_id=service_data.head_external_id,
@@ -199,7 +201,8 @@ async def create_service_objective(
     return await org_service.create_service_objective(
         service_id=service_id,
         title=objective_data.title,
-        description=objective_data.description,
+        description_html=objective_data.description_html,
+        description_md=objective_data.description_md,
         display_order=objective_data.display_order,
     )
 
@@ -269,7 +272,8 @@ async def create_service_achievement(
     return await org_service.create_service_achievement(
         service_id=service_id,
         title=achievement_data.title,
-        description=achievement_data.description,
+        description_html=achievement_data.description_html,
+        description_md=achievement_data.description_md,
         type=achievement_data.type,
         cover_image_external_id=achievement_data.cover_image_external_id,
         achievement_date=achievement_data.achievement_date,
@@ -343,7 +347,8 @@ async def create_service_project(
     return await org_service.create_service_project(
         service_id=service_id,
         title=project_data.title,
-        description=project_data.description,
+        description_html=project_data.description_html,
+        description_md=project_data.description_md,
         cover_image_external_id=project_data.cover_image_external_id,
         progress=project_data.progress,
         status=project_data.status,

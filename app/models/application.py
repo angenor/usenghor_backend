@@ -96,7 +96,8 @@ class ApplicationCall(Base, UUIDMixin, TimestampMixin):
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
+    description_html: Mapped[str | None] = mapped_column(Text)
+    description_md: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (pas de FK) - UUID pour correspondre au schéma SQL
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -121,7 +122,8 @@ class ApplicationCall(Base, UUIDMixin, TimestampMixin):
     program_start_date: Mapped[date | None] = mapped_column(Date)
     program_end_date: Mapped[date | None] = mapped_column(Date)
 
-    target_audience: Mapped[str | None] = mapped_column(Text)
+    target_audience_html: Mapped[str | None] = mapped_column(Text)
+    target_audience_md: Mapped[str | None] = mapped_column(Text)
     registration_fee: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     currency: Mapped[str] = mapped_column(String(10), default="EUR")
 

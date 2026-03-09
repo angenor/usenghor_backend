@@ -185,7 +185,8 @@ class ApplicationCallBase(BaseModel):
 
     title: str = Field(..., min_length=1, max_length=255, description="Titre de l'appel")
     slug: str = Field(..., min_length=1, max_length=255, description="Slug URL")
-    description: str | None = Field(None, description="Description")
+    description_html: str | None = Field(None, description="Description (HTML)")
+    description_md: str | None = Field(None, description="Description (Markdown)")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     program_external_id: str | None = Field(None, description="ID du programme associé")
     campus_external_id: str | None = Field(None, description="ID du campus")
@@ -197,7 +198,8 @@ class ApplicationCallBase(BaseModel):
     deadline: datetime | None = Field(None, description="Date limite")
     program_start_date: date | None = Field(None, description="Début du programme")
     program_end_date: date | None = Field(None, description="Fin du programme")
-    target_audience: str | None = Field(None, description="Public cible")
+    target_audience_html: str | None = Field(None, description="Public cible (HTML)")
+    target_audience_md: str | None = Field(None, description="Public cible (Markdown)")
     registration_fee: Decimal | None = Field(None, ge=0, description="Frais d'inscription")
     currency: str = Field("EUR", max_length=10, description="Devise")
     external_form_url: str | None = Field(None, max_length=500, description="URL formulaire externe")
@@ -218,7 +220,8 @@ class ApplicationCallUpdate(BaseModel):
 
     title: str | None = Field(None, min_length=1, max_length=255)
     slug: str | None = Field(None, min_length=1, max_length=255)
-    description: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
     cover_image_external_id: str | None = None
     program_external_id: str | None = None
     campus_external_id: str | None = None
@@ -230,7 +233,8 @@ class ApplicationCallUpdate(BaseModel):
     deadline: datetime | None = None
     program_start_date: date | None = None
     program_end_date: date | None = None
-    target_audience: str | None = None
+    target_audience_html: str | None = None
+    target_audience_md: str | None = None
     registration_fee: Decimal | None = Field(None, ge=0)
     currency: str | None = Field(None, max_length=10)
     external_form_url: str | None = Field(None, max_length=500)
@@ -265,7 +269,8 @@ class ApplicationCallPublic(BaseModel):
     id: str
     title: str
     slug: str
-    description: str | None
+    description_html: str | None
+    description_md: str | None
     cover_image_external_id: str | None
     program_external_id: str | None
     campus_external_id: str | None
@@ -277,7 +282,8 @@ class ApplicationCallPublic(BaseModel):
     deadline: datetime | None
     program_start_date: date | None
     program_end_date: date | None
-    target_audience: str | None
+    target_audience_html: str | None
+    target_audience_md: str | None
     registration_fee: Decimal | None
     currency: str
     external_form_url: str | None

@@ -142,7 +142,7 @@ class ProjectService:
             query = query.where(
                 or_(
                     Project.title.ilike(search_filter),
-                    Project.summary.ilike(search_filter),
+                    Project.summary_html.ilike(search_filter),
                 )
             )
 
@@ -568,7 +568,7 @@ class ProjectService:
             query = query.where(
                 or_(
                     Project.title.ilike(search_filter),
-                    Project.summary.ilike(search_filter),
+                    Project.summary_html.ilike(search_filter),
                 )
             )
 

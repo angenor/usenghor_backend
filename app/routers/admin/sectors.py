@@ -67,8 +67,10 @@ async def create_sector(
     sector = await service.create_sector(
         code=sector_data.code,
         name=sector_data.name,
-        description=sector_data.description,
-        mission=sector_data.mission,
+        description_html=sector_data.description_html,
+        description_md=sector_data.description_md,
+        mission_html=sector_data.mission_html,
+        mission_md=sector_data.mission_md,
         icon_external_id=sector_data.icon_external_id,
         cover_image_external_id=sector_data.cover_image_external_id,
         head_external_id=sector_data.head_external_id,

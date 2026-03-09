@@ -21,7 +21,8 @@ class ServiceObjectiveBase(BaseModel):
     """Schéma de base pour les objectifs de service."""
 
     title: str = Field(..., min_length=1, max_length=255, description="Titre de l'objectif")
-    description: str | None = Field(None, description="Description de l'objectif")
+    description_html: str | None = Field(None, description="Description de l'objectif (HTML)")
+    description_md: str | None = Field(None, description="Description de l'objectif (Markdown)")
     display_order: int = Field(0, ge=0, description="Ordre d'affichage")
 
 
@@ -35,7 +36,8 @@ class ServiceObjectiveUpdate(BaseModel):
     """Schéma pour la mise à jour d'un objectif."""
 
     title: str | None = Field(None, min_length=1, max_length=255)
-    description: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
     display_order: int | None = Field(None, ge=0)
 
 
@@ -57,7 +59,8 @@ class ServiceAchievementBase(BaseModel):
     """Schéma de base pour les réalisations de service."""
 
     title: str = Field(..., min_length=1, max_length=255, description="Titre de la réalisation")
-    description: str | None = Field(None, description="Description")
+    description_html: str | None = Field(None, description="Description (HTML)")
+    description_md: str | None = Field(None, description="Description (Markdown)")
     type: str | None = Field(None, max_length=100, description="Type de réalisation")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     achievement_date: date | None = Field(None, description="Date de la réalisation")
@@ -73,7 +76,8 @@ class ServiceAchievementUpdate(BaseModel):
     """Schéma pour la mise à jour d'une réalisation."""
 
     title: str | None = Field(None, min_length=1, max_length=255)
-    description: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
     type: str | None = Field(None, max_length=100)
     cover_image_external_id: str | None = None
     achievement_date: date | None = None
@@ -98,7 +102,8 @@ class ServiceProjectBase(BaseModel):
     """Schéma de base pour les projets de service."""
 
     title: str = Field(..., min_length=1, max_length=255, description="Titre du projet")
-    description: str | None = Field(None, description="Description")
+    description_html: str | None = Field(None, description="Description (HTML)")
+    description_md: str | None = Field(None, description="Description (Markdown)")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     progress: int = Field(0, ge=0, le=100, description="Progression en %")
     status: ProjectStatus = Field(ProjectStatus.PLANNED, description="Statut du projet")
@@ -116,7 +121,8 @@ class ServiceProjectUpdate(BaseModel):
     """Schéma pour la mise à jour d'un projet."""
 
     title: str | None = Field(None, min_length=1, max_length=255)
-    description: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
     cover_image_external_id: str | None = None
     progress: int | None = Field(None, ge=0, le=100)
     status: ProjectStatus | None = None
@@ -189,8 +195,10 @@ class ServiceBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="Nom du service")
     sigle: str | None = Field(None, max_length=50, description="Sigle / abréviation du service")
     color: str | None = Field(None, max_length=7, description="Couleur du service (hex, ex: #FF0000)")
-    description: str | None = Field(None, description="Description du service")
-    mission: str | None = Field(None, description="Mission du service")
+    description_html: str | None = Field(None, description="Description du service (HTML)")
+    description_md: str | None = Field(None, description="Description du service (Markdown)")
+    mission_html: str | None = Field(None, description="Mission du service (HTML)")
+    mission_md: str | None = Field(None, description="Mission du service (Markdown)")
     email: EmailStr | None = Field(None, description="Email du service")
     phone: str | None = Field(None, max_length=30, description="Téléphone du service")
     head_external_id: str | None = Field(None, description="ID du responsable")
@@ -211,8 +219,10 @@ class ServiceUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=255)
     sigle: str | None = Field(None, max_length=50)
     color: str | None = Field(None, max_length=7)
-    description: str | None = None
-    mission: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+    mission_html: str | None = None
+    mission_md: str | None = None
     email: EmailStr | None = None
     phone: str | None = Field(None, max_length=30)
     sector_id: str | None = None
@@ -259,8 +269,10 @@ class SectorBase(BaseModel):
 
     code: str = Field(..., min_length=1, max_length=20, description="Code unique du secteur")
     name: str = Field(..., min_length=1, max_length=255, description="Nom du secteur")
-    description: str | None = Field(None, description="Description du secteur")
-    mission: str | None = Field(None, description="Mission du secteur")
+    description_html: str | None = Field(None, description="Description du secteur (HTML)")
+    description_md: str | None = Field(None, description="Description du secteur (Markdown)")
+    mission_html: str | None = Field(None, description="Mission du secteur (HTML)")
+    mission_md: str | None = Field(None, description="Mission du secteur (Markdown)")
     icon_external_id: str | None = Field(None, description="ID de l'icône")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     head_external_id: str | None = Field(None, description="ID du responsable")
@@ -278,8 +290,10 @@ class SectorUpdate(BaseModel):
 
     code: str | None = Field(None, min_length=1, max_length=20)
     name: str | None = Field(None, min_length=1, max_length=255)
-    description: str | None = None
-    mission: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+    mission_html: str | None = None
+    mission_md: str | None = None
     icon_external_id: str | None = None
     cover_image_external_id: str | None = None
     head_external_id: str | None = None
@@ -321,8 +335,10 @@ class SectorPublic(BaseModel):
     id: str
     code: str
     name: str
-    description: str | None
-    mission: str | None
+    description_html: str | None
+    description_md: str | None
+    mission_html: str | None
+    mission_md: str | None
     icon_external_id: str | None
     cover_image_external_id: str | None
     display_order: int
@@ -337,8 +353,10 @@ class ServicePublic(BaseModel):
     name: str
     sigle: str | None
     color: str | None
-    description: str | None
-    mission: str | None
+    description_html: str | None
+    description_md: str | None
+    mission_html: str | None
+    mission_md: str | None
     email: str | None
     phone: str | None
     sector_id: str | None

@@ -30,8 +30,10 @@ CREATE TABLE projects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
-    summary TEXT,
-    description TEXT,
+    summary_html TEXT,
+    summary_md TEXT,
+    description_html TEXT,
+    description_md TEXT,
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
     sector_external_id UUID,        -- → ORGANIZATION.sectors.id
@@ -82,10 +84,12 @@ CREATE TABLE project_calls (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
-    description TEXT,
+    description_html TEXT,
+    description_md TEXT,
     cover_image_external_id UUID,  -- → MEDIA.media.id
     status call_status DEFAULT 'upcoming',
-    conditions TEXT,
+    conditions_html TEXT,
+    conditions_md TEXT,
     type call_type,
     deadline TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),

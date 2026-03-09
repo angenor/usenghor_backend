@@ -69,7 +69,7 @@ class AcademicService:
                 or_(
                     Program.code.ilike(search_filter),
                     Program.title.ilike(search_filter),
-                    Program.description.ilike(search_filter),
+                    Program.description_html.ilike(search_filter),
                 )
             )
 
@@ -121,7 +121,7 @@ class AcademicService:
                 or_(
                     Program.code.ilike(search_filter),
                     Program.title.ilike(search_filter),
-                    Program.description.ilike(search_filter),
+                    Program.description_html.ilike(search_filter),
                 )
             )
 
@@ -373,8 +373,10 @@ class AcademicService:
             slug=new_slug,
             type=program.type,
             subtitle=program.subtitle,
-            description=program.description,
-            teaching_methods=program.teaching_methods,
+            description_html=program.description_html,
+            description_md=program.description_md,
+            teaching_methods_html=program.teaching_methods_html,
+            teaching_methods_md=program.teaching_methods_md,
             cover_image_external_id=program.cover_image_external_id,
             sector_external_id=program.sector_external_id,
             coordinator_external_id=program.coordinator_external_id,

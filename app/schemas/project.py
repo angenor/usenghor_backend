@@ -63,8 +63,10 @@ class ProjectBase(BaseModel):
 
     title: str = Field(..., min_length=1, max_length=255, description="Titre")
     slug: str = Field(..., min_length=1, max_length=255, description="Slug URL")
-    summary: str | None = Field(None, description="Résumé")
-    description: str | None = Field(None, description="Description complète")
+    summary_html: str | None = Field(None, description="Résumé (HTML)")
+    summary_md: str | None = Field(None, description="Résumé (Markdown)")
+    description_html: str | None = Field(None, description="Description complète (HTML)")
+    description_md: str | None = Field(None, description="Description complète (Markdown)")
 
 
 class ProjectCreate(ProjectBase):
@@ -94,8 +96,10 @@ class ProjectUpdate(BaseModel):
 
     title: str | None = Field(None, min_length=1, max_length=255)
     slug: str | None = Field(None, min_length=1, max_length=255)
-    summary: str | None = None
-    description: str | None = None
+    summary_html: str | None = None
+    summary_md: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
     cover_image_external_id: str | None = None
     sector_external_id: str | None = None
     manager_external_id: str | None = None
@@ -148,8 +152,10 @@ class ProjectPublic(BaseModel):
     id: str
     title: str
     slug: str
-    summary: str | None
-    description: str | None
+    summary_html: str | None
+    summary_md: str | None
+    description_html: str | None
+    description_md: str | None
     cover_image_external_id: str | None
     start_date: date | None
     end_date: date | None
@@ -164,7 +170,8 @@ class ProjectFundraisingPublic(BaseModel):
     id: str
     title: str
     slug: str
-    summary: str | None
+    summary_html: str | None
+    summary_md: str | None
     cover_image_external_id: str | None
     budget: Decimal | None
     currency: str
@@ -231,9 +238,11 @@ class ProjectCallBase(BaseModel):
     """Schéma de base pour les appels de projet."""
 
     title: str = Field(..., min_length=1, max_length=255, description="Titre")
-    description: str | None = Field(None, description="Description")
+    description_html: str | None = Field(None, description="Description (HTML)")
+    description_md: str | None = Field(None, description="Description (Markdown)")
     cover_image_external_id: str | None = Field(None, description="ID image de couverture")
-    conditions: str | None = Field(None, description="Conditions")
+    conditions_html: str | None = Field(None, description="Conditions (HTML)")
+    conditions_md: str | None = Field(None, description="Conditions (Markdown)")
     type: ProjectCallType | None = Field(None, description="Type d'appel")
     deadline: datetime | None = Field(None, description="Date limite")
 
@@ -250,10 +259,12 @@ class ProjectCallUpdate(BaseModel):
     """Schéma pour la mise à jour d'un appel de projet."""
 
     title: str | None = Field(None, min_length=1, max_length=255)
-    description: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
     cover_image_external_id: str | None = None
     status: ProjectCallStatus | None = None
-    conditions: str | None = None
+    conditions_html: str | None = None
+    conditions_md: str | None = None
     type: ProjectCallType | None = None
     deadline: datetime | None = None
 

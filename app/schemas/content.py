@@ -120,7 +120,8 @@ class EventBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255, description="Titre")
     slug: str = Field(..., min_length=1, max_length=255, description="Slug URL")
     description: str | None = Field(None, description="Description courte")
-    content: str | None = Field(None, description="Contenu riche")
+    content_html: str | None = Field(None, description="Contenu riche (HTML)")
+    content_md: str | None = Field(None, description="Contenu riche (Markdown)")
 
     type: EventType = Field(..., description="Type d'événement")
     type_other: str | None = Field(None, max_length=100, description="Type personnalisé")
@@ -161,7 +162,8 @@ class EventUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=255)
     slug: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
-    content: str | None = None
+    content_html: str | None = None
+    content_md: str | None = None
 
     type: EventType | None = None
     type_other: str | None = Field(None, max_length=100)
@@ -224,7 +226,8 @@ class EventPublic(BaseModel):
     title: str
     slug: str
     description: str | None
-    content: str | None
+    content_html: str | None
+    content_md: str | None
     type: EventType
     type_other: str | None
     start_date: datetime
@@ -252,7 +255,8 @@ class NewsBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255, description="Titre")
     slug: str = Field(..., min_length=1, max_length=255, description="Slug URL")
     summary: str | None = Field(None, description="Résumé")
-    content: str | None = Field(None, description="Contenu riche")
+    content_html: str | None = Field(None, description="Contenu riche (HTML)")
+    content_md: str | None = Field(None, description="Contenu riche (Markdown)")
     video_url: str | None = Field(None, max_length=500, description="URL vidéo")
     highlight_status: NewsHighlightStatus = Field(
         NewsHighlightStatus.STANDARD, description="Mise en avant"
@@ -283,7 +287,8 @@ class NewsUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=255)
     slug: str | None = Field(None, min_length=1, max_length=255)
     summary: str | None = None
-    content: str | None = None
+    content_html: str | None = None
+    content_md: str | None = None
     video_url: str | None = Field(None, max_length=500)
     highlight_status: NewsHighlightStatus | None = None
 
@@ -350,7 +355,8 @@ class NewsPublic(BaseModel):
     title: str
     slug: str
     summary: str | None
-    content: str | None
+    content_html: str | None
+    content_md: str | None
     video_url: str | None
     cover_image_external_id: str | None
     highlight_status: NewsHighlightStatus

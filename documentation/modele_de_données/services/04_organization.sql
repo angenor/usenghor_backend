@@ -20,8 +20,10 @@ CREATE TABLE sectors (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
-    description TEXT,
-    mission TEXT,
+    description_html TEXT,
+    description_md TEXT,
+    mission_html TEXT,
+    mission_md TEXT,
     -- Références INTER-SERVICE (pas de FK)
     icon_external_id UUID,        -- → MEDIA.media.id
     cover_image_external_id UUID, -- → MEDIA.media.id
@@ -41,8 +43,10 @@ CREATE TABLE services (
     name VARCHAR(255) NOT NULL,
     sigle VARCHAR(50),
     color VARCHAR(7),
-    description TEXT,
-    mission TEXT,
+    description_html TEXT,
+    description_md TEXT,
+    mission_html TEXT,
+    mission_md TEXT,
     -- Références INTER-SERVICE (pas de FK)
     head_external_id UUID,   -- → IDENTITY.users.id
     album_external_id UUID,  -- → MEDIA.albums.id
@@ -61,7 +65,8 @@ CREATE TABLE service_objectives (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     service_id UUID REFERENCES services(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
-    description TEXT,
+    description_html TEXT,
+    description_md TEXT,
     display_order INT DEFAULT 0
 );
 
@@ -70,7 +75,8 @@ CREATE TABLE service_achievements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     service_id UUID REFERENCES services(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
-    description TEXT,
+    description_html TEXT,
+    description_md TEXT,
     type VARCHAR(100),
     cover_image_external_id UUID,  -- → MEDIA.media.id
     achievement_date TIMESTAMPTZ,
@@ -82,7 +88,8 @@ CREATE TABLE service_projects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     service_id UUID REFERENCES services(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
-    description TEXT,
+    description_html TEXT,
+    description_md TEXT,
     cover_image_external_id UUID,  -- → MEDIA.media.id
     progress INT DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
     status project_status DEFAULT 'planned',

@@ -81,7 +81,8 @@ class Event(Base, UUIDMixin, TimestampMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    content: Mapped[str | None] = mapped_column(Text)
+    content_html: Mapped[str | None] = mapped_column(Text)
+    content_md: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (pas de FK) - UUID pour correspondre au schéma SQL
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -189,7 +190,8 @@ class News(Base, UUIDMixin, TimestampMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     summary: Mapped[str | None] = mapped_column(Text)
-    content: Mapped[str | None] = mapped_column(Text)
+    content_html: Mapped[str | None] = mapped_column(Text)
+    content_md: Mapped[str | None] = mapped_column(Text)
     video_url: Mapped[str | None] = mapped_column(String(500))
 
     # Références externes (pas de FK) - UUID pour correspondre au schéma SQL

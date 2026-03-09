@@ -28,7 +28,8 @@ CREATE TABLE application_calls (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
+    description_html TEXT,
+    description_md TEXT,
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
     program_external_id UUID,      -- → ACADEMIC.programs.id
@@ -42,7 +43,8 @@ CREATE TABLE application_calls (
     deadline TIMESTAMPTZ,
     program_start_date DATE,
     program_end_date DATE,
-    target_audience TEXT,
+    target_audience_html TEXT,
+    target_audience_md TEXT,
     registration_fee DECIMAL(10, 2),
     currency VARCHAR(10) DEFAULT 'EUR',
     external_form_url VARCHAR(500),

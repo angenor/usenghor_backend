@@ -99,7 +99,7 @@ class ApplicationService:
             query = query.where(
                 or_(
                     ApplicationCall.title.ilike(search_filter),
-                    ApplicationCall.description.ilike(search_filter),
+                    ApplicationCall.description_html.ilike(search_filter),
                 )
             )
 
