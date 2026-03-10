@@ -146,6 +146,26 @@ async def create_course(
     return IdResponse(id=course.id, message="Cours créé avec succès")
 
 
+@router.put("/{semester_id}/courses/reorder", response_model=list[ProgramCourseRead])
+async def reorder_courses(
+    semester_id: str,
+    reorder_data: ProgramCourseReorder,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("programs.edit")),
+) -> list[ProgramCourseRead]:
+    """Réordonne les cours d'un semestre."""
+    service = AcademicService(db)
+
+    # Vérifier que le semestre existe
+    semester = await service.get_semester_by_id(semester_id)
+    if not semester:
+        raise NotFoundException("Semestre non trouvé")
+
+    courses = await service.reorder_courses(reorder_data.course_ids)
+    return [ProgramCourseRead.model_validate(c) for c in courses]
+
+
 @router.put("/{semester_id}/courses/{course_id}", response_model=ProgramCourseRead)
 async def update_course(
     semester_id: str,
@@ -186,23 +206,3 @@ async def delete_course(
 
     await service.delete_course(course_id)
     return MessageResponse(message="Cours supprimé avec succès")
-
-
-@router.put("/{semester_id}/courses/reorder", response_model=list[ProgramCourseRead])
-async def reorder_courses(
-    semester_id: str,
-    reorder_data: ProgramCourseReorder,
-    db: DbSession,
-    current_user: CurrentUser,
-    _: bool = Depends(PermissionChecker("programs.edit")),
-) -> list[ProgramCourseRead]:
-    """Réordonne les cours d'un semestre."""
-    service = AcademicService(db)
-
-    # Vérifier que le semestre existe
-    semester = await service.get_semester_by_id(semester_id)
-    if not semester:
-        raise NotFoundException("Semestre non trouvé")
-
-    courses = await service.reorder_courses(reorder_data.course_ids)
-    return [ProgramCourseRead.model_validate(c) for c in courses]
