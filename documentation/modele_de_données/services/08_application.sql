@@ -12,7 +12,7 @@
 --         applications, application_degrees, application_documents
 -- Dépendances externes: ACADEMIC (program_id), CAMPUS (campus_id),
 --                       IDENTITY (user_id, reviewer_id), MEDIA (cover_image_id),
---                       CORE (countries)
+--                       CORE (countries), PROJECT (project_id)
 -- ============================================================================
 
 -- Types ENUM spécifiques à ce service
@@ -35,6 +35,7 @@ CREATE TABLE application_calls (
     program_external_id UUID,      -- → ACADEMIC.programs.id
     campus_external_id UUID,       -- → CAMPUS.campuses.id
     country_external_id UUID,      -- → CORE.countries.id (pays du lieu de formation/exercice)
+    project_external_id UUID,      -- → PROJECT.projects.id
     created_by_external_id UUID,   -- → IDENTITY.users.id
     location_address TEXT,         -- Adresse exacte du lieu de formation/exercice
     type call_type NOT NULL,
@@ -60,6 +61,7 @@ CREATE INDEX idx_application_calls_deadline ON application_calls(deadline);
 CREATE INDEX idx_application_calls_slug ON application_calls(slug);
 CREATE INDEX idx_application_calls_program ON application_calls(program_external_id);
 CREATE INDEX idx_application_calls_country ON application_calls(country_external_id);
+CREATE INDEX idx_application_calls_project ON application_calls(project_external_id);
 
 -- Critères d'éligibilité d'un appel
 CREATE TABLE call_eligibility_criteria (

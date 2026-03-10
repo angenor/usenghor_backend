@@ -25,7 +25,7 @@ class ProgramCourseBase(BaseModel):
     code: str | None = Field(None, max_length=20, description="Code du cours")
     title: str = Field(..., min_length=1, max_length=255, description="Titre du cours")
     description: str | None = Field(None, description="Description du cours")
-    credits: int | None = Field(None, ge=0, description="Crédits ECTS")
+    credits: float | None = Field(None, ge=0, description="Crédits ECTS")
     lecture_hours: int = Field(0, ge=0, description="Heures de cours magistraux")
     tutorial_hours: int = Field(0, ge=0, description="Heures de TD")
     practical_hours: int = Field(0, ge=0, description="Heures de TP")
@@ -45,7 +45,7 @@ class ProgramCourseUpdate(BaseModel):
     code: str | None = Field(None, max_length=20)
     title: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
-    credits: int | None = Field(None, ge=0)
+    credits: float | None = Field(None, ge=0)
     lecture_hours: int | None = Field(None, ge=0)
     tutorial_hours: int | None = Field(None, ge=0)
     practical_hours: int | None = Field(None, ge=0)
@@ -78,7 +78,7 @@ class ProgramSemesterBase(BaseModel):
 
     number: int = Field(..., ge=1, description="Numéro du semestre")
     title: str | None = Field(None, max_length=255, description="Titre du semestre")
-    credits: int = Field(1, ge=0, description="Crédits du semestre")
+    credits: float = Field(1, ge=0, description="Crédits du semestre")
     display_order: int = Field(0, ge=0, description="Ordre d'affichage")
 
 
@@ -93,7 +93,7 @@ class ProgramSemesterUpdate(BaseModel):
 
     number: int | None = Field(None, ge=1)
     title: str | None = Field(None, max_length=255)
-    credits: int | None = Field(None, ge=0)
+    credits: float | None = Field(None, ge=0)
     display_order: int | None = Field(None, ge=0)
 
 
@@ -323,7 +323,7 @@ class ProgramBase(BaseModel):
     field_id: str | None = Field(None, description="ID du champ disciplinaire (certificats)")
     type: ProgramType = Field(..., description="Type de programme")
     duration_months: int | None = Field(None, ge=1, description="Durée en mois")
-    credits: int | None = Field(None, ge=0, description="Crédits ECTS")
+    credits: float | None = Field(None, ge=0, description="Crédits ECTS")
     degree_awarded: str | None = Field(None, max_length=255, description="Diplôme délivré")
     required_degree: str | None = Field(None, description="Diplôme requis pour l'admission")
     display_order: int = Field(0, ge=0, description="Ordre d'affichage")
@@ -363,7 +363,7 @@ class ProgramUpdate(BaseModel):
     field_id: str | None = None
     type: ProgramType | None = None
     duration_months: int | None = Field(None, ge=1)
-    credits: int | None = Field(None, ge=0)
+    credits: float | None = Field(None, ge=0)
     degree_awarded: str | None = Field(None, max_length=255)
     required_degree: str | None = None
     status: PublicationStatus | None = None
@@ -421,7 +421,7 @@ class ProgramPublic(BaseModel):
     field_name: str | None = None
     type: ProgramType
     duration_months: int | None
-    credits: int | None
+    credits: float | None
     degree_awarded: str | None
     required_degree: str | None
     is_featured: bool

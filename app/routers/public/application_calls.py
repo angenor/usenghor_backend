@@ -89,6 +89,18 @@ async def list_calls_by_type(
     return list(result.scalars().all())
 
 
+@router.get("/by-project/{project_id}", response_model=list[ApplicationCallPublic])
+async def list_calls_by_project(
+    project_id: str,
+    db: DbSession,
+) -> list[ApplicationCall]:
+    """Liste les appels à candidature publiés associés à un projet."""
+    service = ApplicationService(db)
+    query = await service.get_published_calls(project_id=project_id)
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
 @router.get("/{slug}", response_model=ApplicationCallPublicWithDetails)
 async def get_call_by_slug(
     slug: str,

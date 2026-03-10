@@ -52,7 +52,7 @@ CREATE TABLE programs (
     field_id UUID REFERENCES program_fields(id) ON DELETE SET NULL,  -- Champ disciplinaire (certificats)
     type program_type NOT NULL,
     duration_months INT,
-    credits INT,
+    credits NUMERIC(5, 1),
     degree_awarded VARCHAR(255),
     required_degree TEXT,
     status publication_status DEFAULT 'draft',
@@ -89,7 +89,7 @@ CREATE TABLE program_semesters (
     program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
     number INT NOT NULL,
     title VARCHAR(255),
-    credits INT DEFAULT 1,
+    credits NUMERIC(5, 1) DEFAULT 1,
     display_order INT DEFAULT 0,
     UNIQUE (program_id, number)
 );
@@ -101,7 +101,7 @@ CREATE TABLE program_courses (
     code VARCHAR(20),
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    credits INT,
+    credits NUMERIC(5, 1),
     lecture_hours INT DEFAULT 0,
     tutorial_hours INT DEFAULT 0,
     practical_hours INT DEFAULT 0,

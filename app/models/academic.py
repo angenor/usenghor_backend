@@ -93,7 +93,7 @@ class Program(Base, UUIDMixin, TimestampMixin):
         nullable=False,
     )
     duration_months: Mapped[int | None] = mapped_column(Integer)
-    credits: Mapped[int | None] = mapped_column(Integer)
+    credits: Mapped[Decimal | None] = mapped_column(Numeric(5, 1))
     degree_awarded: Mapped[str | None] = mapped_column(String(255))
     required_degree: Mapped[str | None] = mapped_column(Text)
 
@@ -213,7 +213,7 @@ class ProgramSemester(Base, UUIDMixin):
     )
     number: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str | None] = mapped_column(String(255))
-    credits: Mapped[int] = mapped_column(Integer, default=1)
+    credits: Mapped[Decimal] = mapped_column(Numeric(5, 1), default=1)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
 
     # Relations
@@ -238,7 +238,7 @@ class ProgramCourse(Base, UUIDMixin):
     code: Mapped[str | None] = mapped_column(String(20))
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    credits: Mapped[int | None] = mapped_column(Integer)
+    credits: Mapped[Decimal | None] = mapped_column(Numeric(5, 1))
     lecture_hours: Mapped[int] = mapped_column(Integer, default=0)
     tutorial_hours: Mapped[int] = mapped_column(Integer, default=0)
     practical_hours: Mapped[int] = mapped_column(Integer, default=0)
