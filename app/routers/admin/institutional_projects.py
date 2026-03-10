@@ -21,6 +21,8 @@ from app.schemas.project import (
     ProjectCategoryCreate,
     ProjectCategoryRead,
     ProjectCategoryUpdate,
+    ProjectCountryCreate,
+    ProjectCountryRead,
     ProjectCreate,
     ProjectMediaCreate,
     ProjectMediaRead,
@@ -311,6 +313,61 @@ async def remove_project_partner(
     service = ProjectService(db)
     await service.remove_partner(project_id, partner_external_id)
     return MessageResponse(message="Partenaire retiré avec succès")
+
+
+# =============================================================================
+# PROJECT COUNTRIES
+# =============================================================================
+
+
+@router.get("/{project_id}/countries", response_model=list[ProjectCountryRead])
+async def list_project_countries(
+    project_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("project.view")),
+) -> list[ProjectCountryRead]:
+    """Liste les pays d'un projet."""
+    service = ProjectService(db)
+    project = await service.get_project_by_id(project_id)
+    if not project:
+        raise NotFoundException("Projet non trouvé")
+    countries = await service.get_project_countries(project_id)
+    return [ProjectCountryRead.model_validate(c) for c in countries]
+
+
+@router.post(
+    "/{project_id}/countries",
+    response_model=ProjectCountryRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_project_country(
+    project_id: str,
+    data: ProjectCountryCreate,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("project.edit")),
+) -> ProjectCountryRead:
+    """Ajoute un pays à un projet."""
+    service = ProjectService(db)
+    country = await service.add_country(project_id, data.country_external_id)
+    return ProjectCountryRead.model_validate(country)
+
+
+@router.delete(
+    "/{project_id}/countries/{country_external_id}", response_model=MessageResponse
+)
+async def remove_project_country(
+    project_id: str,
+    country_external_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("project.edit")),
+) -> MessageResponse:
+    """Retire un pays d'un projet."""
+    service = ProjectService(db)
+    await service.remove_country(project_id, country_external_id)
+    return MessageResponse(message="Pays retiré avec succès")
 
 
 # =============================================================================

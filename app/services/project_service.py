@@ -547,6 +547,64 @@ class ProjectService:
         return list(result.scalars().all())
 
     # =========================================================================
+    # PROJECT COUNTRIES
+    # =========================================================================
+
+    async def get_project_countries(self, project_id: str) -> list[ProjectCountry]:
+        """Récupère les pays d'un projet."""
+        result = await self.db.execute(
+            select(ProjectCountry).where(ProjectCountry.project_id == project_id)
+        )
+        return list(result.scalars().all())
+
+    async def add_country(
+        self, project_id: str, country_external_id: str
+    ) -> ProjectCountry:
+        """Ajoute un pays à un projet."""
+        project = await self.get_project_by_id(project_id)
+        if not project:
+            raise NotFoundException("Projet non trouvé")
+
+        # Vérifier si le pays existe déjà
+        result = await self.db.execute(
+            select(ProjectCountry).where(
+                ProjectCountry.project_id == project_id,
+                ProjectCountry.country_external_id == country_external_id,
+            )
+        )
+        if result.scalar_one_or_none():
+            raise ConflictException("Ce pays est déjà associé au projet")
+
+        country = ProjectCountry(
+            project_id=project_id,
+            country_external_id=country_external_id,
+        )
+        self.db.add(country)
+        await self.db.flush()
+        return country
+
+    async def remove_country(
+        self, project_id: str, country_external_id: str
+    ) -> None:
+        """Retire un pays d'un projet."""
+        result = await self.db.execute(
+            select(ProjectCountry).where(
+                ProjectCountry.project_id == project_id,
+                ProjectCountry.country_external_id == country_external_id,
+            )
+        )
+        if not result.scalar_one_or_none():
+            raise NotFoundException("Pays non trouvé pour ce projet")
+
+        await self.db.execute(
+            delete(ProjectCountry).where(
+                ProjectCountry.project_id == project_id,
+                ProjectCountry.country_external_id == country_external_id,
+            )
+        )
+        await self.db.flush()
+
+    # =========================================================================
     # PUBLIC ACCESS
     # =========================================================================
 
