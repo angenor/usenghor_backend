@@ -12,14 +12,18 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
+from sqlalchemy import select
+
 from app.core.dependencies import CurrentUser, DbSession, PermissionChecker
 from app.core.pagination import PaginationParams, paginate
-from app.models.identity import AuditLog
+from app.models.identity import AuditLog, User
 from app.schemas.common import MessageResponse
 from app.schemas.identity import (
     AuditLogPurge,
     AuditLogRead,
+    AuditLogReadWithUser,
     AuditLogStatistics,
+    AuditLogUserInfo,
 )
 from app.services.identity_service import IdentityService
 
@@ -40,7 +44,7 @@ async def list_audit_logs(
     search: str | None = Query(None, description="Recherche textuelle"),
     _: bool = Depends(PermissionChecker("admin.audit")),
 ) -> dict:
-    """Liste les logs d'audit avec pagination et filtres."""
+    """Liste les logs d'audit avec pagination et filtres, enrichis avec les infos utilisateur."""
     service = IdentityService(db)
     query = await service.get_audit_logs(
         user_id=user_id,
@@ -51,7 +55,27 @@ async def list_audit_logs(
         ip_address=ip_address,
         search=search,
     )
-    return await paginate(db, query, pagination, AuditLog, AuditLogRead)
+    result = await paginate(db, query, pagination, AuditLog, AuditLogRead)
+
+    # Enrichir les items avec les données utilisateur
+    items: list[AuditLogRead] = result["items"]
+    user_ids = {item.user_id for item in items if item.user_id}
+    users_map: dict[str, User] = {}
+    if user_ids:
+        users_result = await db.execute(
+            select(User).where(User.id.in_(user_ids))
+        )
+        users_map = {str(u.id): u for u in users_result.scalars().all()}
+
+    enriched_items = []
+    for item in items:
+        item_dict = item.model_dump()
+        user = users_map.get(item.user_id) if item.user_id else None
+        item_dict["user"] = AuditLogUserInfo.from_user(user).model_dump() if user else None
+        enriched_items.append(item_dict)
+
+    result["items"] = enriched_items
+    return result
 
 
 @router.get("/statistics", response_model=AuditLogStatistics)
@@ -160,20 +184,31 @@ async def get_record_audit_logs(
     return await paginate(db, query, pagination, AuditLog, AuditLogRead)
 
 
-@router.get("/{log_id}", response_model=AuditLogRead)
+@router.get("/{log_id}", response_model=dict)
 async def get_audit_log(
     log_id: str,
     db: DbSession,
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("admin.audit")),
-) -> AuditLog:
-    """Récupère un log d'audit par son ID."""
+) -> dict:
+    """Récupère un log d'audit par son ID, enrichi avec les infos utilisateur."""
     service = IdentityService(db)
     log = await service.get_audit_log_by_id(log_id)
     if not log:
         from app.core.exceptions import NotFoundException
         raise NotFoundException("Log d'audit non trouvé")
-    return log
+
+    log_data = AuditLogRead.model_validate(log).model_dump()
+
+    # Enrichir avec les données utilisateur
+    if log.user_id:
+        user_result = await db.execute(
+            select(User).where(User.id == log.user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        log_data["user"] = AuditLogUserInfo.from_user(user).model_dump() if user else None
+
+    return log_data
 
 
 @router.post("/purge", response_model=MessageResponse)

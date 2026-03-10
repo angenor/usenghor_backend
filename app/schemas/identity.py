@@ -403,6 +403,31 @@ class AuditLogRead(BaseModel):
         return str(v)
 
 
+class AuditLogUserInfo(BaseModel):
+    """Informations minimales d'un utilisateur pour l'affichage dans les logs."""
+
+    id: str
+    name: str
+    email: str
+
+    model_config = {"from_attributes": True}
+
+    @classmethod
+    def from_user(cls, user) -> "AuditLogUserInfo":
+        """Crée une instance depuis un modèle User (first_name + last_name)."""
+        return cls(
+            id=str(user.id),
+            name=f"{user.first_name} {user.last_name}".strip(),
+            email=user.email,
+        )
+
+
+class AuditLogReadWithUser(AuditLogRead):
+    """Log d'audit en lecture avec informations utilisateur."""
+
+    user: AuditLogUserInfo | None = None
+
+
 class AuditLogUserStat(BaseModel):
     """Statistique par utilisateur."""
 
