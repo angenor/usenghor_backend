@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import close_db, init_db
+from app.middleware.audit import AuditMiddleware
 from app.routers import auth
 from app.routers.admin import router as admin_router
 from app.routers.public import router as public_router
@@ -193,6 +194,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Middleware d'audit automatique
+app.add_middleware(AuditMiddleware)
 
 # Routers
 app.include_router(auth.router)
