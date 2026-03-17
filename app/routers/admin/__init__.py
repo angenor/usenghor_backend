@@ -18,6 +18,7 @@ from app.routers.admin import (
     editorial,
     event_registrations,
     events,
+    fundraisers,
     institutional_projects,
     media,
     news,
@@ -67,6 +68,7 @@ router.include_router(applications.router)
 router.include_router(subscribers.router)
 router.include_router(campaigns.router)
 router.include_router(editorial.router)
+router.include_router(fundraisers.router)
 router.include_router(institutional_projects.router)
 
 __all__ = ["router"]

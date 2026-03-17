@@ -87,17 +87,20 @@
 \echo '[12/16] Service NEWSLETTER...'
 \i 11_newsletter.sql
 
-\echo '[13/16] Service EDITORIAL (configuration)...'
+\echo '[13/17] Service EDITORIAL (configuration)...'
 \i 12_editorial.sql
 
+\echo '[14/17] Service FUNDRAISING (levées de fonds)...'
+\i 13_fundraising.sql
+
 -- Fonctions, triggers et données
-\echo '[14/16] Fonctions et triggers...'
+\echo '[15/17] Fonctions et triggers...'
 \i 99_functions.sql
 
-\echo '[15/16] Données initiales...'
+\echo '[16/17] Données initiales...'
 \i 99_data_init.sql
 
-\echo '[16/16] Vues...'
+\echo '[17/17] Vues...'
 \i 99_views.sql
 
 \echo '=============================================='

@@ -12,6 +12,7 @@ from app.routers.public import (
     countries,
     editorial,
     events,
+    fundraisers,
     institutional_projects,
     media,
     news,
@@ -33,6 +34,7 @@ router.include_router(campuses.router)
 router.include_router(countries.router)
 router.include_router(news.router)
 router.include_router(events.router)
+router.include_router(fundraisers.router)
 router.include_router(partners.router)
 router.include_router(partnership_requests.router)
 router.include_router(program_fields.router)
