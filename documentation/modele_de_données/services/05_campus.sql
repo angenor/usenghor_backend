@@ -18,6 +18,8 @@ CREATE TABLE campuses (
     code VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    description_html TEXT,
+    description_md TEXT,
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID, -- → MEDIA.media.id
     country_external_id UUID,     -- → CORE.countries.id

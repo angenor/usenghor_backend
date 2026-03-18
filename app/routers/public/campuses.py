@@ -37,6 +37,8 @@ class CampusPublicEnriched(BaseModel):
     code: str  # Utilisé comme slug dans le frontend
     name: str
     description: str | None
+    description_html: str | None = None
+    description_md: str | None = None
     cover_image_url: str | None  # Résolu depuis cover_image_external_id
     city: str | None
     email: str | None
@@ -188,6 +190,8 @@ async def list_all_campuses(
             code=campus.code,
             name=campus.name,
             description=campus.description,
+            description_html=campus.description_html,
+            description_md=campus.description_md,
             cover_image_url=resolve_media_url(cover_media),
             city=campus.city,
             email=campus.email,
@@ -304,6 +308,8 @@ async def get_campus_by_code(
         code=campus.code,
         name=campus.name,
         description=campus.description,
+        description_html=campus.description_html,
+        description_md=campus.description_md,
         cover_image_url=resolve_media_url(cover_media),
         city=campus.city,
         email=campus.email,

@@ -125,6 +125,8 @@ class CampusBase(BaseModel):
     code: str = Field(..., min_length=1, max_length=20, description="Code unique du campus")
     name: str = Field(..., min_length=1, max_length=255, description="Nom du campus")
     description: str | None = Field(None, description="Description du campus")
+    description_html: str | None = Field(None, description="Description HTML (rendu public)")
+    description_md: str | None = Field(None, description="Description Markdown (édition)")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     country_external_id: str | None = Field(None, description="ID du pays")
     head_external_id: str | None = Field(None, description="ID du responsable")
@@ -151,6 +153,8 @@ class CampusUpdate(BaseModel):
     code: str | None = Field(None, min_length=1, max_length=20)
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
     cover_image_external_id: str | None = None
     country_external_id: str | None = None
     head_external_id: str | None = None
@@ -190,6 +194,8 @@ class CampusPublic(BaseModel):
     code: str
     name: str
     description: str | None
+    description_html: str | None = None
+    description_md: str | None = None
     cover_image_external_id: str | None
     country_external_id: str | None
     city: str | None

@@ -23,6 +23,8 @@ class Campus(Base, UUIDMixin, TimestampMixin):
     code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    description_html: Mapped[str | None] = mapped_column(Text)
+    description_md: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (pas de FK, car cross-service) - UUID pour correspondre au schéma SQL
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
