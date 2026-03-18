@@ -179,6 +179,8 @@ class UserBase(BaseModel):
     linkedin: str | None = None
     facebook: str | None = None
     biography: str | None = None
+    biography_html: str | None = None
+    biography_md: str | None = None
     city: str | None = None
     address: str | None = None
 
@@ -204,6 +206,8 @@ class UserUpdate(BaseModel):
     linkedin: str | None = None
     facebook: str | None = None
     biography: str | None = None
+    biography_html: str | None = None
+    biography_md: str | None = None
     city: str | None = None
     address: str | None = None
     active: bool | None = None
@@ -259,6 +263,8 @@ class UserMeUpdate(BaseModel):
     linkedin: str | None = None
     facebook: str | None = None
     biography: str | None = None
+    biography_html: str | None = None
+    biography_md: str | None = None
     city: str | None = None
     address: str | None = None
     photo_external_id: str | None = None

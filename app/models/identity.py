@@ -99,6 +99,8 @@ class User(Base, UUIDMixin, TimestampMixin):
     linkedin: Mapped[str | None] = mapped_column(String(255))
     facebook: Mapped[str | None] = mapped_column(String(255))
     biography: Mapped[str | None] = mapped_column(Text)
+    biography_html: Mapped[str | None] = mapped_column(Text)
+    biography_md: Mapped[str | None] = mapped_column(Text)
 
     # Références INTER-SERVICE (pas de FK)
     photo_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
