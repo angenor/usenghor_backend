@@ -48,10 +48,11 @@ class Settings(BaseSettings):
     storage_path: str = "/var/www/uploads"
 
     # Email
-    smtp_host: str = "smtp.example.com"
+    smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587
-    smtp_user: str = "noreply@usenghor.org"
+    smtp_user: str = "communication@usenghor.org"
     smtp_password: str = ""
+    smtp_from_email: str = "communication@usenghor.org"
 
     @property
     def database_url_async(self) -> str:

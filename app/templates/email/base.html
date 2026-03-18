@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject | default("Université Senghor") }}</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background-color: #1e3a5f; padding: 24px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 20px; }
+        .content { padding: 32px 24px; color: #333333; line-height: 1.6; }
+        .footer { background-color: #f4f4f7; padding: 16px 24px; text-align: center; font-size: 12px; color: #888888; }
+        .footer a { color: #1e3a5f; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Université Senghor</h1>
+        </div>
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+        <div class="footer">
+            <p>
+                Université Senghor d'Alexandrie<br>
+                1 Midan Ahmed Orabi, El Mancheya — Alexandrie, Égypte
+            </p>
+            <p>
+                <a href="https://usenghor-francophonie.org">usenghor-francophonie.org</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

@@ -16,6 +16,7 @@ from app.routers.admin import (
     countries,
     dashboard,
     editorial,
+    email,
     event_registrations,
     events,
     fundraisers,
@@ -68,6 +69,7 @@ router.include_router(applications.router)
 router.include_router(subscribers.router)
 router.include_router(campaigns.router)
 router.include_router(editorial.router)
+router.include_router(email.router)
 router.include_router(fundraisers.router)
 router.include_router(institutional_projects.router)
 
