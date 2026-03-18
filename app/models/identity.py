@@ -111,6 +111,7 @@ class User(Base, UUIDMixin, TimestampMixin):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Relations
     roles: Mapped[list["Role"]] = relationship(

@@ -69,6 +69,14 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=8)
 
 
+class VerifyResetTokenResponse(BaseModel):
+    """Réponse de vérification d'un token de réinitialisation."""
+
+    valid: bool
+    user_first_name: str | None = None
+    reason: str | None = None  # "expired", "used", "invalid"
+
+
 class RegisterRequest(BaseModel):
     """Requête d'inscription publique."""
 

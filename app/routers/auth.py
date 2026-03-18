@@ -16,6 +16,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.config import settings
 from app.core.dependencies import CurrentUser, DbSession
 from app.core.exceptions import CredentialsException, NotFoundException
 from app.core.security import (
@@ -31,20 +32,111 @@ from app.models.campus import CampusTeam
 from app.schemas.common import MessageResponse
 from app.schemas.identity import (
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     LoginRequest,
     RefreshTokenRequest,
     RegisterRequest,
     RegisterResponse,
+    ResetPasswordRequest,
     Token,
     UserMe,
     UserMeUpdate,
     UserRead,
+    VerifyResetTokenResponse,
 )
+from app.services.email_service import EmailService
+from app.services.identity_service import IdentityService
 from app.services.media_service import MediaService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+
+
+# =========================================================================
+# PASSWORD RESET (routes statiques AVANT les routes dynamiques)
+# =========================================================================
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    db: DbSession = None,
+) -> MessageResponse:
+    """
+    Demande de réinitialisation de mot de passe.
+
+    Envoie un email avec un lien de réinitialisation si l'email correspond
+    à un compte actif et vérifié. Retourne toujours le même message
+    pour ne pas divulguer l'existence d'un compte.
+    """
+    service = IdentityService(db)
+    result = await service.create_reset_token(request.email)
+
+    if result:
+        token_value, user = result
+        reset_url = f"{settings.frontend_url}/admin/reset-password?token={token_value}"
+        await EmailService.send_email(
+            to=user.email,
+            subject="Réinitialisation de votre mot de passe — Université Senghor",
+            template_name="password_reset",
+            context={
+                "user_first_name": user.first_name,
+                "reset_url": reset_url,
+            },
+        )
+
+    return MessageResponse(
+        message="Si un compte existe avec cette adresse email, un lien de réinitialisation a été envoyé."
+    )
+
+
+@router.get("/verify-reset-token", response_model=VerifyResetTokenResponse)
+async def verify_reset_token(
+    token: str,
+    db: DbSession = None,
+) -> VerifyResetTokenResponse:
+    """
+    Vérifie la validité d'un token de réinitialisation.
+    """
+    service = IdentityService(db)
+    user_token, reason = await service.validate_reset_token(token)
+
+    if user_token and user_token.user:
+        return VerifyResetTokenResponse(
+            valid=True,
+            user_first_name=user_token.user.first_name,
+        )
+
+    return VerifyResetTokenResponse(valid=False, reason=reason)
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+async def reset_password(
+    request: ResetPasswordRequest,
+    db: DbSession = None,
+) -> MessageResponse:
+    """
+    Réinitialise le mot de passe avec un token valide.
+    """
+    service = IdentityService(db)
+    success = await service.reset_password_with_token(request.token, request.new_password)
+
+    if not success:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail="Ce lien de réinitialisation est invalide ou a expiré.",
+        )
+
+    return MessageResponse(
+        message="Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter."
+    )
+
+
+# =========================================================================
+# LOGIN & AUTH
+# =========================================================================
 
 
 @router.post("/login", response_model=Token)
@@ -175,6 +267,15 @@ async def refresh_token(
 
     if not user.active:
         raise CredentialsException("Compte désactivé")
+
+    # Vérifier si le mot de passe a été changé après l'émission du refresh token
+    if user.password_changed_at:
+        token_iat = payload.get("iat")
+        if token_iat:
+            from datetime import timezone as tz
+            token_issued_at = datetime.fromtimestamp(token_iat, tz=tz.utc)
+            if token_issued_at < user.password_changed_at.replace(tzinfo=tz.utc):
+                raise CredentialsException("Session invalidée suite à un changement de mot de passe")
 
     # Créer de nouveaux tokens
     access_token = create_access_token(data={"sub": user.id})

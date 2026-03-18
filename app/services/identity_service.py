@@ -248,6 +248,129 @@ class IdentityService:
         )
         return new_password
 
+    async def create_reset_token(self, email: str) -> tuple[str, User] | None:
+        """
+        Crée un token de réinitialisation de mot de passe.
+
+        Vérifie que l'utilisateur existe, est actif et vérifié.
+        Invalide les tokens précédents. Vérifie le rate limit (5/h).
+
+        Args:
+            email: Email de l'utilisateur.
+
+        Returns:
+            Tuple (token, user) si succès, None si l'utilisateur n'existe pas,
+            est inactif, non vérifié ou a atteint le rate limit.
+        """
+        user = await self.get_user_by_email(email)
+        if not user or not user.active or not user.email_verified:
+            return None
+
+        # Rate limit : max 5 tokens password_reset par utilisateur par heure
+        one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
+        count_result = await self.db.execute(
+            select(func.count(UserToken.id))
+            .where(
+                UserToken.user_id == user.id,
+                UserToken.type == "password_reset",
+                UserToken.created_at >= one_hour_ago,
+            )
+        )
+        count = count_result.scalar() or 0
+        if count >= 5:
+            return None
+
+        # Invalider les tokens de réinitialisation précédents
+        await self.db.execute(
+            update(UserToken)
+            .where(
+                UserToken.user_id == user.id,
+                UserToken.type == "password_reset",
+                UserToken.used == False,  # noqa: E712
+            )
+            .values(used=True)
+        )
+
+        # Générer et stocker le nouveau token
+        token_value = secrets.token_urlsafe(32)
+        token = UserToken(
+            id=str(uuid4()),
+            user_id=user.id,
+            token=token_value,
+            type="password_reset",
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            used=False,
+        )
+        self.db.add(token)
+        await self.db.flush()
+
+        return token_value, user
+
+    async def validate_reset_token(self, token_value: str) -> tuple[UserToken | None, str | None]:
+        """
+        Valide un token de réinitialisation.
+
+        Args:
+            token_value: Token à valider.
+
+        Returns:
+            Tuple (UserToken, None) si valide, (None, reason) sinon.
+            reason: "invalid", "expired", "used"
+        """
+        result = await self.db.execute(
+            select(UserToken)
+            .options(selectinload(UserToken.user))
+            .where(UserToken.token == token_value, UserToken.type == "password_reset")
+        )
+        token = result.scalar_one_or_none()
+
+        if not token:
+            return None, "invalid"
+
+        if token.used:
+            return None, "used"
+
+        if token.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+            return None, "expired"
+
+        return token, None
+
+    async def reset_password_with_token(self, token_value: str, new_password: str) -> bool:
+        """
+        Réinitialise le mot de passe avec un token valide.
+
+        Args:
+            token_value: Token de réinitialisation.
+            new_password: Nouveau mot de passe en clair.
+
+        Returns:
+            True si succès, False si token invalide.
+        """
+        token, reason = await self.validate_reset_token(token_value)
+        if not token:
+            return False
+
+        # Mettre à jour le mot de passe et password_changed_at
+        now = datetime.now(timezone.utc)
+        await self.db.execute(
+            update(User)
+            .where(User.id == token.user_id)
+            .values(
+                password_hash=get_password_hash(new_password),
+                password_changed_at=now,
+            )
+        )
+
+        # Marquer le token comme utilisé
+        await self.db.execute(
+            update(UserToken)
+            .where(UserToken.id == token.id)
+            .values(used=True)
+        )
+
+        await self.db.flush()
+        return True
+
     async def verify_user_email(self, user_id: str) -> User:
         """Marque l'email d'un utilisateur comme vérifié."""
         user = await self.get_user_by_id(user_id)

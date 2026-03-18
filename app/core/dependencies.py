@@ -5,6 +5,7 @@ Dépendances FastAPI
 Dépendances réutilisables pour l'injection de dépendances.
 """
 
+from datetime import datetime, timezone
 from functools import wraps
 from typing import Annotated
 
@@ -65,6 +66,14 @@ async def get_current_user(
 
     if not user.active:
         raise CredentialsException("Compte désactivé")
+
+    # Vérifier si le mot de passe a été changé après l'émission du token
+    if user.password_changed_at:
+        token_iat = payload.get("iat")
+        if token_iat:
+            token_issued_at = datetime.fromtimestamp(token_iat, tz=timezone.utc)
+            if token_issued_at < user.password_changed_at.replace(tzinfo=timezone.utc):
+                raise CredentialsException("Session invalidée suite à un changement de mot de passe")
 
     return user
 

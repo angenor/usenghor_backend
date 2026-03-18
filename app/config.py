@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     storage_type: Literal["local", "s3"] = "local"
     storage_path: str = "/var/www/uploads"
 
+    # Frontend
+    frontend_url: str = "http://localhost:3000"
+
     # Email
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587

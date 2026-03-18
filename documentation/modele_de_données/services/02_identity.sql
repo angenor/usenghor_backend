@@ -63,6 +63,7 @@ CREATE TABLE users (
     active BOOLEAN DEFAULT TRUE,
     email_verified BOOLEAN DEFAULT FALSE,
     last_login_at TIMESTAMPTZ,
+    password_changed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
