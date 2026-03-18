@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from math import ceil
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from app.core.dependencies import DbSession
 from app.core.exceptions import NotFoundException
@@ -35,6 +35,7 @@ async def list_news(
     call_id: str | None = Query(None, description="Filtrer par appel"),
 ) -> dict:
     """Liste les actualités publiées avec les noms des entités associées résolus."""
+    now = datetime.now(timezone.utc)
     service = ContentService(db)
     query = await service.get_news(
         status=PublicationStatus.PUBLISHED,
@@ -47,8 +48,16 @@ async def list_news(
         call_id=call_id,
     )
 
+    # Filtrer les actualités pas encore visibles
+    query = query.where(
+        or_(News.visible_from.is_(None), News.visible_from <= now)
+    )
+
     # Compter le total
-    count_query = select(func.count()).select_from(News).where(News.status == PublicationStatus.PUBLISHED)
+    count_query = select(func.count()).select_from(News).where(
+        News.status == PublicationStatus.PUBLISHED,
+        or_(News.visible_from.is_(None), News.visible_from <= now),
+    )
     if tag_id:
         from app.models.content import NewsTag
         count_query = count_query.join(NewsTag).where(NewsTag.tag_id == tag_id)
