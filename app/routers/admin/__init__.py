@@ -34,6 +34,7 @@ from app.routers.admin import (
     sectors,
     services,
     subscribers,
+    surveys,
     tags,
     users,
 )
@@ -72,5 +73,6 @@ router.include_router(editorial.router)
 router.include_router(email.router)
 router.include_router(fundraisers.router)
 router.include_router(institutional_projects.router)
+router.include_router(surveys.router)
 
 __all__ = ["router"]

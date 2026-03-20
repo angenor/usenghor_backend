@@ -57,3 +57,13 @@ class ValidationException(HTTPException):
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=detail,
         )
+
+
+class GoneException(HTTPException):
+    """Exception pour les ressources qui ne sont plus disponibles (410)."""
+
+    def __init__(self, detail: str = "Ressource indisponible"):
+        super().__init__(
+            status_code=status.HTTP_410_GONE,
+            detail=detail,
+        )

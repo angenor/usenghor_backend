@@ -90,11 +90,14 @@
 \echo '[13/17] Service EDITORIAL (configuration)...'
 \i 12_editorial.sql
 
-\echo '[14/17] Service FUNDRAISING (levées de fonds)...'
+\echo '[14/18] Service FUNDRAISING (levées de fonds)...'
 \i 13_fundraising.sql
 
+\echo '[15/18] Service SURVEY (campagnes de sondage)...'
+\i 14_survey.sql
+
 -- Fonctions, triggers et données
-\echo '[15/17] Fonctions et triggers...'
+\echo '[16/18] Fonctions et triggers...'
 \i 99_functions.sql
 
 \echo '[16/17] Données initiales...'

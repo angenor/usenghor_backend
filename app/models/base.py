@@ -42,6 +42,15 @@ class MediaType(str, enum.Enum):
     AUDIO = "audio"
 
 
+class SurveyCampaignStatus(str, enum.Enum):
+    """Statut de campagne de sondage."""
+
+    DRAFT = "draft"
+    ACTIVE = "active"
+    PAUSED = "paused"
+    CLOSED = "closed"
+
+
 class TimestampMixin:
     """Mixin pour les colonnes created_at et updated_at."""
 
