@@ -303,17 +303,12 @@ class SurveyService:
     async def _send_confirmation_email(
         self, campaign: SurveyCampaign, response_data: dict
     ) -> None:
-        """Envoyer un email de confirmation au répondant si un email est trouvé."""
-        # Chercher un email dans les réponses
-        email = response_data.get("email")
-        if not email:
-            # Parcourir le survey_json pour trouver un champ de type email
-            elements = (campaign.survey_json or {}).get("elements", [])
-            for el in elements:
-                if el.get("inputType") == "email" and el.get("name"):
-                    email = response_data.get(el["name"])
-                    if email:
-                        break
+        """Envoyer un email de confirmation au répondant."""
+        # Utiliser le champ configuré par l'admin
+        if not campaign.confirmation_email_field:
+            return
+
+        email = response_data.get(campaign.confirmation_email_field)
 
         if not email or not isinstance(email, str) or "@" not in email:
             return

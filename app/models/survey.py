@@ -38,6 +38,7 @@ class SurveyCampaign(Base, UUIDMixin, TimestampMixin):
         nullable=False, default=SurveyCampaignStatus.DRAFT
     )
     confirmation_email_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    confirmation_email_field: Mapped[str | None] = mapped_column(VARCHAR(100))
     closes_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("users.id"), nullable=False

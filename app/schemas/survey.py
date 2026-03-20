@@ -29,6 +29,7 @@ class SurveyCampaignCreate(BaseModel):
     description_ar: str | None = None
     survey_json: dict = Field(default_factory=dict)
     confirmation_email_enabled: bool = False
+    confirmation_email_field: str | None = Field(None, max_length=100)
     closes_at: datetime | None = None
 
 
@@ -44,6 +45,7 @@ class SurveyCampaignUpdate(BaseModel):
     description_ar: str | None = None
     survey_json: dict | None = None
     confirmation_email_enabled: bool | None = None
+    confirmation_email_field: str | None = None
     closes_at: datetime | None = None
 
 
@@ -61,6 +63,7 @@ class SurveyCampaignRead(BaseModel):
     survey_json: dict
     status: SurveyCampaignStatus
     confirmation_email_enabled: bool
+    confirmation_email_field: str | None = None
     closes_at: datetime | None = None
     created_by: str
     created_at: datetime
