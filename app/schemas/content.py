@@ -5,6 +5,7 @@ Schémas Content
 Schémas Pydantic pour la gestion des actualités et événements.
 """
 
+import re
 from datetime import datetime
 from decimal import Decimal
 
@@ -12,6 +13,9 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.models.base import PublicationStatus
 from app.models.content import EventType, NewsHighlightStatus, RegistrationStatus
+
+# Regex pour normaliser les espaces Unicode problématiques (insécables, zero-width, etc.)
+_PROBLEMATIC_CHARS_RE = re.compile(r'[\x00-\x09\x0B\x0C\x0E-\x1F\x7F\u00A0\u202F\u2007\u2009\u200A\u200B\u2060\uFEFF]')
 
 
 # =============================================================================
@@ -120,6 +124,14 @@ class EventBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255, description="Titre")
     slug: str = Field(..., min_length=1, max_length=255, description="Slug URL")
     description: str | None = Field(None, description="Description courte")
+
+    @field_validator('title', 'description', 'venue', 'city', mode='before')
+    @classmethod
+    def sanitize_unicode_spaces(cls, v: str | None) -> str | None:
+        """Remplace les espaces Unicode problématiques par des espaces normaux."""
+        if v is None:
+            return v
+        return _PROBLEMATIC_CHARS_RE.sub(' ', v).strip()
     content_html: str | None = Field(None, description="Contenu riche (HTML)")
     content_md: str | None = Field(None, description="Contenu riche (Markdown)")
 
@@ -162,6 +174,14 @@ class EventUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=255)
     slug: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
+
+    @field_validator('title', 'description', 'venue', 'city', mode='before')
+    @classmethod
+    def sanitize_unicode_spaces(cls, v: str | None) -> str | None:
+        """Remplace les espaces Unicode problématiques par des espaces normaux."""
+        if v is None:
+            return v
+        return _PROBLEMATIC_CHARS_RE.sub(' ', v).strip()
     content_html: str | None = None
     content_md: str | None = None
 
@@ -255,6 +275,14 @@ class NewsBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255, description="Titre")
     slug: str = Field(..., min_length=1, max_length=255, description="Slug URL")
     summary: str | None = Field(None, description="Résumé")
+
+    @field_validator('title', 'summary', mode='before')
+    @classmethod
+    def sanitize_unicode_spaces(cls, v: str | None) -> str | None:
+        """Remplace les espaces Unicode problématiques par des espaces normaux."""
+        if v is None:
+            return v
+        return _PROBLEMATIC_CHARS_RE.sub(' ', v).strip()
     content_html: str | None = Field(None, description="Contenu riche (HTML)")
     content_md: str | None = Field(None, description="Contenu riche (Markdown)")
     video_url: str | None = Field(None, max_length=500, description="URL vidéo")
@@ -287,6 +315,14 @@ class NewsUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=255)
     slug: str | None = Field(None, min_length=1, max_length=255)
     summary: str | None = None
+
+    @field_validator('title', 'summary', mode='before')
+    @classmethod
+    def sanitize_unicode_spaces(cls, v: str | None) -> str | None:
+        """Remplace les espaces Unicode problématiques par des espaces normaux."""
+        if v is None:
+            return v
+        return _PROBLEMATIC_CHARS_RE.sub(' ', v).strip()
     content_html: str | None = None
     content_md: str | None = None
     video_url: str | None = Field(None, max_length=500)
