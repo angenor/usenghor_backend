@@ -29,15 +29,11 @@ router = APIRouter(prefix="/fundraisers", tags=["Fundraisers"])
 
 
 def _get_lang(request: Request) -> str:
-    """Extrait la langue depuis Accept-Language ou query param."""
+    """Extrait la langue depuis le query param lang (prioritaire) ou Accept-Language."""
     lang = request.query_params.get("lang")
     if lang and lang in ("fr", "en", "ar"):
         return lang
-    accept_lang = request.headers.get("accept-language", "fr")
-    if "ar" in accept_lang:
-        return "ar"
-    if "en" in accept_lang:
-        return "en"
+    # Français par défaut (langue principale du site)
     return "fr"
 
 
