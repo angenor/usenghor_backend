@@ -53,6 +53,8 @@ class UserPublicProfile(BaseModel):
     last_name: str
     salutation: str | None = None
     biography: str | None = None
+    biography_html: str | None = None
+    biography_md: str | None = None
     photo_url: str | None = None
     email: str | None = None
     phone: str | None = None
@@ -147,6 +149,8 @@ async def get_user_profile(
         last_name=user.last_name,
         salutation=user.salutation,
         biography=user.biography,
+        biography_html=user.biography_html,
+        biography_md=user.biography_md,
         photo_url=resolve_media_url(photo_media),
         email=user.email,
         phone=user.phone,

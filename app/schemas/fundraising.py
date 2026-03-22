@@ -1,56 +1,141 @@
 """
-Schémas Fundraising
-===================
+Schémas Fundraising (Levées de fonds)
+======================================
 
-Schémas Pydantic pour la gestion des levées de fonds.
+Schémas Pydantic pour les campagnes, contributeurs,
+manifestations d'intérêt, sections éditoriales et médiathèque.
 """
 
 from datetime import datetime
-from decimal import Decimal
 
-from pydantic import BaseModel, Field
-
-from app.models.fundraising import ContributorCategory, FundraiserStatus
+from pydantic import BaseModel, EmailStr, Field
 
 
-# =============================================================================
-# CONTRIBUTEURS
-# =============================================================================
+# ── Fundraiser ───────────────────────────────────────────────────────
 
+class FundraiserBase(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255)
+    slug: str = Field(..., min_length=1, max_length=255)
+    description_html: str | None = None
+    description_md: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    reason_html: str | None = None
+    reason_md: str | None = None
+    reason_en_html: str | None = None
+    reason_en_md: str | None = None
+    reason_ar_html: str | None = None
+    reason_ar_md: str | None = None
+    cover_image_external_id: str | None = None
+    goal_amount: float = Field(..., gt=0)
+    status: str = Field("draft", pattern="^(draft|active|completed)$")
+
+
+class FundraiserCreate(FundraiserBase):
+    pass
+
+
+class FundraiserUpdate(BaseModel):
+    title: str | None = Field(None, min_length=1, max_length=255)
+    slug: str | None = Field(None, min_length=1, max_length=255)
+    description_html: str | None = None
+    description_md: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    reason_html: str | None = None
+    reason_md: str | None = None
+    reason_en_html: str | None = None
+    reason_en_md: str | None = None
+    reason_ar_html: str | None = None
+    reason_ar_md: str | None = None
+    cover_image_external_id: str | None = None
+    goal_amount: float | None = Field(None, gt=0)
+    status: str | None = Field(None, pattern="^(draft|active|completed)$")
+
+
+class FundraiserRead(FundraiserBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FundraiserPublic(BaseModel):
+    """Vue publique d'une campagne (liste)."""
+
+    id: str
+    title: str
+    slug: str
+    cover_image_url: str | None = None
+    goal_amount: float
+    total_raised: float = 0
+    progress_percentage: float = 0
+    contributor_count: int = 0
+    status: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FundraiserPublicDetail(BaseModel):
+    """Vue publique détaillée d'une campagne."""
+
+    id: str
+    title: str
+    slug: str
+    description_html: str | None = None
+    description_en_html: str | None = None
+    description_ar_html: str | None = None
+    reason_html: str | None = None
+    reason_en_html: str | None = None
+    reason_ar_html: str | None = None
+    cover_image_url: str | None = None
+    goal_amount: float
+    total_raised: float = 0
+    progress_percentage: float = 0
+    contributor_count: int = 0
+    status: str
+    contributors: list["ContributorPublic"] = []
+    media: list["FundraiserMediaRead"] = []
+    news: list["FundraiserNewsPublic"] = []
+
+    model_config = {"from_attributes": True}
+
+
+# ── Contributor ──────────────────────────────────────────────────────
 
 class ContributorBase(BaseModel):
-    """Schéma de base pour les contributeurs."""
-
-    name: str = Field(..., min_length=1, max_length=255, description="Nom (FR)")
-    name_en: str | None = Field(None, max_length=255, description="Nom (EN)")
-    name_ar: str | None = Field(None, max_length=255, description="Nom (AR)")
-    category: ContributorCategory = Field(..., description="Catégorie")
-    amount: Decimal = Field(0, ge=0, description="Montant (EUR)")
-    logo_external_id: str | None = Field(None, description="ID média logo")
-    display_order: int = Field(0, ge=0, description="Ordre d'affichage")
+    name: str = Field(..., min_length=1, max_length=255)
+    name_en: str | None = Field(None, max_length=255)
+    name_ar: str | None = Field(None, max_length=255)
+    category: str = Field(..., pattern="^(state_organization|foundation_philanthropist|company)$")
+    amount: float = Field(0, ge=0)
+    show_amount_publicly: bool = False
+    logo_external_id: str | None = None
+    display_order: int = Field(0, ge=0)
 
 
 class ContributorCreate(ContributorBase):
-    """Schéma pour la création d'un contributeur."""
-
     pass
 
 
 class ContributorUpdate(BaseModel):
-    """Schéma pour la mise à jour d'un contributeur."""
-
     name: str | None = Field(None, min_length=1, max_length=255)
     name_en: str | None = Field(None, max_length=255)
     name_ar: str | None = Field(None, max_length=255)
-    category: ContributorCategory | None = None
-    amount: Decimal | None = Field(None, ge=0)
+    category: str | None = Field(None, pattern="^(state_organization|foundation_philanthropist|company)$")
+    amount: float | None = Field(None, ge=0)
+    show_amount_publicly: bool | None = None
     logo_external_id: str | None = None
     display_order: int | None = Field(None, ge=0)
 
 
 class ContributorRead(ContributorBase):
-    """Schéma pour la lecture d'un contributeur."""
-
     id: str
     fundraiser_id: str
     created_at: datetime
@@ -60,136 +145,210 @@ class ContributorRead(ContributorBase):
 
 
 class ContributorPublic(BaseModel):
-    """Schéma public pour un contributeur."""
+    """Vue publique d'un contributeur. amount est None si non consenti."""
 
     id: str
     name: str
-    name_en: str | None
-    name_ar: str | None
-    category: ContributorCategory
-    amount: Decimal
-    logo_external_id: str | None
+    name_en: str | None = None
+    name_ar: str | None = None
+    category: str
+    amount: float | None = None
+    logo_url: str | None = None
+    display_order: int = 0
 
     model_config = {"from_attributes": True}
 
 
-# =============================================================================
-# LEVÉES DE FONDS
-# =============================================================================
+# ── All Contributors (agrégation globale) ────────────────────────────
+
+class AllContributorsItem(BaseModel):
+    """Contributeur agrégé toutes campagnes confondues."""
+
+    name: str
+    category: str
+    total_amount: float | None = None
+    show_amount_publicly: bool = False
+    logo_url: str | None = None
+    campaigns_count: int = 0
+
+    model_config = {"from_attributes": True}
 
 
-class FundraiserBase(BaseModel):
-    """Schéma de base pour les levées de fonds."""
+# ── Interest Expression ──────────────────────────────────────────────
 
-    title: str = Field(..., min_length=1, max_length=255, description="Titre")
-    slug: str = Field(..., min_length=1, max_length=255, description="Slug URL")
-    description_html: str | None = Field(None, description="Description (HTML FR)")
-    description_md: str | None = Field(None, description="Description (Markdown FR)")
-    description_en_html: str | None = Field(None, description="Description (HTML EN)")
-    description_en_md: str | None = Field(None, description="Description (Markdown EN)")
-    description_ar_html: str | None = Field(None, description="Description (HTML AR)")
-    description_ar_md: str | None = Field(None, description="Description (Markdown AR)")
-    goal_amount: Decimal = Field(..., gt=0, description="Objectif financier (EUR)")
+class InterestExpressionCreate(BaseModel):
+    full_name: str = Field(..., min_length=1, max_length=255)
+    email: EmailStr
+    message: str | None = Field(None, max_length=2000)
+    honeypot: str = ""
+    challenge_token: str = ""
+    form_opened_at: int = 0
 
 
-class FundraiserCreate(FundraiserBase):
-    """Schéma pour la création d'une levée de fonds."""
-
-    cover_image_external_id: str | None = None
-    status: FundraiserStatus = FundraiserStatus.DRAFT
-
-
-class FundraiserUpdate(BaseModel):
-    """Schéma pour la mise à jour d'une levée de fonds."""
-
-    title: str | None = Field(None, min_length=1, max_length=255)
-    slug: str | None = Field(None, min_length=1, max_length=255)
-    description_html: str | None = None
-    description_md: str | None = None
-    description_en_html: str | None = None
-    description_en_md: str | None = None
-    description_ar_html: str | None = None
-    description_ar_md: str | None = None
-    cover_image_external_id: str | None = None
-    goal_amount: Decimal | None = Field(None, gt=0)
-    status: FundraiserStatus | None = None
-
-
-class FundraiserRead(FundraiserBase):
-    """Schéma pour la lecture d'une levée de fonds (admin)."""
-
+class InterestExpressionRead(BaseModel):
     id: str
-    cover_image_external_id: str | None
-    status: FundraiserStatus
-    total_raised: Decimal = Decimal("0")
-    progress_percentage: float = 0.0
-    contributor_count: int = 0
+    fundraiser_id: str
+    fundraiser_title: str | None = None
+    full_name: str
+    email: str
+    message: str | None = None
+    status: str
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
 
 
-class FundraiserPublic(BaseModel):
-    """Schéma public pour la liste des levées de fonds."""
+class InterestExpressionStatusUpdate(BaseModel):
+    status: str = Field(..., pattern="^(new|contacted)$")
 
+
+# ── Editorial Section ────────────────────────────────────────────────
+
+class EditorialItemBase(BaseModel):
+    icon: str = Field(..., min_length=1, max_length=100)
+    title_fr: str = Field(..., min_length=1, max_length=255)
+    title_en: str | None = Field(None, max_length=255)
+    title_ar: str | None = Field(None, max_length=255)
+    description_fr: str = Field(..., min_length=1)
+    description_en: str | None = None
+    description_ar: str | None = None
+    display_order: int = Field(0, ge=0)
+    is_active: bool = True
+
+
+class EditorialItemCreate(EditorialItemBase):
+    pass
+
+
+class EditorialItemUpdate(BaseModel):
+    icon: str | None = Field(None, min_length=1, max_length=100)
+    title_fr: str | None = Field(None, min_length=1, max_length=255)
+    title_en: str | None = Field(None, max_length=255)
+    title_ar: str | None = Field(None, max_length=255)
+    description_fr: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
+    display_order: int | None = Field(None, ge=0)
+    is_active: bool | None = None
+
+
+class EditorialItemRead(EditorialItemBase):
     id: str
+    section_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class EditorialItemPublic(BaseModel):
+    """Item éditorial dans la langue demandée."""
+
+    icon: str
     title: str
+    description: str
+
+    model_config = {"from_attributes": True}
+
+
+class EditorialSectionUpdate(BaseModel):
+    title_fr: str | None = Field(None, min_length=1, max_length=255)
+    title_en: str | None = Field(None, max_length=255)
+    title_ar: str | None = Field(None, max_length=255)
+    display_order: int | None = Field(None, ge=0)
+    is_active: bool | None = None
+
+
+class EditorialSectionRead(BaseModel):
+    id: str
     slug: str
-    cover_image_external_id: str | None
-    goal_amount: Decimal
-    total_raised: Decimal = Decimal("0")
-    progress_percentage: float = 0.0
-    status: FundraiserStatus
-    contributor_count: int = 0
+    title_fr: str
+    title_en: str | None = None
+    title_ar: str | None = None
+    display_order: int
+    is_active: bool
+    items: list[EditorialItemRead] = []
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class EditorialSectionPublic(BaseModel):
+    """Section éditoriale dans la langue demandée."""
+
+    slug: str
+    title: str
+    items: list[EditorialItemPublic] = []
+
+    model_config = {"from_attributes": True}
+
+
+# ── Fundraiser Media ─────────────────────────────────────────────────
+
+class FundraiserMediaCreate(BaseModel):
+    media_external_id: str
+    caption_fr: str | None = Field(None, max_length=500)
+    caption_en: str | None = Field(None, max_length=500)
+    caption_ar: str | None = Field(None, max_length=500)
+    display_order: int = Field(0, ge=0)
+
+
+class FundraiserMediaUpdate(BaseModel):
+    caption_fr: str | None = Field(None, max_length=500)
+    caption_en: str | None = Field(None, max_length=500)
+    caption_ar: str | None = Field(None, max_length=500)
+    display_order: int | None = Field(None, ge=0)
+
+
+class FundraiserMediaRead(BaseModel):
+    id: str
+    fundraiser_id: str
+    media_external_id: str
+    media_url: str | None = None
+    caption_fr: str | None = None
+    caption_en: str | None = None
+    caption_ar: str | None = None
+    display_order: int = 0
     created_at: datetime
 
     model_config = {"from_attributes": True}
 
 
-class FundraiserPublicDetail(BaseModel):
-    """Schéma public pour le détail d'une levée de fonds."""
+# ── Fundraiser News (public) ─────────────────────────────────────────
+
+class FundraiserNewsPublic(BaseModel):
+    """Actualité associée à une campagne (vue publique)."""
 
     id: str
     title: str
     slug: str
-    description_html: str | None
-    description_en_html: str | None
-    description_ar_html: str | None
-    cover_image_external_id: str | None
-    goal_amount: Decimal
-    total_raised: Decimal = Decimal("0")
-    progress_percentage: float = 0.0
-    status: FundraiserStatus
-    contributors: list[ContributorPublic] = []
-    news: list[dict] = []
-    created_at: datetime
+    cover_image_url: str | None = None
+    published_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
 
-# =============================================================================
-# ASSOCIATION ACTUALITÉS
-# =============================================================================
+# ── Global Stats ─────────────────────────────────────────────────────
 
+class GlobalStats(BaseModel):
+    """Statistiques agrégées pour la page principale."""
 
-class FundraiserNewsCreate(BaseModel):
-    """Schéma pour associer une actualité à une levée de fonds."""
-
-    news_id: str = Field(..., description="ID de l'actualité à associer")
-
-
-# =============================================================================
-# STATISTIQUES
-# =============================================================================
+    total_raised_all_campaigns: float = 0
+    total_contributors: int = 0
+    active_campaigns_count: int = 0
+    completed_campaigns_count: int = 0
 
 
 class FundraiserStatistics(BaseModel):
-    """Statistiques des levées de fonds."""
+    """Statistiques pour le dashboard admin."""
 
-    total: int = Field(0, description="Total")
-    draft: int = Field(0, description="Brouillons")
-    active: int = Field(0, description="En cours")
-    completed: int = Field(0, description="Terminées")
-    total_goal: Decimal = Field(Decimal("0"), description="Objectif total")
-    total_raised: Decimal = Field(Decimal("0"), description="Total levé")
+    total_campaigns: int = 0
+    active_campaigns: int = 0
+    completed_campaigns: int = 0
+    draft_campaigns: int = 0
+    total_raised: float = 0
+    total_contributors: int = 0
+    total_interest_expressions: int = 0
+    new_interest_expressions: int = 0
