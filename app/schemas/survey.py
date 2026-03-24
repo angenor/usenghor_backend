@@ -92,6 +92,7 @@ class SurveyCampaignPublic(BaseModel):
     description_ar: str | None = None
     survey_json: dict
     status: SurveyCampaignStatus
+    confirmation_email_enabled: bool = False
 
     model_config = {"from_attributes": True}
 
