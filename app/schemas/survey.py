@@ -93,6 +93,7 @@ class SurveyCampaignPublic(BaseModel):
     survey_json: dict
     status: SurveyCampaignStatus
     confirmation_email_enabled: bool = False
+    cover_image_external_id: str | None = None
 
     model_config = {"from_attributes": True}
 

@@ -5,19 +5,24 @@ Router Public - Sondages
 Endpoints publics pour les formulaires de sondage.
 """
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request
+from sqlalchemy import select
 
 from app.core.dependencies import DbSession
 from app.core.exceptions import GoneException, NotFoundException
 from app.models.base import SurveyCampaignStatus
+from app.models.survey import SurveyAssociation
 from app.schemas.survey import (
     SurveyCampaignListPublic,
     SurveyCampaignPublic,
     SurveySubmitRequest,
 )
 from app.services.survey_service import SurveyService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/surveys", tags=["Surveys"])
 
@@ -55,7 +60,24 @@ async def get_survey_by_slug(
     if campaign.status == SurveyCampaignStatus.DRAFT:
         raise NotFoundException("Formulaire introuvable")
 
-    return SurveyCampaignPublic.model_validate(campaign)
+    result = SurveyCampaignPublic.model_validate(campaign)
+
+    # Résoudre l'image de couverture depuis la première association
+    try:
+        assoc_result = await db.execute(
+            select(SurveyAssociation)
+            .where(SurveyAssociation.campaign_id == campaign.id)
+            .limit(1)
+        )
+        assoc = assoc_result.scalar_one_or_none()
+        if assoc:
+            cover_id = await _get_entity_cover_image(db, assoc.entity_type, assoc.entity_id)
+            if cover_id:
+                result.cover_image_external_id = str(cover_id)
+    except Exception as e:
+        logger.warning(f"Impossible de résoudre l'image de couverture: {e}")
+
+    return result
 
 
 @router.post("/{slug}/submit", status_code=201)
@@ -82,3 +104,25 @@ async def submit_response(
         session_id=session_id,
     )
     return {"message": "Réponse enregistrée avec succès"}
+
+
+async def _get_entity_cover_image(db, entity_type: str, entity_id: str) -> str | None:
+    """Récupère le cover_image_external_id de l'entité associée."""
+    from app.models.academic import Program
+    from app.models.application import ApplicationCall
+    from app.models.content import Event
+
+    entity_model_map: dict = {
+        "event": Event,
+        "application_call": ApplicationCall,
+        "program": Program,
+    }
+
+    model_class = entity_model_map.get(entity_type)
+    if not model_class:
+        return None
+
+    result = await db.execute(
+        select(model_class.cover_image_external_id).where(model_class.id == entity_id)
+    )
+    return result.scalar_one_or_none()
