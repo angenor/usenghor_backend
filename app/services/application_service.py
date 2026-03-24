@@ -125,9 +125,9 @@ class ApplicationService:
 
         # Tri par statut : ongoing → upcoming → closed, puis par deadline
         status_order = case(
-            (ApplicationCall.status == "ongoing", 0),
-            (ApplicationCall.status == "upcoming", 1),
-            (ApplicationCall.status == "closed", 2),
+            (ApplicationCall.status == CallStatus.ONGOING, 0),
+            (ApplicationCall.status == CallStatus.UPCOMING, 1),
+            (ApplicationCall.status == CallStatus.CLOSED, 2),
             else_=3,
         )
         query = query.order_by(status_order, ApplicationCall.deadline.asc())
