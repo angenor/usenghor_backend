@@ -16,6 +16,9 @@ from app.models.base import PublicationStatus
 from app.models.content import Event, EventType
 from app.schemas.common import IdResponse, MessageResponse
 from app.schemas.content import (
+    ContentAlbumAdd,
+    ContentAlbumReorder,
+    ContentAlbumsResponse,
     EventCreate,
     EventRead,
     EventStatistics,
@@ -25,6 +28,69 @@ from app.schemas.content import (
 from app.services.content_service import ContentService
 
 router = APIRouter(prefix="/events", tags=["Events"])
+
+
+# =========================================================================
+# ALBUMS (routes statiques AVANT les routes dynamiques /{event_id})
+# =========================================================================
+
+
+@router.get("/{event_id}/albums", response_model=ContentAlbumsResponse)
+async def get_event_albums(
+    event_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("events.view")),
+) -> dict:
+    """Liste les albums associés à un événement."""
+    service = ContentService(db)
+    event = await service.get_event_by_id(event_id)
+    if not event:
+        raise NotFoundException("Événement non trouvé")
+    albums = await service.get_event_albums(event_id)
+    return {"albums": albums}
+
+
+@router.post("/{event_id}/albums", response_model=ContentAlbumsResponse)
+async def add_albums_to_event(
+    event_id: str,
+    data: ContentAlbumAdd,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("events.edit")),
+) -> dict:
+    """Associe des albums à un événement."""
+    service = ContentService(db)
+    albums = await service.add_albums_to_event(event_id, data.album_ids)
+    return {"albums": albums}
+
+
+@router.delete("/{event_id}/albums/{album_id}", response_model=MessageResponse)
+async def remove_album_from_event(
+    event_id: str,
+    album_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("events.edit")),
+) -> MessageResponse:
+    """Dissocie un album d'un événement."""
+    service = ContentService(db)
+    await service.remove_album_from_event(event_id, album_id)
+    return MessageResponse(message="Album dissocié de l'événement")
+
+
+@router.put("/{event_id}/albums/reorder", response_model=ContentAlbumsResponse)
+async def reorder_event_albums(
+    event_id: str,
+    data: ContentAlbumReorder,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("events.edit")),
+) -> dict:
+    """Réordonne les albums d'un événement."""
+    service = ContentService(db)
+    albums = await service.reorder_event_albums(event_id, data.album_ids)
+    return {"albums": albums}
 
 
 @router.get("/statistics", response_model=EventStatistics)

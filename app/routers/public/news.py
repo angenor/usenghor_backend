@@ -22,6 +22,17 @@ from app.services.content_service import ContentService
 router = APIRouter(prefix="/news", tags=["News"])
 
 
+@router.get("/{slug}/albums")
+async def get_news_public_albums(
+    slug: str,
+    db: DbSession,
+) -> dict:
+    """Récupère les albums publiés associés à une actualité."""
+    service = ContentService(db)
+    albums = await service.get_news_published_albums(slug)
+    return {"albums": albums}
+
+
 @router.get("", response_model=dict)
 async def list_news(
     db: DbSession,

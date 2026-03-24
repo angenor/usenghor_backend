@@ -90,6 +90,7 @@ CREATE INDEX idx_event_registrations_user ON event_registrations(user_external_i
 CREATE TABLE event_media_library (
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     album_external_id UUID NOT NULL,  -- → MEDIA.albums.id
+    display_order INT DEFAULT 0,
     PRIMARY KEY (event_id, album_external_id)
 );
 
@@ -141,6 +142,14 @@ CREATE TABLE news_media (
     media_external_id UUID NOT NULL,  -- → MEDIA.media.id
     display_order INT DEFAULT 0,
     PRIMARY KEY (news_id, media_external_id)
+);
+
+-- Médiathèque d'une actualité (plusieurs albums possibles)
+CREATE TABLE news_media_library (
+    news_id UUID REFERENCES news(id) ON DELETE CASCADE,
+    album_external_id UUID NOT NULL,  -- → MEDIA.albums.id
+    display_order INT DEFAULT 0,
+    PRIMARY KEY (news_id, album_external_id)
 );
 
 -- Relation actualités <-> tags

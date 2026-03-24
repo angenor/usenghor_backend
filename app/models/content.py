@@ -130,6 +130,11 @@ class Event(Base, UUIDMixin, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    media_library: Mapped[list["EventMediaLibrary"]] = relationship(
+        "EventMediaLibrary",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
 
 class EventPartner(Base):
@@ -181,6 +186,19 @@ class EventMediaLibrary(Base):
         ForeignKey("events.id", ondelete="CASCADE"), primary_key=True
     )
     album_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    display_order: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class NewsMediaLibrary(Base):
+    """Table de liaison actualité-albums."""
+
+    __tablename__ = "news_media_library"
+
+    news_id: Mapped[str] = mapped_column(
+        ForeignKey("news.id", ondelete="CASCADE"), primary_key=True
+    )
+    album_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    display_order: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class News(Base, UUIDMixin, TimestampMixin):
@@ -224,6 +242,11 @@ class News(Base, UUIDMixin, TimestampMixin):
     )
     news_services: Mapped[list["NewsService"]] = relationship(
         "NewsService", cascade="all, delete-orphan", lazy="selectin"
+    )
+    media_library: Mapped[list["NewsMediaLibrary"]] = relationship(
+        "NewsMediaLibrary",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
     @property

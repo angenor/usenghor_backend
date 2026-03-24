@@ -20,6 +20,17 @@ from app.services.content_service import ContentService
 router = APIRouter(prefix="/events", tags=["Events"])
 
 
+@router.get("/{slug}/albums")
+async def get_event_public_albums(
+    slug: str,
+    db: DbSession,
+) -> dict:
+    """Récupère les albums publiés associés à un événement."""
+    service = ContentService(db)
+    albums = await service.get_event_published_albums(slug)
+    return {"albums": albums}
+
+
 @router.get("", response_model=dict)
 async def list_events(
     db: DbSession,

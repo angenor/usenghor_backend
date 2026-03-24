@@ -24,6 +24,7 @@ from app.models.content import (
     NewsCampus,
     NewsHighlightStatus,
     NewsMedia,
+    NewsMediaLibrary,
     NewsService,
     NewsTag,
     RegistrationStatus,
@@ -32,6 +33,7 @@ from app.models.content import (
 from app.models.academic import Program
 from app.models.application import ApplicationCall
 from app.models.identity import User
+from app.models.media import Album, AlbumMedia, Media
 from app.models.organization import Sector, Service
 from app.models.project import Project
 
@@ -933,6 +935,332 @@ class ContentService:
             )
         )
         await self.db.flush()
+
+    # =========================================================================
+    # EVENT ↔ ALBUMS (médiathèque)
+    # =========================================================================
+
+    async def _get_album_summary(self, album_id: str) -> dict | None:
+        """Récupère le résumé d'un album (titre, statut, media_count, cover)."""
+        result = await self.db.execute(
+            select(Album).where(Album.id == album_id)
+        )
+        album = result.scalar_one_or_none()
+        if not album:
+            return None
+
+        count_result = await self.db.execute(
+            select(func.count(AlbumMedia.media_id)).where(AlbumMedia.album_id == album_id)
+        )
+        media_count = count_result.scalar() or 0
+
+        # Cover = premier média de type image
+        cover_result = await self.db.execute(
+            select(Media.id).join(AlbumMedia, AlbumMedia.media_id == Media.id)
+            .where(AlbumMedia.album_id == album_id, Media.type == "image")
+            .order_by(AlbumMedia.display_order)
+            .limit(1)
+        )
+        cover_media = cover_result.scalar_one_or_none()
+        cover_url = f"/api/public/media/{cover_media}/download?variant=low" if cover_media else None
+
+        return {
+            "id": album.id,
+            "title": album.title,
+            "description": album.description,
+            "status": album.status.value if hasattr(album.status, 'value') else str(album.status),
+            "media_count": media_count,
+            "cover_url": cover_url,
+        }
+
+    async def add_albums_to_event(self, event_id: str, album_ids: list[str]) -> list[dict]:
+        """Associe des albums à un événement."""
+        event = await self.get_event_by_id(event_id)
+        if not event:
+            raise NotFoundException("Événement non trouvé")
+
+        # Récupérer l'ordre max actuel
+        result = await self.db.execute(
+            select(func.max(EventMediaLibrary.display_order))
+            .where(EventMediaLibrary.event_id == event_id)
+        )
+        max_order = result.scalar() or -1
+
+        for i, album_id in enumerate(album_ids):
+            existing = await self.db.execute(
+                select(EventMediaLibrary).where(
+                    EventMediaLibrary.event_id == event_id,
+                    EventMediaLibrary.album_external_id == album_id,
+                )
+            )
+            if existing.scalar_one_or_none():
+                continue
+
+            self.db.add(EventMediaLibrary(
+                event_id=event_id,
+                album_external_id=album_id,
+                display_order=max_order + i + 1,
+            ))
+
+        await self.db.flush()
+        return await self.get_event_albums(event_id)
+
+    async def remove_album_from_event(self, event_id: str, album_id: str) -> None:
+        """Dissocie un album d'un événement."""
+        result = await self.db.execute(
+            select(EventMediaLibrary).where(
+                EventMediaLibrary.event_id == event_id,
+                EventMediaLibrary.album_external_id == album_id,
+            )
+        )
+        if not result.scalar_one_or_none():
+            raise NotFoundException("Association non trouvée")
+
+        await self.db.execute(
+            delete(EventMediaLibrary).where(
+                EventMediaLibrary.event_id == event_id,
+                EventMediaLibrary.album_external_id == album_id,
+            )
+        )
+        await self.db.flush()
+
+    async def get_event_albums(self, event_id: str) -> list[dict]:
+        """Récupère les albums associés à un événement (admin : tous statuts)."""
+        result = await self.db.execute(
+            select(EventMediaLibrary)
+            .where(EventMediaLibrary.event_id == event_id)
+            .order_by(EventMediaLibrary.display_order)
+        )
+        entries = result.scalars().all()
+
+        albums = []
+        for entry in entries:
+            album_summary = await self._get_album_summary(entry.album_external_id)
+            albums.append({
+                "album_external_id": entry.album_external_id,
+                "display_order": entry.display_order,
+                "album": album_summary,
+            })
+        return albums
+
+    async def get_event_published_albums(self, event_slug: str) -> list[dict]:
+        """Récupère les albums publiés d'un événement avec leurs médias."""
+        event = await self.get_event_by_slug(event_slug)
+        if not event or event.status != PublicationStatus.PUBLISHED:
+            raise NotFoundException("Événement non trouvé")
+
+        result = await self.db.execute(
+            select(EventMediaLibrary)
+            .where(EventMediaLibrary.event_id == event.id)
+            .order_by(EventMediaLibrary.display_order)
+        )
+        entries = result.scalars().all()
+
+        albums = []
+        for entry in entries:
+            # Charger l'album et vérifier qu'il est publié
+            album_result = await self.db.execute(
+                select(Album).where(
+                    Album.id == entry.album_external_id,
+                    Album.status == PublicationStatus.PUBLISHED,
+                )
+            )
+            album = album_result.scalar_one_or_none()
+            if not album:
+                continue
+
+            # Charger les médias de l'album
+            media_result = await self.db.execute(
+                select(Media).join(AlbumMedia, AlbumMedia.media_id == Media.id)
+                .where(AlbumMedia.album_id == album.id)
+                .order_by(AlbumMedia.display_order)
+            )
+            media_items = media_result.scalars().all()
+
+            albums.append({
+                "id": album.id,
+                "title": album.title,
+                "description": album.description,
+                "display_order": entry.display_order,
+                "media_items": [
+                    {
+                        "id": m.id,
+                        "name": m.name,
+                        "type": m.type.value if hasattr(m.type, 'value') else str(m.type),
+                        "url": f"/api/public/media/{m.id}/download",
+                        "width": m.width,
+                        "height": m.height,
+                        "duration_seconds": m.duration_seconds,
+                        "alt_text": m.alt_text,
+                        "display_order": idx,
+                    }
+                    for idx, m in enumerate(media_items)
+                ],
+            })
+        return albums
+
+    async def reorder_event_albums(self, event_id: str, album_ids: list[str]) -> list[dict]:
+        """Réordonne les albums d'un événement."""
+        event = await self.get_event_by_id(event_id)
+        if not event:
+            raise NotFoundException("Événement non trouvé")
+
+        for i, album_id in enumerate(album_ids):
+            await self.db.execute(
+                update(EventMediaLibrary)
+                .where(
+                    EventMediaLibrary.event_id == event_id,
+                    EventMediaLibrary.album_external_id == album_id,
+                )
+                .values(display_order=i)
+            )
+        await self.db.flush()
+        return await self.get_event_albums(event_id)
+
+    # =========================================================================
+    # NEWS ↔ ALBUMS (médiathèque)
+    # =========================================================================
+
+    async def add_albums_to_news(self, news_id: str, album_ids: list[str]) -> list[dict]:
+        """Associe des albums à une actualité."""
+        news = await self.get_news_by_id(news_id)
+        if not news:
+            raise NotFoundException("Actualité non trouvée")
+
+        result = await self.db.execute(
+            select(func.max(NewsMediaLibrary.display_order))
+            .where(NewsMediaLibrary.news_id == news_id)
+        )
+        max_order = result.scalar() or -1
+
+        for i, album_id in enumerate(album_ids):
+            existing = await self.db.execute(
+                select(NewsMediaLibrary).where(
+                    NewsMediaLibrary.news_id == news_id,
+                    NewsMediaLibrary.album_external_id == album_id,
+                )
+            )
+            if existing.scalar_one_or_none():
+                continue
+
+            self.db.add(NewsMediaLibrary(
+                news_id=news_id,
+                album_external_id=album_id,
+                display_order=max_order + i + 1,
+            ))
+
+        await self.db.flush()
+        return await self.get_news_albums(news_id)
+
+    async def remove_album_from_news(self, news_id: str, album_id: str) -> None:
+        """Dissocie un album d'une actualité."""
+        result = await self.db.execute(
+            select(NewsMediaLibrary).where(
+                NewsMediaLibrary.news_id == news_id,
+                NewsMediaLibrary.album_external_id == album_id,
+            )
+        )
+        if not result.scalar_one_or_none():
+            raise NotFoundException("Association non trouvée")
+
+        await self.db.execute(
+            delete(NewsMediaLibrary).where(
+                NewsMediaLibrary.news_id == news_id,
+                NewsMediaLibrary.album_external_id == album_id,
+            )
+        )
+        await self.db.flush()
+
+    async def get_news_albums(self, news_id: str) -> list[dict]:
+        """Récupère les albums associés à une actualité (admin : tous statuts)."""
+        result = await self.db.execute(
+            select(NewsMediaLibrary)
+            .where(NewsMediaLibrary.news_id == news_id)
+            .order_by(NewsMediaLibrary.display_order)
+        )
+        entries = result.scalars().all()
+
+        albums = []
+        for entry in entries:
+            album_summary = await self._get_album_summary(entry.album_external_id)
+            albums.append({
+                "album_external_id": entry.album_external_id,
+                "display_order": entry.display_order,
+                "album": album_summary,
+            })
+        return albums
+
+    async def get_news_published_albums(self, news_slug: str) -> list[dict]:
+        """Récupère les albums publiés d'une actualité avec leurs médias."""
+        news = await self.get_news_by_slug(news_slug)
+        if not news or news.status != PublicationStatus.PUBLISHED:
+            raise NotFoundException("Actualité non trouvée")
+
+        result = await self.db.execute(
+            select(NewsMediaLibrary)
+            .where(NewsMediaLibrary.news_id == news.id)
+            .order_by(NewsMediaLibrary.display_order)
+        )
+        entries = result.scalars().all()
+
+        albums = []
+        for entry in entries:
+            album_result = await self.db.execute(
+                select(Album).where(
+                    Album.id == entry.album_external_id,
+                    Album.status == PublicationStatus.PUBLISHED,
+                )
+            )
+            album = album_result.scalar_one_or_none()
+            if not album:
+                continue
+
+            media_result = await self.db.execute(
+                select(Media).join(AlbumMedia, AlbumMedia.media_id == Media.id)
+                .where(AlbumMedia.album_id == album.id)
+                .order_by(AlbumMedia.display_order)
+            )
+            media_items = media_result.scalars().all()
+
+            albums.append({
+                "id": album.id,
+                "title": album.title,
+                "description": album.description,
+                "display_order": entry.display_order,
+                "media_items": [
+                    {
+                        "id": m.id,
+                        "name": m.name,
+                        "type": m.type.value if hasattr(m.type, 'value') else str(m.type),
+                        "url": f"/api/public/media/{m.id}/download",
+                        "width": m.width,
+                        "height": m.height,
+                        "duration_seconds": m.duration_seconds,
+                        "alt_text": m.alt_text,
+                        "display_order": idx,
+                    }
+                    for idx, m in enumerate(media_items)
+                ],
+            })
+        return albums
+
+    async def reorder_news_albums(self, news_id: str, album_ids: list[str]) -> list[dict]:
+        """Réordonne les albums d'une actualité."""
+        news = await self.get_news_by_id(news_id)
+        if not news:
+            raise NotFoundException("Actualité non trouvée")
+
+        for i, album_id in enumerate(album_ids):
+            await self.db.execute(
+                update(NewsMediaLibrary)
+                .where(
+                    NewsMediaLibrary.news_id == news_id,
+                    NewsMediaLibrary.album_external_id == album_id,
+                )
+                .values(display_order=i)
+            )
+        await self.db.flush()
+        return await self.get_news_albums(news_id)
 
     # =========================================================================
     # STATISTICS

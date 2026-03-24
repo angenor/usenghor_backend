@@ -16,6 +16,9 @@ from app.models.base import PublicationStatus
 from app.models.content import News, NewsHighlightStatus
 from app.schemas.common import IdResponse, MessageResponse
 from app.schemas.content import (
+    ContentAlbumAdd,
+    ContentAlbumReorder,
+    ContentAlbumsResponse,
     NewsCreate,
     NewsPublish,
     NewsRead,
@@ -26,6 +29,69 @@ from app.schemas.content import (
 from app.services.content_service import ContentService
 
 router = APIRouter(prefix="/news", tags=["News"])
+
+
+# =========================================================================
+# ALBUMS (routes statiques AVANT les routes dynamiques /{news_id})
+# =========================================================================
+
+
+@router.get("/{news_id}/albums", response_model=ContentAlbumsResponse)
+async def get_news_albums(
+    news_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("news.view")),
+) -> dict:
+    """Liste les albums associés à une actualité."""
+    service = ContentService(db)
+    news = await service.get_news_by_id(news_id)
+    if not news:
+        raise NotFoundException("Actualité non trouvée")
+    albums = await service.get_news_albums(news_id)
+    return {"albums": albums}
+
+
+@router.post("/{news_id}/albums", response_model=ContentAlbumsResponse)
+async def add_albums_to_news(
+    news_id: str,
+    data: ContentAlbumAdd,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("news.edit")),
+) -> dict:
+    """Associe des albums à une actualité."""
+    service = ContentService(db)
+    albums = await service.add_albums_to_news(news_id, data.album_ids)
+    return {"albums": albums}
+
+
+@router.delete("/{news_id}/albums/{album_id}", response_model=MessageResponse)
+async def remove_album_from_news(
+    news_id: str,
+    album_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("news.edit")),
+) -> MessageResponse:
+    """Dissocie un album d'une actualité."""
+    service = ContentService(db)
+    await service.remove_album_from_news(news_id, album_id)
+    return MessageResponse(message="Album dissocié de l'actualité")
+
+
+@router.put("/{news_id}/albums/reorder", response_model=ContentAlbumsResponse)
+async def reorder_news_albums(
+    news_id: str,
+    data: ContentAlbumReorder,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("news.edit")),
+) -> dict:
+    """Réordonne les albums d'une actualité."""
+    service = ContentService(db)
+    albums = await service.reorder_news_albums(news_id, data.album_ids)
+    return {"albums": albums}
 
 
 @router.get("/statistics", response_model=NewsStatistics)

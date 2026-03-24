@@ -412,6 +412,52 @@ class NewsPublish(BaseModel):
 
 
 # =============================================================================
+# CONTENT ALBUMS (associations événements/actualités ↔ albums)
+# =============================================================================
+
+
+class ContentAlbumAdd(BaseModel):
+    """Schéma pour associer des albums à un contenu."""
+
+    album_ids: list[str] = Field(..., min_length=1, description="IDs des albums à associer")
+
+
+class ContentAlbumReorder(BaseModel):
+    """Schéma pour réordonner les albums d'un contenu."""
+
+    album_ids: list[str] = Field(..., min_length=1, description="IDs des albums dans le nouvel ordre")
+
+
+class AlbumSummary(BaseModel):
+    """Résumé d'un album pour les associations."""
+
+    id: str
+    title: str
+    description: str | None = None
+    status: str
+    media_count: int = 0
+    cover_url: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class ContentAlbumEntry(BaseModel):
+    """Entrée d'album associé à un contenu."""
+
+    album_external_id: str
+    display_order: int = 0
+    album: AlbumSummary | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class ContentAlbumsResponse(BaseModel):
+    """Réponse avec la liste des albums associés à un contenu."""
+
+    albums: list[ContentAlbumEntry] = []
+
+
+# =============================================================================
 # STATISTICS
 # =============================================================================
 
