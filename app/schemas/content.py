@@ -149,6 +149,7 @@ class EventBase(BaseModel):
 
     is_online: bool = Field(False, description="Événement en ligne")
     video_conference_link: str | None = Field(None, max_length=500)
+    youtube_link: str | None = Field(None, max_length=500, description="Lien YouTube (replay)")
 
     registration_required: bool = Field(False, description="Inscription requise")
     registration_link: str | None = Field(None, max_length=500)
@@ -199,6 +200,7 @@ class EventUpdate(BaseModel):
 
     is_online: bool | None = None
     video_conference_link: str | None = Field(None, max_length=500)
+    youtube_link: str | None = Field(None, max_length=500)
 
     registration_required: bool | None = None
     registration_link: str | None = Field(None, max_length=500)
@@ -256,6 +258,7 @@ class EventPublic(BaseModel):
     city: str | None
     is_online: bool
     video_conference_link: str | None
+    youtube_link: str | None
     registration_required: bool
     registration_link: str | None
     max_attendees: int | None

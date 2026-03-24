@@ -45,6 +45,7 @@ CREATE TABLE events (
     longitude DECIMAL(11, 8),
     is_online BOOLEAN DEFAULT FALSE,
     video_conference_link VARCHAR(500),
+    youtube_link VARCHAR(500),                        -- Lien YouTube (replay)
     registration_required BOOLEAN DEFAULT FALSE,
     registration_link VARCHAR(500),
     max_attendees INT,

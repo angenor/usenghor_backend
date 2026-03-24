@@ -112,6 +112,7 @@ class Event(Base, UUIDMixin, TimestampMixin):
 
     is_online: Mapped[bool] = mapped_column(Boolean, default=False)
     video_conference_link: Mapped[str | None] = mapped_column(String(500))
+    youtube_link: Mapped[str | None] = mapped_column(String(500))
 
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registration_link: Mapped[str | None] = mapped_column(String(500))
