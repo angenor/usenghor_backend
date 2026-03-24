@@ -123,7 +123,14 @@ class ApplicationService:
         if project_id:
             query = query.where(ApplicationCall.project_external_id == project_id)
 
-        query = query.order_by(ApplicationCall.created_at.desc(), ApplicationCall.deadline.desc())
+        # Tri par statut : ongoing → upcoming → closed, puis par deadline
+        status_order = case(
+            (ApplicationCall.status == "ongoing", 0),
+            (ApplicationCall.status == "upcoming", 1),
+            (ApplicationCall.status == "closed", 2),
+            else_=3,
+        )
+        query = query.order_by(status_order, ApplicationCall.deadline.asc())
         return query
 
     async def get_published_calls(
