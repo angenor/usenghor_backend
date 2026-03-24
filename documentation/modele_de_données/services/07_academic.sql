@@ -14,7 +14,7 @@
 -- ============================================================================
 
 -- Types ENUM spécifiques à ce service
-CREATE TYPE program_type AS ENUM ('master', 'doctorate', 'university_diploma', 'certificate');
+CREATE TYPE program_type AS ENUM ('master', 'doctorate', 'university_diploma', 'certificate', 'clom');
 
 -- Champs disciplinaires (pour les certificats)
 CREATE TABLE program_fields (

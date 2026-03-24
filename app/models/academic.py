@@ -31,6 +31,7 @@ class ProgramType(str, enum.Enum):
     DOCTORATE = "doctorate"
     UNIVERSITY_DIPLOMA = "university_diploma"
     CERTIFICATE = "certificate"
+    CLOM = "clom"
 
 
 class ProgramField(Base, UUIDMixin, TimestampMixin):
