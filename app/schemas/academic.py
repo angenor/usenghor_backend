@@ -293,6 +293,19 @@ class ProgramPartnerRead(ProgramPartnerBase):
     model_config = {"from_attributes": True}
 
 
+class ProgramPartnerPublic(BaseModel):
+    """Schéma enrichi pour l'affichage public des partenaires d'un programme."""
+
+    partner_external_id: str
+    name: str
+    logo_external_id: str | None = None
+    website: str | None = None
+    partner_type: str
+    partnership_type: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
 # =============================================================================
 # PROGRAM
 # =============================================================================

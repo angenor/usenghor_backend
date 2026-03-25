@@ -1310,6 +1310,45 @@ class AcademicService:
         )
         await self.db.flush()
 
+    async def get_program_partners_enriched(self, program_id: str) -> list[dict]:
+        """
+        Récupère les partenaires d'un programme avec les détails enrichis
+        (nom, logo, site web, type) depuis la table partners.
+        Filtre uniquement les partenaires actifs.
+        """
+        from app.models.partner import Partner
+
+        result = await self.db.execute(
+            select(
+                ProgramPartner.partner_external_id,
+                ProgramPartner.partnership_type,
+                Partner.name,
+                Partner.logo_external_id,
+                Partner.website,
+                Partner.type,
+            )
+            .join(
+                Partner,
+                Partner.id == ProgramPartner.partner_external_id,
+            )
+            .where(
+                ProgramPartner.program_id == program_id,
+                Partner.active == True,
+            )
+        )
+
+        return [
+            {
+                "partner_external_id": str(row.partner_external_id),
+                "name": row.name,
+                "logo_external_id": str(row.logo_external_id) if row.logo_external_id else None,
+                "website": row.website,
+                "partner_type": row.type.value if hasattr(row.type, "value") else str(row.type),
+                "partnership_type": row.partnership_type,
+            }
+            for row in result.fetchall()
+        ]
+
     # =========================================================================
     # PROGRAM MEDIA LIBRARY
     # =========================================================================

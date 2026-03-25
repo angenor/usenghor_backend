@@ -93,8 +93,11 @@
 \echo '[14/18] Service FUNDRAISING (levées de fonds)...'
 \i 13_fundraising.sql
 
-\echo '[15/18] Service SURVEY (campagnes de sondage)...'
+\echo '[15/19] Service SURVEY (campagnes de sondage)...'
 \i 14_survey.sql
+
+\echo '[16/19] Service SHORT_LINKS (réducteur de liens)...'
+\i 13_short_links.sql
 
 -- Fonctions, triggers et données
 \echo '[16/18] Fonctions et triggers...'

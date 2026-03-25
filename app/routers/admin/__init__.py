@@ -33,6 +33,7 @@ from app.routers.admin import (
     roles,
     sectors,
     services,
+    short_links,
     subscribers,
     surveys,
     tags,
@@ -74,5 +75,6 @@ router.include_router(email.router)
 router.include_router(fundraisers.router)
 router.include_router(institutional_projects.router)
 router.include_router(surveys.router)
+router.include_router(short_links.router)
 
 __all__ = ["router"]

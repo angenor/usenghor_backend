@@ -23,6 +23,7 @@ from app.routers.public import (
     programs,
     sectors,
     services,
+    short_links,
     surveys,
     users,
 )
@@ -48,6 +49,7 @@ router.include_router(institutional_projects.router)
 router.include_router(media.router)
 router.include_router(sectors.router)
 router.include_router(services.router)
+router.include_router(short_links.router)
 router.include_router(surveys.router)
 router.include_router(users.router)
 

@@ -12,7 +12,7 @@ from app.core.exceptions import NotFoundException
 from app.core.pagination import PaginationParams, paginate
 from app.models.academic import Program, ProgramType
 from app.models.base import PublicationStatus
-from app.schemas.academic import ProgramPublic, ProgramPublicWithDetails
+from app.schemas.academic import ProgramPartnerPublic, ProgramPublic, ProgramPublicWithDetails
 from app.schemas.content import NewsPublicEnriched
 from app.services.academic_service import AcademicService
 from app.services.content_service import ContentService
@@ -71,6 +71,21 @@ async def get_program_news(
 
     enriched_items = await content_service.enrich_news_with_names(news_list)
     return [NewsPublicEnriched.model_validate(item) for item in enriched_items]
+
+
+@router.get("/{slug}/partners", response_model=list[ProgramPartnerPublic])
+async def get_program_partners(
+    slug: str,
+    db: DbSession,
+) -> list[ProgramPartnerPublic]:
+    """Récupère les partenaires actifs d'un programme avec leurs détails."""
+    service = AcademicService(db)
+    program = await service.get_program_by_slug(slug)
+    if not program or program.status != PublicationStatus.PUBLISHED:
+        raise NotFoundException("Programme non trouvé")
+
+    partners_data = await service.get_program_partners_enriched(program.id)
+    return [ProgramPartnerPublic(**p) for p in partners_data]
 
 
 @router.get("/{slug}/media-library", response_model=list[str])
