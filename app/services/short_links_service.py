@@ -57,7 +57,7 @@ class ShortLinkService:
         if target_url.startswith("/"):
             return
 
-        # URL externe : vérifier le domaine
+        # URL externe : parser et vérifier le domaine
         try:
             parsed = urlparse(target_url)
             if not parsed.scheme or not parsed.netloc:
@@ -71,11 +71,19 @@ class ShortLinkService:
         except Exception:
             raise ValidationException("Format d'URL invalide")
 
-        # Vérifier que le domaine est dans la liste blanche
-        result = await self.db.execute(
-            select(AllowedDomain).where(AllowedDomain.domain == domain)
-        )
-        if not result.scalar_one_or_none():
+        # Domaines internes de la plateforme — toujours autorisés
+        internal_domains = {
+            "usenghor-francophonie.org",
+            "www.usenghor-francophonie.org",
+        }
+        if domain in internal_domains:
+            return
+
+        # Vérifier que le domaine (ou son domaine parent) est dans la liste blanche
+        # Ex: "www.google.com" matche "google.com", "docs.google.com" aussi
+        result = await self.db.execute(select(AllowedDomain))
+        allowed = [row.domain for row in result.scalars().all()]
+        if not any(domain == d or domain.endswith(f".{d}") for d in allowed):
             raise ValidationException(
                 f"Le domaine '{domain}' n'est pas dans la liste des domaines autorisés"
             )
