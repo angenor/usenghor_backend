@@ -85,29 +85,18 @@ async def list_short_links(
     _: bool = Depends(PermissionChecker("short_links.view")),
 ) -> dict:
     """Liste les liens courts avec pagination."""
-    service = ShortLinkService(db)
-    query = await service.list_short_links(search=search)
-    result = await paginate(db, query, pagination, ShortLink, ShortLinkRead)
-
-    # Enrichir chaque item avec full_short_url et created_by_name
-    for item in result["items"]:
-        if isinstance(item, dict):
-            item["full_short_url"] = f"{PRODUCTION_DOMAIN}/r/{item['code']}"
-        else:
-            item.full_short_url = f"{PRODUCTION_DOMAIN}/r/{item.code}"
-
-    # Résoudre created_by_name via une requête séparée
     from sqlalchemy import select as sa_select
 
-    items_list = result["items"]
-    if items_list:
-        # Collecter les IDs des créateurs
-        creator_ids = set()
-        for item in items_list:
-            cb = item["created_by"] if isinstance(item, dict) else getattr(item, "created_by", None)
-            if cb:
-                creator_ids.add(cb)
+    service = ShortLinkService(db)
+    query = await service.list_short_links(search=search)
+    # Paginer sans conversion Pydantic (on a besoin de created_by)
+    result = await paginate(db, query, pagination, ShortLink)
 
+    # Résoudre created_by_name via une requête séparée
+    raw_items = result["items"]
+    users_map: dict[str, str] = {}
+    if raw_items:
+        creator_ids = {item.created_by for item in raw_items if item.created_by}
         if creator_ids:
             users_result = await db.execute(
                 sa_select(User.id, User.first_name, User.last_name).where(
@@ -119,13 +108,19 @@ async def list_short_links(
                 for row in users_result.all()
             }
 
-            for item in items_list:
-                if isinstance(item, dict):
-                    cb = item.get("created_by")
-                    item["created_by_name"] = users_map.get(cb, None)
-                else:
-                    cb = getattr(item, "created_by", None)
-                    item.created_by_name = users_map.get(cb, None)
+    # Convertir en schémas enrichis
+    result["items"] = [
+        ShortLinkRead(
+            id=item.id,
+            code=item.code,
+            target_url=item.target_url,
+            full_short_url=f"{PRODUCTION_DOMAIN}/r/{item.code}",
+            created_by_name=users_map.get(item.created_by) if item.created_by else None,
+            created_at=item.created_at,
+            updated_at=item.updated_at,
+        )
+        for item in raw_items
+    ]
 
     return result
 
