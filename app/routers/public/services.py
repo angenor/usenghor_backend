@@ -63,6 +63,7 @@ class ServicePublicWithDetailsEnriched(ServicePublic):
     achievements: list[ServiceAchievementRead] = []
     projects: list[ServiceProjectRead] = []
     team: list[ServiceTeamMemberPublic] = []
+    album_ids: list[str] = []
 
 
 # =============================================================================
@@ -130,6 +131,9 @@ async def get_service(
                 user=user_data,
             ))
 
+    # Récupérer les albums associés via service_media_library
+    album_ids = await org_service.get_service_albums(service_id)
+
     return ServicePublicWithDetailsEnriched(
         id=svc.id,
         name=svc.name,
@@ -149,4 +153,5 @@ async def get_service(
         achievements=svc.achievements,
         projects=svc.projects,
         team=enriched_team,
+        album_ids=album_ids,
     )
