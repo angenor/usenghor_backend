@@ -42,6 +42,18 @@ async def list_users(
     return await paginate(db, query, pagination, User, UserRead)
 
 
+@router.get("/upcoming-birthdays", response_model=list[UserWithRoles])
+async def get_upcoming_birthdays(
+    db: DbSession,
+    current_user: CurrentUser,
+    days: int = Query(7, ge=1, le=30, description="Nombre de jours à venir"),
+    _: bool = Depends(PermissionChecker("users.view")),
+) -> list:
+    """Retourne les utilisateurs dont l'anniversaire est dans les N prochains jours."""
+    service = IdentityService(db)
+    return await service.get_upcoming_birthdays(days=days)
+
+
 @router.get("/{user_id}", response_model=UserWithRoles)
 async def get_user(
     user_id: str,

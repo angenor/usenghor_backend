@@ -6,10 +6,10 @@ Logique métier pour la gestion des utilisateurs, rôles et permissions.
 """
 
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from uuid import uuid4
 
-from sqlalchemy import String, cast, delete, func, or_, select, update
+from sqlalchemy import String, cast, delete, extract, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -72,6 +72,39 @@ class IdentityService:
             query = query.join(User.roles).where(Role.id == role_id)
 
         return query
+
+    async def get_upcoming_birthdays(self, days: int = 7) -> list[User]:
+        """
+        Retourne les utilisateurs actifs et vérifiés dont l'anniversaire
+        tombe dans les N prochains jours.
+        """
+        today = date.today()
+        results: list[User] = []
+
+        # Récupérer tous les utilisateurs actifs, vérifiés, avec une date de naissance
+        query = (
+            select(User)
+            .options(selectinload(User.roles))
+            .where(
+                User.active == True,
+                User.email_verified == True,
+                User.birth_date.isnot(None),
+            )
+        )
+        result = await self.db.execute(query)
+        users = result.scalars().all()
+
+        for user in users:
+            bd = user.birth_date
+            # Prochaine occurrence de l'anniversaire
+            next_bd = bd.replace(year=today.year)
+            if next_bd < today - timedelta(days=1):
+                next_bd = bd.replace(year=today.year + 1)
+            diff = (next_bd - today).days
+            if 0 <= diff <= days:
+                results.append(user)
+
+        return results
 
     async def get_user_by_id(self, user_id: str) -> User | None:
         """Récupère un utilisateur par son ID."""
