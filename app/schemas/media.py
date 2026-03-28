@@ -141,6 +141,7 @@ class AlbumBase(BaseModel):
 class AlbumCreate(AlbumBase):
     """Schéma pour la création d'un album."""
 
+    slug: str | None = Field(None, max_length=300, description="Slug URL-friendly (généré automatiquement si absent)")
     status: PublicationStatus = Field(
         PublicationStatus.DRAFT, description="Statut de publication"
     )
@@ -151,6 +152,7 @@ class AlbumUpdate(BaseModel):
 
     title: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
+    slug: str | None = Field(None, max_length=300)
     status: PublicationStatus | None = None
 
 
@@ -158,6 +160,7 @@ class AlbumRead(AlbumBase):
     """Schéma pour la lecture d'un album."""
 
     id: str
+    slug: str
     status: PublicationStatus
     created_at: datetime
     updated_at: datetime
@@ -169,6 +172,44 @@ class AlbumWithMedia(AlbumRead):
     """Schéma pour un album avec ses médias."""
 
     media_items: list[MediaRead] = []
+
+
+class CoverMedia(BaseModel):
+    """Schéma pour le média de couverture d'un album."""
+
+    id: str
+    url: str
+    type: MediaType
+    name: str
+
+    model_config = {"from_attributes": True}
+
+
+class PublicAlbumListItem(BaseModel):
+    """Schéma pour un album dans le listing public de la médiathèque."""
+
+    id: str
+    title: str
+    description: str | None
+    slug: str
+    status: PublicationStatus
+    created_at: datetime
+    updated_at: datetime
+    media_count: int
+    media_types: list[str]
+    cover_media: CoverMedia | None
+
+    model_config = {"from_attributes": True}
+
+
+class PublicAlbumListResponse(BaseModel):
+    """Réponse paginée pour le listing public des albums."""
+
+    items: list[PublicAlbumListItem]
+    total: int
+    page: int
+    limit: int
+    pages: int
 
 
 class AlbumMediaAdd(BaseModel):

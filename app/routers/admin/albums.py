@@ -32,6 +32,7 @@ def _album_to_schema(album: Album) -> AlbumWithMedia:
         id=album.id,
         title=album.title,
         description=album.description,
+        slug=album.slug,
         status=album.status,
         created_at=album.created_at,
         updated_at=album.updated_at,
@@ -89,6 +90,7 @@ async def create_album(
         title=album_data.title,
         description=album_data.description,
         status=album_data.status,
+        slug=album_data.slug,
     )
     return IdResponse(id=album.id, message="Album créé avec succès")
 

@@ -55,6 +55,7 @@ class Album(Base, UUIDMixin, TimestampMixin):
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    slug: Mapped[str] = mapped_column(String(300), unique=True, nullable=False, index=True)
     status: Mapped[PublicationStatus] = mapped_column(
         Enum(
             PublicationStatus,

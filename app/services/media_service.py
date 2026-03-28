@@ -6,13 +6,15 @@ Logique métier pour la gestion des médias (upload, albums).
 """
 
 import os
+import re
 import shutil
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
 from fastapi import UploadFile
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import delete, distinct, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -505,6 +507,143 @@ class MediaService:
     # ALBUMS
     # =========================================================================
 
+    async def generate_slug(self, title: str) -> str:
+        """Génère un slug unique à partir du titre."""
+        # Normaliser unicode et translitérer
+        normalized = unicodedata.normalize("NFKD", title)
+        ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
+        # Minuscules, remplacer tout non-alphanumérique par un tiret
+        slug = re.sub(r"[^a-z0-9]+", "-", ascii_text.lower()).strip("-")
+        if not slug:
+            slug = "album"
+        # Dédoublonner
+        base_slug = slug
+        counter = 2
+        while True:
+            existing = await self.db.execute(
+                select(Album.id).where(Album.slug == slug)
+            )
+            if not existing.scalar_one_or_none():
+                break
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        return slug
+
+    async def get_published_albums_list(
+        self,
+        page: int = 1,
+        limit: int = 24,
+        search: str | None = None,
+        media_type: str | None = None,
+    ) -> dict:
+        """
+        Liste les albums publiés non vides pour la médiathèque publique.
+
+        Returns:
+            Dict avec items, total, page, limit, pages.
+        """
+        # Sous-requête : albums publiés ayant au moins 1 média
+        albums_with_media = (
+            select(AlbumMedia.album_id)
+            .group_by(AlbumMedia.album_id)
+            .having(func.count(AlbumMedia.media_id) > 0)
+        )
+
+        # Si filtre par type de média, ne garder que les albums contenant ce type
+        if media_type:
+            albums_with_type = (
+                select(AlbumMedia.album_id)
+                .join(Media, Media.id == AlbumMedia.media_id)
+                .where(Media.type == media_type)
+                .group_by(AlbumMedia.album_id)
+            )
+            albums_with_media = albums_with_type
+
+        base_query = (
+            select(Album)
+            .where(Album.status == PublicationStatus.PUBLISHED)
+            .where(Album.id.in_(albums_with_media))
+        )
+
+        if search:
+            search_filter = f"%{search}%"
+            base_query = base_query.where(
+                or_(
+                    Album.title.ilike(search_filter),
+                    Album.description.ilike(search_filter),
+                )
+            )
+
+        # Compter le total
+        count_query = select(func.count()).select_from(base_query.subquery())
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar() or 0
+
+        # Pagination
+        pages = max(1, (total + limit - 1) // limit)
+        offset = (page - 1) * limit
+
+        albums_query = (
+            base_query
+            .options(selectinload(Album.media_items))
+            .order_by(Album.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await self.db.execute(albums_query)
+        albums = result.scalars().unique().all()
+
+        items = []
+        for album in albums:
+            media_items = album.media_items or []
+            # Récupérer les médias triés par display_order
+            ordered_media_result = await self.db.execute(
+                select(Media)
+                .join(AlbumMedia, AlbumMedia.media_id == Media.id)
+                .where(AlbumMedia.album_id == album.id)
+                .order_by(AlbumMedia.display_order.asc())
+                .limit(1)
+            )
+            cover = ordered_media_result.scalar_one_or_none()
+
+            media_types = list({m.type.value for m in media_items})
+
+            items.append({
+                "id": album.id,
+                "title": album.title,
+                "description": album.description,
+                "slug": album.slug,
+                "status": album.status,
+                "created_at": album.created_at,
+                "updated_at": album.updated_at,
+                "media_count": len(media_items),
+                "media_types": media_types,
+                "cover_media": {
+                    "id": cover.id,
+                    "url": cover.url,
+                    "type": cover.type,
+                    "name": cover.name,
+                } if cover else None,
+            })
+
+        return {
+            "items": items,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "pages": pages,
+        }
+
+    async def get_album_by_slug(self, slug: str) -> Album | None:
+        """Récupère un album publié par son slug avec ses médias."""
+        result = await self.db.execute(
+            select(Album)
+            .options(selectinload(Album.media_items))
+            .where(Album.slug == slug)
+            .where(Album.status == PublicationStatus.PUBLISHED)
+        )
+        return result.scalar_one_or_none()
+
     async def get_albums(
         self,
         search: str | None = None,
@@ -550,6 +689,7 @@ class MediaService:
         title: str,
         description: str | None = None,
         status: PublicationStatus = PublicationStatus.DRAFT,
+        slug: str | None = None,
     ) -> Album:
         """
         Crée un nouvel album.
@@ -558,14 +698,18 @@ class MediaService:
             title: Titre de l'album.
             description: Description.
             status: Statut de publication.
+            slug: Slug URL-friendly (généré automatiquement si absent).
 
         Returns:
             Album créé.
         """
+        if not slug:
+            slug = await self.generate_slug(title)
         album = Album(
             id=str(uuid4()),
             title=title,
             description=description,
+            slug=slug,
             status=status,
         )
         self.db.add(album)

@@ -38,10 +38,13 @@ CREATE TABLE albums (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title VARCHAR(255) NOT NULL,
     description TEXT,
+    slug VARCHAR(300) UNIQUE NOT NULL,
     status publication_status DEFAULT 'draft',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX idx_albums_slug ON albums(slug);
 
 -- Relation albums <-> médias
 CREATE TABLE album_media (
