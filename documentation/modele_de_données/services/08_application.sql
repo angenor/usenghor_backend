@@ -76,7 +76,7 @@ CREATE TABLE call_eligibility_criteria (
 CREATE TABLE call_coverage (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     call_id UUID REFERENCES application_calls(id) ON DELETE CASCADE,
-    item VARCHAR(255) NOT NULL,
+    item VARCHAR(500) NOT NULL,
     description TEXT,
     display_order INT DEFAULT 0
 );

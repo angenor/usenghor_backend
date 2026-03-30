@@ -65,7 +65,7 @@ class CallEligibilityCriteriaRead(CallEligibilityCriteriaBase):
 class CallCoverageBase(BaseModel):
     """Schéma de base pour les prises en charge."""
 
-    item: str = Field(..., min_length=1, max_length=255, description="Élément pris en charge")
+    item: str = Field(..., min_length=1, max_length=500, description="Élément pris en charge")
     description: str | None = Field(None, description="Description")
     display_order: int = Field(0, ge=0, description="Ordre d'affichage")
 
@@ -79,7 +79,7 @@ class CallCoverageCreate(CallCoverageBase):
 class CallCoverageUpdate(BaseModel):
     """Schéma pour la mise à jour d'une prise en charge."""
 
-    item: str | None = Field(None, min_length=1, max_length=255)
+    item: str | None = Field(None, min_length=1, max_length=500)
     description: str | None = None
     display_order: int | None = Field(None, ge=0)
 

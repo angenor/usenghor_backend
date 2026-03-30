@@ -203,7 +203,7 @@ class CallCoverage(Base, UUIDMixin):
     call_id: Mapped[str] = mapped_column(
         ForeignKey("application_calls.id", ondelete="CASCADE"), nullable=False
     )
-    item: Mapped[str] = mapped_column(String(255), nullable=False)
+    item: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
 
