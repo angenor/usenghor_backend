@@ -61,6 +61,7 @@ class FundraisingService:
             "id": fundraiser.id,
             "title": fundraiser.title,
             "slug": fundraiser.slug,
+            "description_html": fundraiser.description_html,
             "cover_image_url": self._resolve_media_url(fundraiser.cover_image_external_id),
             "goal_amount": float(fundraiser.goal_amount),
             "total_raised": totals["total_raised"],

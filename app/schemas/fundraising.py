@@ -71,6 +71,7 @@ class FundraiserPublic(BaseModel):
     id: str
     title: str
     slug: str
+    description_html: str | None = None
     cover_image_url: str | None = None
     goal_amount: float
     total_raised: float = 0
