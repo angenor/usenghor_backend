@@ -24,12 +24,18 @@ async def download_media_public(
         None,
         description="Variante de l'image (low, medium, original). Si non spécifié, retourne l'original.",
     ),
+    download: bool = Query(
+        False,
+        description="Si true, force le téléchargement (Content-Disposition: attachment). Par défaut le fichier est affiché inline.",
+    ),
 ):
     """
-    Télécharge un fichier média (accès public).
+    Sert un fichier média (accès public).
 
-    Cet endpoint permet d'afficher les images dans les balises <img>
-    sans nécessiter d'authentification.
+    Par défaut le fichier est retourné avec `Content-Disposition: inline`
+    pour permettre son affichage direct dans le navigateur (balises <img>,
+    <video>, <iframe> pour les PDF, etc.). Ajouter `?download=1` pour
+    forcer le téléchargement.
 
     Le paramètre `variant` permet de récupérer une version redimensionnée:
     - `low`: Version miniature (480px max)
@@ -44,4 +50,5 @@ async def download_media_public(
         path=file_path,
         filename=filename,
         media_type=mime_type,
+        content_disposition_type="attachment" if download else "inline",
     )

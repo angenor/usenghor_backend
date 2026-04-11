@@ -176,9 +176,13 @@ async def download_media(
         None,
         description="Variante de l'image (low, medium, original)",
     ),
+    download: bool = Query(
+        False,
+        description="Si true, force le téléchargement (Content-Disposition: attachment). Par défaut le fichier est affiché inline.",
+    ),
     _: bool = Depends(PermissionChecker("media.view")),
 ):
-    """Télécharge un fichier média."""
+    """Sert un fichier média. Par défaut inline, `?download=1` pour forcer le téléchargement."""
     service = MediaService(db)
     file_path, filename, mime_type = await service.get_download_info(
         media_id, variant=variant
@@ -187,6 +191,7 @@ async def download_media(
         path=file_path,
         filename=filename,
         media_type=mime_type,
+        content_disposition_type="attachment" if download else "inline",
     )
 
 
