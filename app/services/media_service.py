@@ -634,6 +634,79 @@ class MediaService:
             "pages": pages,
         }
 
+    async def get_public_direct_media_list(
+        self,
+        page: int = 1,
+        limit: int = 24,
+        search: str | None = None,
+        media_type: str | None = None,
+    ) -> dict:
+        """
+        Liste les médias téléversés directement (hors album) pour la médiathèque publique.
+
+        Un « média direct » est un média stocké dans le dossier `general`
+        (donc téléversé via la modale d'upload direct de la médiathèque admin)
+        et qui n'est associé à aucun album. Cette vue publique affiche ces
+        fichiers comme des éléments standalone.
+
+        Returns:
+            Dict avec items, total, page, limit, pages.
+        """
+        # Sous-requête : médias déjà associés à au moins un album (à exclure)
+        media_in_albums = select(AlbumMedia.media_id).distinct()
+
+        base_query = (
+            select(Media)
+            .where(Media.url.like("/uploads/general/%"))
+            .where(Media.is_external_url.is_(False))
+            .where(Media.id.not_in(media_in_albums))
+        )
+
+        if search:
+            search_filter = f"%{search}%"
+            base_query = base_query.where(
+                or_(
+                    Media.name.ilike(search_filter),
+                    Media.description.ilike(search_filter),
+                    Media.alt_text.ilike(search_filter),
+                )
+            )
+
+        if media_type:
+            # Filtre par type : accepte une valeur d'enum MediaType
+            try:
+                parsed_type = MediaType(media_type)
+                base_query = base_query.where(Media.type == parsed_type)
+            except ValueError:
+                # Valeur non reconnue : renvoyer une liste vide plutôt que 500
+                base_query = base_query.where(Media.id == "__no_match__")
+
+        # Compter le total
+        count_query = select(func.count()).select_from(base_query.subquery())
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar() or 0
+
+        # Pagination
+        pages = max(1, (total + limit - 1) // limit)
+        offset = (page - 1) * limit
+
+        items_query = (
+            base_query
+            .order_by(Media.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await self.db.execute(items_query)
+        media_rows = result.scalars().unique().all()
+
+        return {
+            "items": list(media_rows),
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "pages": pages,
+        }
+
     async def get_album_by_slug(self, slug: str) -> Album | None:
         """Récupère un album publié par son slug avec ses médias."""
         result = await self.db.execute(

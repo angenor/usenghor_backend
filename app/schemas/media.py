@@ -212,6 +212,36 @@ class PublicAlbumListResponse(BaseModel):
     pages: int
 
 
+class PublicDirectMediaItem(BaseModel):
+    """Schéma pour un média direct (hors album) dans le listing public."""
+
+    id: str
+    name: str
+    description: str | None
+    type: MediaType
+    url: str
+    mime_type: str | None
+    size_bytes: int | None
+    width: int | None
+    height: int | None
+    duration_seconds: int | None
+    alt_text: str | None
+    credits: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PublicDirectMediaListResponse(BaseModel):
+    """Réponse paginée pour le listing public des fichiers directs (hors album)."""
+
+    items: list[PublicDirectMediaItem]
+    total: int
+    page: int
+    limit: int
+    pages: int
+
+
 class AlbumMediaAdd(BaseModel):
     """Schéma pour ajouter des médias à un album."""
 
