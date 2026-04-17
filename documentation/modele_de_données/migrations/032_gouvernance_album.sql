@@ -31,24 +31,35 @@ WITH upsert_album AS (
 SELECT id INTO TEMP TABLE _governance_album_id FROM upsert_album;
 
 -- 3. Extraction des documents depuis editorial_contents
+--    Déduplication par `url` : si la source contient plusieurs entrées avec la
+--    même URL (artefact d'édition), on garde celle avec le plus petit
+--    display_order (sort_order si défini, sinon position dans le tableau).
+--    Indispensable pour éviter `ON CONFLICT DO UPDATE command cannot affect
+--    row a second time` sur album_media (album_id, media_id).
 CREATE TEMP TABLE _source_docs AS
-SELECT
-  (elem->>'title_fr')::TEXT                                            AS name,
-  NULLIF(elem->>'description_fr','')                                   AS description,
-  (elem->>'file_url')::TEXT                                            AS url,
-  NULLIF(elem->>'file_size','')::BIGINT                                AS size_bytes,
-  NULLIF(elem->>'cover_image','')                                      AS thumbnail_url,
-  NULLIF(elem->>'year','')                                             AS credits,
-  COALESCE(
-    NULLIF(elem->>'sort_order','')::INT,
-    (row_number() OVER ())::INT - 1
-  )                                                                    AS display_order
-FROM editorial_contents ec,
-     jsonb_array_elements(ec.value::jsonb) AS elem
-WHERE ec.key = 'governance.foundingTexts.documents'
-  AND ec.value_type = 'json'
-  AND elem->>'file_url' IS NOT NULL
-  AND elem->>'file_url' <> '';
+WITH expanded AS (
+  SELECT
+    (elem->>'title_fr')::TEXT                                            AS name,
+    NULLIF(elem->>'description_fr','')                                   AS description,
+    (elem->>'file_url')::TEXT                                            AS url,
+    NULLIF(elem->>'file_size','')::BIGINT                                AS size_bytes,
+    NULLIF(elem->>'cover_image','')                                      AS thumbnail_url,
+    NULLIF(elem->>'year','')                                             AS credits,
+    COALESCE(
+      NULLIF(elem->>'sort_order','')::INT,
+      (row_number() OVER ())::INT - 1
+    )                                                                    AS display_order
+  FROM editorial_contents ec,
+       jsonb_array_elements(ec.value::jsonb) AS elem
+  WHERE ec.key = 'governance.foundingTexts.documents'
+    AND ec.value_type = 'json'
+    AND elem->>'file_url' IS NOT NULL
+    AND elem->>'file_url' <> ''
+)
+SELECT DISTINCT ON (url)
+  name, description, url, size_bytes, thumbnail_url, credits, display_order
+FROM expanded
+ORDER BY url, display_order ASC NULLS LAST;
 
 -- 4. Insertion des médias absents (idempotence par url)
 WITH inserted AS (
