@@ -25,6 +25,11 @@ class MediaBase(BaseModel):
     description: str | None = Field(None, description="Description")
     alt_text: str | None = Field(None, max_length=255, description="Texte alternatif")
     credits: str | None = Field(None, max_length=255, description="Crédits")
+    thumbnail_url: str | None = Field(
+        None,
+        max_length=500,
+        description="URL de la vignette / couverture",
+    )
 
 
 class MediaCreate(MediaBase):
@@ -47,6 +52,7 @@ class MediaUpdate(BaseModel):
     description: str | None = None
     alt_text: str | None = Field(None, max_length=255)
     credits: str | None = Field(None, max_length=255)
+    thumbnail_url: str | None = Field(None, max_length=500)
 
 
 class MediaRead(MediaBase):
@@ -103,6 +109,11 @@ class MediaExternalCreate(BaseModel):
     description: str | None = Field(None, description="Description")
     alt_text: str | None = Field(None, max_length=255, description="Texte alternatif")
     credits: str | None = Field(None, max_length=255, description="Crédits")
+    thumbnail_url: str | None = Field(
+        None,
+        max_length=500,
+        description="URL de la vignette / couverture",
+    )
 
 
 class MediaUsageItem(BaseModel):
@@ -179,6 +190,7 @@ class CoverMedia(BaseModel):
 
     id: str
     url: str
+    thumbnail_url: str | None = None
     type: MediaType
     name: str
 

@@ -24,6 +24,7 @@ class Media(Base, UUIDMixin, TimestampMixin):
         nullable=False,
     )
     url: Mapped[str] = mapped_column(String(500), nullable=False)
+    thumbnail_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_external_url: Mapped[bool] = mapped_column(Boolean, default=False)
     size_bytes: Mapped[int | None] = mapped_column(BigInteger)
     mime_type: Mapped[str | None] = mapped_column(String(100))

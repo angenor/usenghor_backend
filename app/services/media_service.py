@@ -596,12 +596,16 @@ class MediaService:
         items = []
         for album in albums:
             media_items = album.media_items or []
-            # Récupérer les médias triés par display_order
+            # Récupérer les médias triés par display_order ASC (NULLS LAST)
+            # puis created_at ASC pour départager
             ordered_media_result = await self.db.execute(
                 select(Media)
                 .join(AlbumMedia, AlbumMedia.media_id == Media.id)
                 .where(AlbumMedia.album_id == album.id)
-                .order_by(AlbumMedia.display_order.asc())
+                .order_by(
+                    AlbumMedia.display_order.asc().nulls_last(),
+                    Media.created_at.asc(),
+                )
                 .limit(1)
             )
             cover = ordered_media_result.scalar_one_or_none()
@@ -621,6 +625,7 @@ class MediaService:
                 "cover_media": {
                     "id": cover.id,
                     "url": cover.url,
+                    "thumbnail_url": cover.thumbnail_url,
                     "type": cover.type,
                     "name": cover.name,
                 } if cover else None,
@@ -708,14 +713,33 @@ class MediaService:
         }
 
     async def get_album_by_slug(self, slug: str) -> Album | None:
-        """Récupère un album publié par son slug avec ses médias."""
+        """
+        Récupère un album publié par son slug avec ses médias.
+
+        Les `media_items` sont retournés triés par `display_order ASC NULLS LAST`,
+        puis `created_at ASC` (FR-014 : ordre stable côté public).
+        """
         result = await self.db.execute(
             select(Album)
-            .options(selectinload(Album.media_items))
             .where(Album.slug == slug)
             .where(Album.status == PublicationStatus.PUBLISHED)
         )
-        return result.scalar_one_or_none()
+        album = result.scalar_one_or_none()
+        if album is None:
+            return None
+
+        # Charger les médias triés par display_order
+        ordered_media_result = await self.db.execute(
+            select(Media)
+            .join(AlbumMedia, AlbumMedia.media_id == Media.id)
+            .where(AlbumMedia.album_id == album.id)
+            .order_by(
+                AlbumMedia.display_order.asc().nulls_last(),
+                Media.created_at.asc(),
+            )
+        )
+        album.media_items = list(ordered_media_result.scalars().all())
+        return album
 
     async def get_albums(
         self,

@@ -19,6 +19,7 @@ CREATE TABLE media (
     description TEXT,
     type media_type NOT NULL,
     url VARCHAR(500) NOT NULL,
+    thumbnail_url VARCHAR(500), -- URL de la vignette / couverture, utile pour documents et vidéos
     is_external_url BOOLEAN DEFAULT FALSE,
     size_bytes BIGINT,
     mime_type VARCHAR(100),
