@@ -721,6 +721,7 @@ class MediaService:
         """
         result = await self.db.execute(
             select(Album)
+            .options(selectinload(Album.media_items))
             .where(Album.slug == slug)
             .where(Album.status == PublicationStatus.PUBLISHED)
         )
@@ -728,17 +729,21 @@ class MediaService:
         if album is None:
             return None
 
-        # Charger les médias triés par display_order
-        ordered_media_result = await self.db.execute(
-            select(Media)
-            .join(AlbumMedia, AlbumMedia.media_id == Media.id)
+        # Récupérer le mapping media_id -> display_order pour trier côté Python
+        order_rows = await self.db.execute(
+            select(AlbumMedia.media_id, AlbumMedia.display_order)
             .where(AlbumMedia.album_id == album.id)
-            .order_by(
-                AlbumMedia.display_order.asc().nulls_last(),
-                Media.created_at.asc(),
-            )
         )
-        album.media_items = list(ordered_media_result.scalars().all())
+        order_by_media: dict[str, int | None] = {
+            row[0]: row[1] for row in order_rows.all()
+        }
+
+        def _sort_key(media: Media) -> tuple:
+            order = order_by_media.get(media.id)
+            # display_order NULL → en fin de liste (NULLS LAST)
+            return (order is None, order if order is not None else 0, media.created_at)
+
+        album.media_items.sort(key=_sort_key)
         return album
 
     async def get_albums(
