@@ -78,9 +78,21 @@ INSERT INTO permissions (code, name_fr, category) VALUES
 ('newsletter.view', 'Voir les newsletters', 'newsletter'),
 ('newsletter.create', 'Créer des newsletters', 'newsletter'),
 ('newsletter.send', 'Envoyer des newsletters', 'newsletter'),
+-- Gestion de la FAQ
+('faq.view', 'Voir la FAQ', 'faq'),
+('faq.create', 'Créer des questions FAQ', 'faq'),
+('faq.edit', 'Modifier des questions FAQ', 'faq'),
+('faq.delete', 'Supprimer des questions FAQ', 'faq'),
 -- Administration
 ('admin.settings', 'Gérer les paramètres', 'admin'),
 ('admin.audit', 'Voir les logs d''audit', 'admin');
+
+-- ============================================================================
+-- [FAQ] Catégorie par défaut « Général »
+-- ============================================================================
+INSERT INTO faq_categories (code, label_fr, label_en, label_ar, display_order, is_active)
+VALUES ('general', 'Général', 'General', 'عام', 0, TRUE)
+ON CONFLICT (code) DO NOTHING;
 
 -- ============================================================================
 -- Attribution de toutes les permissions au super_admin

@@ -19,6 +19,7 @@ from app.routers.admin import (
     email,
     event_registrations,
     events,
+    faq,
     fundraisers,
     institutional_projects,
     media,
@@ -76,5 +77,6 @@ router.include_router(fundraisers.router)
 router.include_router(institutional_projects.router)
 router.include_router(surveys.router)
 router.include_router(short_links.router)
+router.include_router(faq.router)
 
 __all__ = ["router"]

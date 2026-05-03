@@ -94,6 +94,7 @@ from app.models.editorial import (
     EditorialContentHistory,
     EditorialValueType,
 )
+from app.models.faq import FaqCategory, FaqEntry
 from app.models.short_links import AllowedDomain, ShortLink
 from app.models.project import (
     Project,
@@ -196,6 +197,9 @@ __all__ = [
     "EditorialCategory",
     "EditorialContent",
     "EditorialContentHistory",
+    # FAQ
+    "FaqCategory",
+    "FaqEntry",
     # Short Links
     "ShortLink",
     "AllowedDomain",

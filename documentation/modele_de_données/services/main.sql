@@ -99,6 +99,9 @@
 \echo '[16/19] Service SHORT_LINKS (réducteur de liens)...'
 \i 13_short_links.sql
 
+\echo '[17/20] Service FAQ (questions/réponses publiques)...'
+\i 15_faq.sql
+
 -- Fonctions, triggers et données
 \echo '[16/18] Fonctions et triggers...'
 \i 99_functions.sql
