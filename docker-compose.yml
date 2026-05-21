@@ -41,4 +41,5 @@ volumes:
 
 networks:
   usenghor_network:
+    name: usenghor_network
     driver: bridge
