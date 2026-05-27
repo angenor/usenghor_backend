@@ -8,6 +8,7 @@ Endpoints CRUD pour la gestion des candidatures.
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import StreamingResponse
 
 from app.core.dependencies import CurrentUser, DbSession, PermissionChecker
 from app.core.exceptions import NotFoundException
@@ -30,6 +31,7 @@ from app.schemas.application import (
     ExtendedApplicationStatistics,
 )
 from app.schemas.common import IdResponse, MessageResponse
+from app.services.application_export import ApplicationExportService
 from app.services.application_service import ApplicationService
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
@@ -100,6 +102,40 @@ async def get_extended_statistics(
         granularity=granularity,
     )
     return ExtendedApplicationStatistics(**stats)
+
+
+@router.get("/export", response_class=StreamingResponse)
+async def export_applications(
+    db: DbSession,
+    current_user: CurrentUser,
+    search: str | None = Query(None, description="Recherche sur nom, prénom, email ou référence"),
+    call_id: str | None = Query(None, description="Filtrer par appel"),
+    status: SubmittedApplicationStatus | None = Query(None, description="Filtrer par statut"),
+    program_id: str | None = Query(None, description="Filtrer par programme"),
+    ids: str | None = Query(None, description="Identifiants séparés par des virgules (sélection)"),
+    _: bool = Depends(PermissionChecker("applications.view")),
+) -> StreamingResponse:
+    """Exporte les candidatures en archive ZIP (un dossier par candidat).
+
+    Chaque dossier contient les documents soumis ainsi qu'un fichier Excel
+    récapitulant les informations du candidat.
+    """
+    id_list = [i.strip() for i in ids.split(",") if i.strip()] if ids else None
+
+    export_service = ApplicationExportService(db)
+    zip_buffer, filename = await export_service.build_zip(
+        search=search,
+        call_id=call_id,
+        status=status,
+        program_id=program_id,
+        ids=id_list,
+    )
+
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @router.get("/{application_id}", response_model=ApplicationWithDetails)
