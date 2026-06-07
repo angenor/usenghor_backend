@@ -26,6 +26,15 @@ CREATE TABLE events (
     description TEXT,
     content_html TEXT, -- Contenu riche (HTML pour affichage public)
     content_md TEXT,   -- Contenu riche (Markdown pour edition)
+    -- Traductions automatiques FR → EN/AR (convention additive, NULL par défaut)
+    title_en VARCHAR(255),
+    title_ar VARCHAR(255),
+    description_en TEXT,
+    description_ar TEXT,
+    content_en_html TEXT,
+    content_en_md TEXT,
+    content_ar_html TEXT,
+    content_ar_md TEXT,
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
     country_external_id UUID,      -- → CORE.countries.id
@@ -101,6 +110,11 @@ CREATE TABLE tags (
     slug VARCHAR(100) UNIQUE NOT NULL,
     icon VARCHAR(50),
     description TEXT,
+    -- Traductions automatiques FR → EN/AR (convention additive, NULL par défaut)
+    name_en VARCHAR(100),
+    name_ar VARCHAR(100),
+    description_en TEXT,
+    description_ar TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -112,6 +126,15 @@ CREATE TABLE news (
     summary TEXT,
     content_html TEXT, -- Contenu riche (HTML pour affichage public)
     content_md TEXT,   -- Contenu riche (Markdown pour edition)
+    -- Traductions automatiques FR → EN/AR (convention additive, NULL par défaut)
+    title_en VARCHAR(255),
+    title_ar VARCHAR(255),
+    summary_en TEXT,
+    summary_ar TEXT,
+    content_en_html TEXT,
+    content_en_md TEXT,
+    content_ar_html TEXT,
+    content_ar_md TEXT,
     video_url VARCHAR(500),
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
