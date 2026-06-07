@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     # Frontend
     frontend_url: str = "http://localhost:3000"
 
+    # Traduction automatique (deep-translator / Google web endpoint)
+    auto_translate_enabled: bool = True
+    auto_translate_source: str = "fr"
+
     # Email
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587

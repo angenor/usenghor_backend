@@ -32,11 +32,18 @@ from app.schemas.faq import (
     FaqEntryPublic,
     FaqEntryPublishStatus,
     FaqEntryUpdate,
+    FaqTranslateRequest,
+    FaqTranslateResponse,
     FaqTreePublic,
     ReorderResponse,
 )
 from app.services.faq_slug import generate_slug
 from app.services.identity_service import IdentityService
+from app.services.translation_service import (
+    SUPPORTED_TARGETS,
+    translate_html,
+    translate_text,
+)
 
 
 def _coalesce(*values: str | None) -> str:
@@ -224,6 +231,73 @@ class FaqService:
             ip_address=ip_address,
             user_agent=user_agent,
         )
+
+    # ------------------------------------------------------------------
+    # Traduction automatique (FR -> EN/AR)
+    # ------------------------------------------------------------------
+
+    async def _autofill_entry_translations(
+        self, entry: FaqEntry, *, force: bool = False
+    ) -> None:
+        """
+        Remplit les champs EN/AR d'une entrée à partir du FR.
+
+        Par défaut, ne touche que les champs **vides** (les corrections manuelles
+        sont préservées). Avec ``force=True``, retraduit tous les champs.
+        N'échoue jamais : une traduction indisponible laisse le champ tel quel.
+        """
+        for lang in SUPPORTED_TARGETS:
+            # Question (texte court)
+            q_attr = f"question_{lang}"
+            if (force or not getattr(entry, q_attr)) and entry.question_fr:
+                translated = await translate_text(entry.question_fr, lang)
+                if translated:
+                    setattr(entry, q_attr, translated)
+
+            # Réponse — HTML (rendu public, balises préservées)
+            html_attr = f"answer_{lang}_html"
+            if (force or not getattr(entry, html_attr)) and entry.answer_fr_html:
+                translated_html = await translate_html(entry.answer_fr_html, lang)
+                if translated_html:
+                    setattr(entry, html_attr, translated_html)
+
+            # Réponse — Markdown (source d'édition)
+            md_attr = f"answer_{lang}_md"
+            if (force or not getattr(entry, md_attr)) and entry.answer_fr_md:
+                translated_md = await translate_text(entry.answer_fr_md, lang)
+                if translated_md:
+                    setattr(entry, md_attr, translated_md)
+
+    async def translate_fields(
+        self, data: FaqTranslateRequest
+    ) -> FaqTranslateResponse:
+        """
+        Traduit des champs FR -> EN/AR sans persistance.
+
+        Utilisé par le bouton « Traduire » du formulaire admin pour pré-remplir
+        (et laisser corriger) les champs EN/AR avant la sauvegarde.
+        """
+        response = FaqTranslateResponse()
+        for lang in SUPPORTED_TARGETS:
+            if data.question_fr:
+                setattr(
+                    response,
+                    f"question_{lang}",
+                    await translate_text(data.question_fr, lang),
+                )
+            if data.answer_fr_html:
+                setattr(
+                    response,
+                    f"answer_{lang}_html",
+                    await translate_html(data.answer_fr_html, lang),
+                )
+            if data.answer_fr_md:
+                setattr(
+                    response,
+                    f"answer_{lang}_md",
+                    await translate_text(data.answer_fr_md, lang),
+                )
+        return response
 
     # ------------------------------------------------------------------
     # Admin — Catégories
@@ -509,6 +583,8 @@ class FaqService:
             created_by=user_id,
             updated_by=user_id,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await self._autofill_entry_translations(entry)
         self.db.add(entry)
         await self.db.flush()
 
@@ -564,6 +640,10 @@ class FaqService:
             old[key] = getattr(entry, key)
             setattr(entry, key, value)
         entry.updated_by = user_id
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        # Les valeurs déjà saisies (corrections manuelles) sont préservées.
+        await self._autofill_entry_translations(entry)
 
         await self.db.flush()
 

@@ -207,3 +207,27 @@ class ReorderResponse(BaseModel):
 
 class PublishRequest(BaseModel):
     is_published: bool
+
+
+# ---------------------------------------------------------------------------
+# Traduction automatique (FR -> EN/AR)
+# ---------------------------------------------------------------------------
+
+
+class FaqTranslateRequest(BaseModel):
+    """Champs source FR à traduire (sans persistance)."""
+
+    question_fr: str | None = None
+    answer_fr_md: str | None = None
+    answer_fr_html: str | None = None
+
+
+class FaqTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    question_en: str | None = None
+    question_ar: str | None = None
+    answer_en_md: str | None = None
+    answer_en_html: str | None = None
+    answer_ar_md: str | None = None
+    answer_ar_html: str | None = None

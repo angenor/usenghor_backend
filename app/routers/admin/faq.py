@@ -21,6 +21,8 @@ from app.schemas.faq import (
     FaqEntryCreate,
     FaqEntryPublishStatus,
     FaqEntryUpdate,
+    FaqTranslateRequest,
+    FaqTranslateResponse,
     PublishRequest,
     ReorderResponse,
 )
@@ -175,6 +177,17 @@ async def reorder_entries(
     return await FaqService(db).reorder_entries(
         payload, user_id=current_user.id, ip_address=ip, user_agent=ua
     )
+
+
+@router.post("/entries/translate", response_model=FaqTranslateResponse)
+async def translate_entry_fields(
+    data: FaqTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("faq.view")),
+) -> FaqTranslateResponse:
+    """Traduit les champs FR -> EN/AR sans persistance (pré-remplissage du formulaire)."""
+    return await FaqService(db).translate_fields(data)
 
 
 @router.get("/entries/{entry_id}", response_model=FaqEntryAdminFull)
