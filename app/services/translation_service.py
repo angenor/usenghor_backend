@@ -68,7 +68,9 @@ def _translate_sync(text: str, target: str, source: str) -> str:
     parts = _chunk(text)
     if len(parts) == 1:
         return translator.translate(text)
-    return "".join(translator.translate(p) for p in parts)
+    # deep-translator peut renvoyer None sur un fragment intraduisible
+    # (ponctuation/nombre seul) → repli sur le fragment d'origine.
+    return "".join((translator.translate(p) or p) for p in parts)
 
 
 def _translate_batch_sync(texts: list[str], target: str, source: str) -> list[str]:
@@ -80,7 +82,10 @@ def _translate_batch_sync(texts: list[str], target: str, source: str) -> list[st
     for segment in texts:
         if _is_translatable(segment):
             chunks = _chunk(segment)
-            out.append("".join(translator.translate(c) for c in chunks))
+            # `translate(c)` peut renvoyer None (fragment intraduisible :
+            # ponctuation, nombre seul…) → repli sur le fragment d'origine
+            # pour ne pas faire échouer tout le bloc HTML.
+            out.append("".join((translator.translate(c) or c) for c in chunks))
         else:
             out.append(segment)
     return out
