@@ -166,3 +166,73 @@ async def translate_html(
     except Exception as exc:  # noqa: BLE001 - échec non bloquant volontaire
         logger.warning("Traduction HTML échouée (%s -> %s) : %s", source, target, exc)
         return None
+
+
+# ---------------------------------------------------------------------------
+# Remplissage automatique des champs traduits (convention additive)
+# ---------------------------------------------------------------------------
+# Helper réutilisable par tous les modules adoptant le nommage additif
+# (colonne FR existante + variantes ``_en`` / ``_ar``). Voir
+# MIGRATION_TRADUCTION_AUTO.md §2 et §3.4.
+
+
+def _lang_attr(base: str, lang: str) -> str:
+    """Nom de l'attribut traduit pour ``base`` et ``lang``.
+
+    Pour un champ rich text, le suffixe de langue s'insère **avant**
+    ``_html`` / ``_md`` :
+
+    - ``content_html`` -> ``content_en_html``
+    - ``content_md``   -> ``content_ar_md``
+
+    Pour un champ texte simple, suffixe direct :
+
+    - ``title`` -> ``title_en``
+    """
+    for suffix in ("_html", "_md"):
+        if base.endswith(suffix):
+            return f"{base[: -len(suffix)]}_{lang}{suffix}"
+    return f"{base}_{lang}"
+
+
+async def autofill_translations(
+    obj,
+    fields,
+    *,
+    force: bool = False,
+    langs: tuple[str, ...] = SUPPORTED_TARGETS,
+) -> None:
+    """Remplit en place les champs traduits ``_en`` / ``_ar`` d'un objet ORM.
+
+    Paramètres
+    ----------
+    obj
+        Instance (modèle SQLAlchemy ou autre) portant les attributs source FR
+        et les attributs cibles traduits.
+    fields
+        Liste de tuples ``(base_attr, kind)`` où ``kind`` ∈ ``{"text", "html"}``.
+        ``base_attr`` est l'attribut FR existant (ex. ``"content_html"``,
+        ``"title"``).
+    force
+        Si ``False`` (défaut), ne remplit que les champs cibles **vides** :
+        les corrections manuelles déjà saisies sont préservées. Si ``True``,
+        retraduit systématiquement depuis la source FR.
+    langs
+        Langues cibles (défaut : ``("en", "ar")``).
+
+    Comportement : **non bloquant**. ``translate_text`` / ``translate_html``
+    avalent leurs erreurs et renvoient ``None`` → en cas d'échec réseau ou de
+    fonctionnalité désactivée, le champ cible est simplement laissé tel quel et
+    la sauvegarde de l'appelant reste fonctionnelle (repli FR à la lecture).
+    """
+    for base, kind in fields:
+        src = getattr(obj, base, None)
+        if not _is_translatable(src):
+            continue
+        translate = translate_html if kind == "html" else translate_text
+        for lang in langs:
+            target = _lang_attr(base, lang)
+            if force or not getattr(obj, target, None):
+                value = await translate(src, lang)
+                if value:
+                    setattr(obj, target, value)
