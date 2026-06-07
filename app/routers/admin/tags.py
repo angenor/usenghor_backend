@@ -12,7 +12,14 @@ from app.core.exceptions import NotFoundException
 from app.core.pagination import PaginationParams, paginate
 from app.models.content import Tag
 from app.schemas.common import IdResponse, MessageResponse
-from app.schemas.content import TagCreate, TagMerge, TagRead, TagUpdate
+from app.schemas.content import (
+    TagCreate,
+    TagMerge,
+    TagRead,
+    TagTranslateRequest,
+    TagTranslateResponse,
+    TagUpdate,
+)
 from app.services.content_service import ContentService
 
 router = APIRouter(prefix="/tags", tags=["Tags"])
@@ -30,6 +37,18 @@ async def list_tags(
     service = ContentService(db)
     query = await service.get_tags(search=search)
     return await paginate(db, query, pagination, Tag, TagRead)
+
+
+# Route STATIQUE déclarée avant la route dynamique /{tag_id}.
+@router.post("/translate", response_model=TagTranslateResponse)
+async def translate_tag_fields(
+    data: TagTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("news.view")),
+) -> TagTranslateResponse:
+    """Traduit les champs FR → EN/AR sans persistance (pré-remplissage du formulaire)."""
+    return await ContentService(db).translate_tag_fields(data)
 
 
 @router.get("/{tag_id}", response_model=TagRead)
@@ -61,6 +80,10 @@ async def create_tag(
         slug=tag_data.slug,
         icon=tag_data.icon,
         description=tag_data.description,
+        name_en=tag_data.name_en,
+        name_ar=tag_data.name_ar,
+        description_en=tag_data.description_en,
+        description_ar=tag_data.description_ar,
     )
     return IdResponse(id=tag.id, message="Tag créé avec succès")
 

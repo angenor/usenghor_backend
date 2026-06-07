@@ -63,6 +63,11 @@ class Tag(Base, UUIDMixin):
     slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     icon: Mapped[str | None] = mapped_column(String(50))
     description: Mapped[str | None] = mapped_column(Text)
+    # Traductions automatiques FR → EN/AR (convention additive)
+    name_en: Mapped[str | None] = mapped_column(String(100))
+    name_ar: Mapped[str | None] = mapped_column(String(100))
+    description_en: Mapped[str | None] = mapped_column(Text)
+    description_ar: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default="now()", nullable=False
     )
@@ -83,6 +88,15 @@ class Event(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
     content_html: Mapped[str | None] = mapped_column(Text)
     content_md: Mapped[str | None] = mapped_column(Text)
+    # Traductions automatiques FR → EN/AR (convention additive)
+    title_en: Mapped[str | None] = mapped_column(String(255))
+    title_ar: Mapped[str | None] = mapped_column(String(255))
+    description_en: Mapped[str | None] = mapped_column(Text)
+    description_ar: Mapped[str | None] = mapped_column(Text)
+    content_en_html: Mapped[str | None] = mapped_column(Text)
+    content_en_md: Mapped[str | None] = mapped_column(Text)
+    content_ar_html: Mapped[str | None] = mapped_column(Text)
+    content_ar_md: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (pas de FK) - UUID pour correspondre au schéma SQL
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -211,6 +225,15 @@ class News(Base, UUIDMixin, TimestampMixin):
     summary: Mapped[str | None] = mapped_column(Text)
     content_html: Mapped[str | None] = mapped_column(Text)
     content_md: Mapped[str | None] = mapped_column(Text)
+    # Traductions automatiques FR → EN/AR (convention additive)
+    title_en: Mapped[str | None] = mapped_column(String(255))
+    title_ar: Mapped[str | None] = mapped_column(String(255))
+    summary_en: Mapped[str | None] = mapped_column(Text)
+    summary_ar: Mapped[str | None] = mapped_column(Text)
+    content_en_html: Mapped[str | None] = mapped_column(Text)
+    content_en_md: Mapped[str | None] = mapped_column(Text)
+    content_ar_html: Mapped[str | None] = mapped_column(Text)
+    content_ar_md: Mapped[str | None] = mapped_column(Text)
     video_url: Mapped[str | None] = mapped_column(String(500))
 
     # Références externes (pas de FK) - UUID pour correspondre au schéma SQL

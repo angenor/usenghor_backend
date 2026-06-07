@@ -22,6 +22,8 @@ from app.schemas.content import (
     EventCreate,
     EventRead,
     EventStatistics,
+    EventTranslateRequest,
+    EventTranslateResponse,
     EventUpdate,
     EventWithRegistrations,
 )
@@ -131,6 +133,18 @@ async def list_events(
     return await paginate(db, query, pagination, Event, schema_class=EventRead)
 
 
+# Route STATIQUE déclarée avant la route dynamique /{event_id}.
+@router.post("/translate", response_model=EventTranslateResponse)
+async def translate_event_fields(
+    data: EventTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("events.view")),
+) -> EventTranslateResponse:
+    """Traduit les champs FR → EN/AR sans persistance (pré-remplissage du formulaire)."""
+    return await ContentService(db).translate_event_fields(data)
+
+
 @router.get("/{event_id}", response_model=EventWithRegistrations)
 async def get_event(
     event_id: str,
@@ -169,6 +183,14 @@ async def create_event(
         description=event_data.description,
         content_html=event_data.content_html,
         content_md=event_data.content_md,
+        title_en=event_data.title_en,
+        title_ar=event_data.title_ar,
+        description_en=event_data.description_en,
+        description_ar=event_data.description_ar,
+        content_en_html=event_data.content_en_html,
+        content_en_md=event_data.content_en_md,
+        content_ar_html=event_data.content_ar_html,
+        content_ar_md=event_data.content_ar_md,
         type=event_data.type,
         type_other=event_data.type_other,
         start_date=event_data.start_date,

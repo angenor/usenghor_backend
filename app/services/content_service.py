@@ -6,6 +6,7 @@ Logique métier pour la gestion des actualités et événements.
 """
 
 from datetime import datetime
+from types import SimpleNamespace
 from uuid import uuid4
 
 from sqlalchemy import delete, func, or_, select, update
@@ -36,6 +37,37 @@ from app.models.identity import User
 from app.models.media import Album, AlbumMedia, Media
 from app.models.organization import Sector, Service
 from app.models.project import Project
+from app.schemas.content import (
+    EventTranslateRequest,
+    EventTranslateResponse,
+    NewsTranslateRequest,
+    NewsTranslateResponse,
+    TagTranslateRequest,
+    TagTranslateResponse,
+)
+from app.services.translation_service import (
+    SUPPORTED_TARGETS,
+    _lang_attr,
+    autofill_translations,
+    translate_html,
+    translate_text,
+)
+
+# Champs traduisibles par table (base_attr, kind) — convention additive (§3.4).
+# kind ∈ {"text", "html"} : "html" préserve les balises du rich text.
+_TAG_TRANSLATABLE = [("name", "text"), ("description", "text")]
+_NEWS_TRANSLATABLE = [
+    ("content_html", "html"),
+    ("content_md", "text"),
+    ("title", "text"),
+    ("summary", "text"),
+]
+_EVENT_TRANSLATABLE = [
+    ("content_html", "html"),
+    ("content_md", "text"),
+    ("title", "text"),
+    ("description", "text"),
+]
 
 
 def add_months(date: datetime, months: int) -> datetime:
@@ -54,6 +86,116 @@ class ContentService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    # =========================================================================
+    # TRADUCTION AUTO FR → EN/AR (convention additive — voir
+    # MIGRATION_TRADUCTION_AUTO.md §3.4/§3.5)
+    # =========================================================================
+
+    async def _autofill_into_kwargs(self, current, changes: dict, fields) -> None:
+        """Enrichit ``changes`` (kwargs d'un bulk UPDATE) avec les traductions
+        EN/AR des champs encore vides.
+
+        Les ``update_*`` utilisent ``update(...).values(**kwargs)`` (et NON une
+        mutation de l'objet ORM) : on construit donc un snapshot détaché (jamais
+        flushé) combinant l'état FR voulu (kwargs sinon valeur en base) et les
+        traductions déjà présentes, on réutilise ``autofill_translations``, puis
+        on reverse les nouvelles traductions dans ``changes``. Muter ``current``
+        (attaché) entrerait en conflit avec le bulk UPDATE.
+
+        ``current`` : objet ORM existant. ``changes`` : kwargs du PUT
+        (``model_dump(exclude_unset=True)``). ``fields`` : liste
+        ``(base_attr, kind)``.
+        """
+        snapshot = SimpleNamespace()
+        was_empty: dict[str, bool] = {}
+        for base, _ in fields:
+            setattr(snapshot, base, changes.get(base, getattr(current, base, None)))
+            for lang in SUPPORTED_TARGETS:
+                target = _lang_attr(base, lang)
+                existing = changes.get(target, getattr(current, target, None))
+                setattr(snapshot, target, existing)
+                was_empty[target] = not existing
+        await autofill_translations(snapshot, fields)
+        for base, _ in fields:
+            for lang in SUPPORTED_TARGETS:
+                target = _lang_attr(base, lang)
+                value = getattr(snapshot, target, None)
+                # On ne touche au bulk UPDATE que pour les traductions NOUVELLEMENT
+                # remplies : les valeurs déjà présentes (en base ou fournies par
+                # l'admin) ne sont pas réécrites.
+                if value and was_empty[target]:
+                    changes[target] = value
+
+    async def translate_tag_fields(
+        self, data: TagTranslateRequest
+    ) -> TagTranslateResponse:
+        """Traduit les champs FR d'un tag en EN/AR (sans persistance)."""
+        response = TagTranslateResponse()
+        for lang in SUPPORTED_TARGETS:
+            if data.name:
+                setattr(response, f"name_{lang}", await translate_text(data.name, lang))
+            if data.description:
+                setattr(
+                    response,
+                    f"description_{lang}",
+                    await translate_text(data.description, lang),
+                )
+        return response
+
+    async def translate_news_fields(
+        self, data: NewsTranslateRequest
+    ) -> NewsTranslateResponse:
+        """Traduit les champs FR d'une actualité en EN/AR (sans persistance)."""
+        response = NewsTranslateResponse()
+        for lang in SUPPORTED_TARGETS:
+            if data.title:
+                setattr(response, f"title_{lang}", await translate_text(data.title, lang))
+            if data.summary:
+                setattr(
+                    response, f"summary_{lang}", await translate_text(data.summary, lang)
+                )
+            if data.content_html:
+                setattr(
+                    response,
+                    f"content_{lang}_html",
+                    await translate_html(data.content_html, lang),
+                )
+            if data.content_md:
+                setattr(
+                    response,
+                    f"content_{lang}_md",
+                    await translate_text(data.content_md, lang),
+                )
+        return response
+
+    async def translate_event_fields(
+        self, data: EventTranslateRequest
+    ) -> EventTranslateResponse:
+        """Traduit les champs FR d'un événement en EN/AR (sans persistance)."""
+        response = EventTranslateResponse()
+        for lang in SUPPORTED_TARGETS:
+            if data.title:
+                setattr(response, f"title_{lang}", await translate_text(data.title, lang))
+            if data.description:
+                setattr(
+                    response,
+                    f"description_{lang}",
+                    await translate_text(data.description, lang),
+                )
+            if data.content_html:
+                setattr(
+                    response,
+                    f"content_{lang}_html",
+                    await translate_html(data.content_html, lang),
+                )
+            if data.content_md:
+                setattr(
+                    response,
+                    f"content_{lang}_md",
+                    await translate_text(data.content_md, lang),
+                )
+        return response
 
     # =========================================================================
     # TAGS
@@ -97,6 +239,8 @@ class ContentService:
             raise ConflictException(f"Un tag avec le nom '{name}' existe déjà")
 
         tag = Tag(id=str(uuid4()), name=name, slug=slug, **kwargs)
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(tag, _TAG_TRANSLATABLE)
         self.db.add(tag)
         await self.db.flush()
         return tag
@@ -123,6 +267,9 @@ class ContentService:
                 raise ConflictException(
                     f"Un tag avec le nom '{kwargs['name']}' existe déjà"
                 )
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(tag, kwargs, _TAG_TRANSLATABLE)
 
         await self.db.execute(update(Tag).where(Tag.id == tag_id).values(**kwargs))
         await self.db.flush()
@@ -243,6 +390,8 @@ class ContentService:
             raise ConflictException(f"Un événement avec le slug '{slug}' existe déjà")
 
         event = Event(id=str(uuid4()), title=title, slug=slug, **kwargs)
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(event, _EVENT_TRANSLATABLE)
         self.db.add(event)
         await self.db.flush()
         return event
@@ -259,6 +408,9 @@ class ContentService:
                 raise ConflictException(
                     f"Un événement avec le slug '{kwargs['slug']}' existe déjà"
                 )
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(event, kwargs, _EVENT_TRANSLATABLE)
 
         await self.db.execute(
             update(Event).where(Event.id == event_id).values(**kwargs)
@@ -320,6 +472,14 @@ class ContentService:
             description=event.description,
             content_html=event.content_html,
             content_md=event.content_md,
+            title_en=event.title_en,
+            title_ar=event.title_ar,
+            description_en=event.description_en,
+            description_ar=event.description_ar,
+            content_en_html=event.content_en_html,
+            content_en_md=event.content_en_md,
+            content_ar_html=event.content_ar_html,
+            content_ar_md=event.content_ar_md,
             type=event.type,
             type_other=event.type_other,
             start_date=event.start_date,
@@ -645,6 +805,10 @@ class ContentService:
                     "slug": tag.slug,
                     "icon": tag.icon,
                     "description": tag.description,
+                    "name_en": tag.name_en,
+                    "name_ar": tag.name_ar,
+                    "description_en": tag.description_en,
+                    "description_ar": tag.description_ar,
                     "created_at": tag.created_at,
                 }
                 for tag in news.tags
@@ -657,6 +821,14 @@ class ContentService:
                 "summary": news.summary,
                 "content_html": news.content_html,
                 "content_md": news.content_md,
+                "title_en": news.title_en,
+                "title_ar": news.title_ar,
+                "summary_en": news.summary_en,
+                "summary_ar": news.summary_ar,
+                "content_en_html": news.content_en_html,
+                "content_en_md": news.content_en_md,
+                "content_ar_html": news.content_ar_html,
+                "content_ar_md": news.content_ar_md,
                 "video_url": news.video_url,
                 "highlight_status": news.highlight_status,
                 "cover_image_external_id": news.cover_image_external_id,
@@ -725,6 +897,8 @@ class ContentService:
             raise ConflictException(f"Une actualité avec le slug '{slug}' existe déjà")
 
         news = News(id=str(uuid4()), title=title, slug=slug, **kwargs)
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(news, _NEWS_TRANSLATABLE)
         self.db.add(news)
         await self.db.flush()
 
@@ -768,6 +942,9 @@ class ContentService:
                 raise ConflictException(
                     f"Une actualité avec le slug '{kwargs['slug']}' existe déjà"
                 )
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(news, kwargs, _NEWS_TRANSLATABLE)
 
         if kwargs:
             await self.db.execute(
@@ -857,6 +1034,14 @@ class ContentService:
             summary=news.summary,
             content_html=news.content_html,
             content_md=news.content_md,
+            title_en=news.title_en,
+            title_ar=news.title_ar,
+            summary_en=news.summary_en,
+            summary_ar=news.summary_ar,
+            content_en_html=news.content_en_html,
+            content_en_md=news.content_en_md,
+            content_ar_html=news.content_ar_html,
+            content_ar_md=news.content_ar_md,
             video_url=news.video_url,
             cover_image_external_id=news.cover_image_external_id,
             sector_external_id=news.sector_external_id,

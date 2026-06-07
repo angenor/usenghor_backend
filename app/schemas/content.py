@@ -30,6 +30,11 @@ class TagBase(BaseModel):
     slug: str = Field(..., min_length=1, max_length=100, description="Slug URL")
     icon: str | None = Field(None, max_length=50, description="Icône du tag")
     description: str | None = Field(None, description="Description du tag")
+    # Traductions automatiques FR → EN/AR (convention additive)
+    name_en: str | None = Field(None, max_length=100, description="Nom (EN)")
+    name_ar: str | None = Field(None, max_length=100, description="Nom (AR)")
+    description_en: str | None = Field(None, description="Description (EN)")
+    description_ar: str | None = Field(None, description="Description (AR)")
 
 
 class TagCreate(TagBase):
@@ -45,6 +50,11 @@ class TagUpdate(BaseModel):
     slug: str | None = Field(None, min_length=1, max_length=100)
     icon: str | None = Field(None, max_length=50)
     description: str | None = None
+    # Traductions automatiques FR → EN/AR (convention additive)
+    name_en: str | None = Field(None, max_length=100)
+    name_ar: str | None = Field(None, max_length=100)
+    description_en: str | None = None
+    description_ar: str | None = None
 
 
 class TagRead(TagBase):
@@ -61,6 +71,22 @@ class TagMerge(BaseModel):
 
     source_tag_ids: list[str] = Field(..., min_length=1, description="Tags à fusionner")
     target_tag_id: str = Field(..., description="Tag cible")
+
+
+class TagTranslateRequest(BaseModel):
+    """Champs source FR d'un tag à traduire (sans persistance)."""
+
+    name: str | None = None
+    description: str | None = None
+
+
+class TagTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
 
 
 # =============================================================================
@@ -135,6 +161,16 @@ class EventBase(BaseModel):
     content_html: str | None = Field(None, description="Contenu riche (HTML)")
     content_md: str | None = Field(None, description="Contenu riche (Markdown)")
 
+    # Traductions automatiques FR → EN/AR (convention additive)
+    title_en: str | None = Field(None, max_length=255)
+    title_ar: str | None = Field(None, max_length=255)
+    description_en: str | None = None
+    description_ar: str | None = None
+    content_en_html: str | None = None
+    content_en_md: str | None = None
+    content_ar_html: str | None = None
+    content_ar_md: str | None = None
+
     type: EventType = Field(..., description="Type d'événement")
     type_other: str | None = Field(None, max_length=100, description="Type personnalisé")
 
@@ -185,6 +221,16 @@ class EventUpdate(BaseModel):
         return _PROBLEMATIC_CHARS_RE.sub(' ', v).strip()
     content_html: str | None = None
     content_md: str | None = None
+
+    # Traductions automatiques FR → EN/AR (convention additive)
+    title_en: str | None = Field(None, max_length=255)
+    title_ar: str | None = Field(None, max_length=255)
+    description_en: str | None = None
+    description_ar: str | None = None
+    content_en_html: str | None = None
+    content_en_md: str | None = None
+    content_ar_html: str | None = None
+    content_ar_md: str | None = None
 
     type: EventType | None = None
     type_other: str | None = Field(None, max_length=100)
@@ -250,6 +296,15 @@ class EventPublic(BaseModel):
     description: str | None
     content_html: str | None
     content_md: str | None
+    # Traductions automatiques FR → EN/AR (convention additive)
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
+    content_en_html: str | None = None
+    content_en_md: str | None = None
+    content_ar_html: str | None = None
+    content_ar_md: str | None = None
     type: EventType
     type_other: str | None
     start_date: datetime
@@ -265,6 +320,28 @@ class EventPublic(BaseModel):
     cover_image_external_id: str | None
 
     model_config = {"from_attributes": True}
+
+
+class EventTranslateRequest(BaseModel):
+    """Champs source FR d'un événement à traduire (sans persistance)."""
+
+    title: str | None = None
+    description: str | None = None
+    content_html: str | None = None
+    content_md: str | None = None
+
+
+class EventTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
+    content_en_html: str | None = None
+    content_en_md: str | None = None
+    content_ar_html: str | None = None
+    content_ar_md: str | None = None
 
 
 # =============================================================================
@@ -288,6 +365,15 @@ class NewsBase(BaseModel):
         return _PROBLEMATIC_CHARS_RE.sub(' ', v).strip()
     content_html: str | None = Field(None, description="Contenu riche (HTML)")
     content_md: str | None = Field(None, description="Contenu riche (Markdown)")
+    # Traductions automatiques FR → EN/AR (convention additive)
+    title_en: str | None = Field(None, max_length=255)
+    title_ar: str | None = Field(None, max_length=255)
+    summary_en: str | None = None
+    summary_ar: str | None = None
+    content_en_html: str | None = None
+    content_en_md: str | None = None
+    content_ar_html: str | None = None
+    content_ar_md: str | None = None
     video_url: str | None = Field(None, max_length=500, description="URL vidéo")
     highlight_status: NewsHighlightStatus = Field(
         NewsHighlightStatus.STANDARD, description="Mise en avant"
@@ -328,6 +414,15 @@ class NewsUpdate(BaseModel):
         return _PROBLEMATIC_CHARS_RE.sub(' ', v).strip()
     content_html: str | None = None
     content_md: str | None = None
+    # Traductions automatiques FR → EN/AR (convention additive)
+    title_en: str | None = Field(None, max_length=255)
+    title_ar: str | None = Field(None, max_length=255)
+    summary_en: str | None = None
+    summary_ar: str | None = None
+    content_en_html: str | None = None
+    content_en_md: str | None = None
+    content_ar_html: str | None = None
+    content_ar_md: str | None = None
     video_url: str | None = Field(None, max_length=500)
     highlight_status: NewsHighlightStatus | None = None
 
@@ -396,6 +491,15 @@ class NewsPublic(BaseModel):
     summary: str | None
     content_html: str | None
     content_md: str | None
+    # Traductions automatiques FR → EN/AR (convention additive)
+    title_en: str | None = None
+    title_ar: str | None = None
+    summary_en: str | None = None
+    summary_ar: str | None = None
+    content_en_html: str | None = None
+    content_en_md: str | None = None
+    content_ar_html: str | None = None
+    content_ar_md: str | None = None
     video_url: str | None
     cover_image_external_id: str | None
     highlight_status: NewsHighlightStatus
@@ -403,6 +507,28 @@ class NewsPublic(BaseModel):
     tags: list[TagRead] = []
 
     model_config = {"from_attributes": True}
+
+
+class NewsTranslateRequest(BaseModel):
+    """Champs source FR d'une actualité à traduire (sans persistance)."""
+
+    title: str | None = None
+    summary: str | None = None
+    content_html: str | None = None
+    content_md: str | None = None
+
+
+class NewsTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    title_en: str | None = None
+    title_ar: str | None = None
+    summary_en: str | None = None
+    summary_ar: str | None = None
+    content_en_html: str | None = None
+    content_en_md: str | None = None
+    content_ar_html: str | None = None
+    content_ar_md: str | None = None
 
 
 class NewsPublish(BaseModel):

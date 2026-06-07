@@ -23,6 +23,8 @@ from app.schemas.content import (
     NewsPublish,
     NewsRead,
     NewsStatistics,
+    NewsTranslateRequest,
+    NewsTranslateResponse,
     NewsUpdate,
     NewsWithTags,
 )
@@ -138,6 +140,18 @@ async def list_news(
     return await paginate(db, query, pagination, News, NewsWithTags)
 
 
+# Route STATIQUE déclarée avant la route dynamique /{news_id}.
+@router.post("/translate", response_model=NewsTranslateResponse)
+async def translate_news_fields(
+    data: NewsTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("news.view")),
+) -> NewsTranslateResponse:
+    """Traduit les champs FR → EN/AR sans persistance (pré-remplissage du formulaire)."""
+    return await ContentService(db).translate_news_fields(data)
+
+
 @router.get("/{news_id}", response_model=NewsWithTags)
 async def get_news(
     news_id: str,
@@ -168,6 +182,14 @@ async def create_news(
         summary=news_data.summary,
         content_html=news_data.content_html,
         content_md=news_data.content_md,
+        title_en=news_data.title_en,
+        title_ar=news_data.title_ar,
+        summary_en=news_data.summary_en,
+        summary_ar=news_data.summary_ar,
+        content_en_html=news_data.content_en_html,
+        content_en_md=news_data.content_en_md,
+        content_ar_html=news_data.content_ar_html,
+        content_ar_md=news_data.content_ar_md,
         video_url=news_data.video_url,
         highlight_status=news_data.highlight_status,
         cover_image_external_id=news_data.cover_image_external_id,
