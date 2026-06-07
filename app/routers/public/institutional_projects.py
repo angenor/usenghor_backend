@@ -12,6 +12,7 @@ from app.core.exceptions import NotFoundException
 from app.core.pagination import PaginationParams, paginate
 from app.models.organization import ProjectStatus
 from app.models.project import Project, ProjectCallStatus
+from app.schemas.partner import PartnerPublic
 from app.schemas.project import (
     ProjectCallRead,
     ProjectCategoryRead,
@@ -69,6 +70,20 @@ async def list_fundraising_featured_projects(
     """
     service = ProjectService(db)
     return await service.get_fundraising_featured_projects(limit=limit)
+
+
+@router.get("/partners", response_model=list[PartnerPublic])
+async def list_all_projects_partners(
+    db: DbSession,
+) -> list:
+    """
+    Liste les partenaires distincts associés à l'ensemble des projets publiés.
+
+    Agrège les partenaires de tous les projets (table project_partners) en
+    supprimant les doublons. Seuls les partenaires actifs sont retournés.
+    """
+    service = ProjectService(db)
+    return await service.get_all_projects_partners()
 
 
 @router.get("/by-slug/{slug}", response_model=ProjectReadWithRelations)

@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 from app.core.exceptions import ConflictException, NotFoundException
 from app.models.base import PublicationStatus
 from app.models.organization import ProjectStatus
+from app.models.partner import Partner
 from app.models.project import (
     Project,
     ProjectCall,
@@ -413,6 +414,22 @@ class ProjectService:
         result = await self.db.execute(
             select(ProjectPartner).where(ProjectPartner.project_id == project_id)
         )
+        return list(result.scalars().all())
+
+    async def get_all_projects_partners(self) -> list[Partner]:
+        """Récupère les partenaires distincts associés à au moins un projet publié."""
+        query = (
+            select(Partner)
+            .join(ProjectPartner, ProjectPartner.partner_external_id == Partner.id)
+            .join(Project, Project.id == ProjectPartner.project_id)
+            .where(
+                Project.publication_status == PublicationStatus.PUBLISHED,
+                Partner.active.is_(True),
+            )
+            .distinct()
+            .order_by(Partner.display_order, Partner.name)
+        )
+        result = await self.db.execute(query)
         return list(result.scalars().all())
 
     # =========================================================================
