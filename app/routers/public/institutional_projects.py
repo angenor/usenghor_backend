@@ -16,7 +16,6 @@ from app.schemas.partner import PartnerPublic
 from app.schemas.project import (
     ProjectCallRead,
     ProjectCategoryRead,
-    ProjectFundraisingPublic,
     ProjectPublic,
     ProjectReadWithRelations,
 )
@@ -56,20 +55,6 @@ async def list_projects(
         category_slug=category,
     )
     return await paginate(db, query, pagination, Project, schema_class=ProjectPublic)
-
-
-@router.get("/fundraising-featured", response_model=list[ProjectFundraisingPublic])
-async def list_fundraising_featured_projects(
-    db: DbSession,
-    limit: int = Query(4, ge=1, le=20, description="Nombre maximum de projets"),
-) -> list:
-    """
-    Liste les projets publiés mis en avant pour la section levée de fonds.
-
-    Retourne les projets avec budget/currency pour la page stratégie.
-    """
-    service = ProjectService(db)
-    return await service.get_fundraising_featured_projects(limit=limit)
 
 
 @router.get("/partners", response_model=list[PartnerPublic])

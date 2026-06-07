@@ -49,10 +49,19 @@ CREATE TABLE fundraisers (
     -- Statut
     status fundraiser_status DEFAULT 'draft' NOT NULL,
 
+    -- Projet associé (facultatif) — un projet peut avoir plusieurs levées
+    project_external_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+
+    -- Période de la levée
+    start_date DATE,
+    end_date DATE,
+
     -- Timestamps
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+CREATE INDEX idx_fundraisers_project ON fundraisers(project_external_id) WHERE project_external_id IS NOT NULL;
 
 -- Contributeurs d'une levée de fonds
 CREATE TABLE fundraiser_contributors (

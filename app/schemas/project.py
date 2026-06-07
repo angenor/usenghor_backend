@@ -87,8 +87,6 @@ class ProjectCreate(ProjectBase):
     )
     category_ids: list[str] | None = Field(None, description="IDs catégories")
     country_ids: list[str] | None = Field(None, description="IDs pays")
-    is_fundraising_featured: bool = Field(False, description="Mis en avant levée de fonds")
-    fundraising_display_order: int = Field(0, ge=0, description="Ordre d'affichage levée de fonds")
 
 
 class ProjectUpdate(BaseModel):
@@ -113,8 +111,6 @@ class ProjectUpdate(BaseModel):
     publication_status: PublicationStatus | None = None
     category_ids: list[str] | None = None
     country_ids: list[str] | None = None
-    is_fundraising_featured: bool | None = None
-    fundraising_display_order: int | None = Field(None, ge=0)
 
 
 class ProjectRead(ProjectBase):
@@ -132,8 +128,6 @@ class ProjectRead(ProjectBase):
     beneficiaries: list[str] | None
     status: ProjectStatus
     publication_status: PublicationStatus
-    is_fundraising_featured: bool
-    fundraising_display_order: int
     created_at: datetime
     updated_at: datetime
 
@@ -164,21 +158,24 @@ class ProjectPublic(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class ProjectFundraisingPublic(BaseModel):
-    """Schéma public pour les projets de levée de fonds. Inclut budget/currency."""
+# =============================================================================
+# PROJECT FUNDRAISERS (association projet <-> levée de fonds)
+# =============================================================================
 
-    id: str
-    title: str
-    slug: str
-    summary_html: str | None
-    summary_md: str | None
-    cover_image_external_id: str | None
-    budget: Decimal | None
-    currency: str
-    status: ProjectStatus
-    fundraising_display_order: int
 
-    model_config = {"from_attributes": True}
+class ProjectFundraiserAttach(BaseModel):
+    """Schéma pour associer une levée de fonds existante à un projet."""
+
+    fundraiser_external_id: str = Field(..., description="ID de la levée de fonds")
+    start_date: date | None = Field(None, description="Début de la période")
+    end_date: date | None = Field(None, description="Fin de la période")
+
+
+class ProjectFundraiserPeriodUpdate(BaseModel):
+    """Schéma pour mettre à jour la période d'une levée associée à un projet."""
+
+    start_date: date | None = None
+    end_date: date | None = None
 
 
 # =============================================================================

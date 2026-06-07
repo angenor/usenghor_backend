@@ -6,7 +6,7 @@ Schémas Pydantic pour les campagnes, contributeurs,
 manifestations d'intérêt, sections éditoriales et médiathèque.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -31,6 +31,10 @@ class FundraiserBase(BaseModel):
     cover_image_external_id: str | None = None
     goal_amount: float = Field(..., gt=0)
     status: str = Field("draft", pattern="^(draft|active|completed)$")
+    # Association projet (facultatif) + période de la levée
+    project_external_id: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
 
 
 class FundraiserCreate(FundraiserBase):
@@ -55,6 +59,9 @@ class FundraiserUpdate(BaseModel):
     cover_image_external_id: str | None = None
     goal_amount: float | None = Field(None, gt=0)
     status: str | None = Field(None, pattern="^(draft|active|completed)$")
+    project_external_id: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
 
 
 class FundraiserRead(FundraiserBase):

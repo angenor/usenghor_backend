@@ -46,8 +46,6 @@ CREATE TABLE projects (
     beneficiaries JSONB,
     status project_status DEFAULT 'planned',
     publication_status publication_status DEFAULT 'draft',
-    is_fundraising_featured BOOLEAN DEFAULT FALSE,
-    fundraising_display_order INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -55,7 +53,6 @@ CREATE TABLE projects (
 CREATE INDEX idx_projects_status ON projects(status);
 CREATE INDEX idx_projects_slug ON projects(slug);
 CREATE INDEX idx_projects_sector ON projects(sector_external_id);
-CREATE INDEX idx_projects_fundraising_featured ON projects(is_fundraising_featured) WHERE is_fundraising_featured = TRUE;
 
 -- Pays concernés par un projet
 CREATE TABLE project_countries (
@@ -108,8 +105,6 @@ COMMENT ON TABLE project_categories IS '[PROJECT] Catégories de projets';
 COMMENT ON COLUMN projects.sector_external_id IS 'Référence externe vers ORGANIZATION.sectors.id';
 COMMENT ON COLUMN projects.manager_external_id IS 'Référence externe vers IDENTITY.users.id';
 COMMENT ON COLUMN project_partners.partner_external_id IS 'Référence externe vers PARTNER.partners.id';
-COMMENT ON COLUMN projects.is_fundraising_featured IS '[PROJECT] Projet mis en avant dans la section levée de fonds';
-COMMENT ON COLUMN projects.fundraising_display_order IS '[PROJECT] Ordre d''affichage dans la section levée de fonds';
 
 -- ============================================================================
 -- FIN DU SERVICE PROJECT

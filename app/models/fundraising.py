@@ -7,8 +7,9 @@ sections éditoriales et médiathèque.
 """
 
 import enum
+from datetime import date
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -83,6 +84,16 @@ class Fundraiser(Base, UUIDMixin, TimestampMixin):
         default=FundraiserStatus.DRAFT.value,
         nullable=False,
     )
+
+    # Projet associé (facultatif) — un projet peut avoir plusieurs levées
+    project_external_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("projects.id", ondelete="SET NULL"),
+    )
+
+    # Période de la levée
+    start_date: Mapped[date | None] = mapped_column(Date)
+    end_date: Mapped[date | None] = mapped_column(Date)
 
     # Relations
     contributors: Mapped[list["FundraiserContributor"]] = relationship(

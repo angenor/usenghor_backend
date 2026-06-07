@@ -117,10 +117,6 @@ class Project(Base, UUIDMixin, TimestampMixin):
         nullable=False,
     )
 
-    # Levée de fonds
-    is_fundraising_featured: Mapped[bool] = mapped_column(Boolean, default=False)
-    fundraising_display_order: Mapped[int] = mapped_column(Integer, default=0)
-
     # Relations
     categories: Mapped[list["ProjectCategory"]] = relationship(
         secondary="project_category_links",

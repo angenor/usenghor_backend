@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 from app.core.exceptions import ConflictException, NotFoundException
 from app.models.base import PublicationStatus
 from app.models.organization import ProjectStatus
+from app.models.fundraising import Fundraiser
 from app.models.partner import Partner
 from app.models.project import (
     Project,
@@ -433,6 +434,74 @@ class ProjectService:
         return list(result.scalars().all())
 
     # =========================================================================
+    # PROJECT FUNDRAISERS (association projet <-> levée de fonds)
+    # =========================================================================
+
+    async def get_project_fundraisers(self, project_id: str) -> list[Fundraiser]:
+        """Récupère les levées de fonds associées à un projet (historique)."""
+        result = await self.db.execute(
+            select(Fundraiser)
+            .where(Fundraiser.project_external_id == project_id)
+            .order_by(
+                Fundraiser.start_date.desc().nullslast(),
+                Fundraiser.created_at.desc(),
+            )
+        )
+        return list(result.scalars().all())
+
+    async def attach_fundraiser(
+        self,
+        project_id: str,
+        fundraiser_id: str,
+        start_date=None,
+        end_date=None,
+    ) -> Fundraiser:
+        """Associe une levée de fonds existante à un projet."""
+        project = await self.get_project_by_id(project_id)
+        if not project:
+            raise NotFoundException("Projet non trouvé")
+
+        fundraiser = await self.db.get(Fundraiser, fundraiser_id)
+        if not fundraiser:
+            raise NotFoundException("Levée de fonds non trouvée")
+
+        fundraiser.project_external_id = project_id
+        if start_date is not None:
+            fundraiser.start_date = start_date
+        if end_date is not None:
+            fundraiser.end_date = end_date
+        await self.db.flush()
+        await self.db.refresh(fundraiser)
+        return fundraiser
+
+    async def update_project_fundraiser(
+        self,
+        project_id: str,
+        fundraiser_id: str,
+        start_date=None,
+        end_date=None,
+    ) -> Fundraiser:
+        """Met à jour la période d'une levée associée à un projet."""
+        fundraiser = await self.db.get(Fundraiser, fundraiser_id)
+        if not fundraiser or fundraiser.project_external_id != project_id:
+            raise NotFoundException("Levée de fonds non associée à ce projet")
+
+        fundraiser.start_date = start_date
+        fundraiser.end_date = end_date
+        await self.db.flush()
+        await self.db.refresh(fundraiser)
+        return fundraiser
+
+    async def detach_fundraiser(self, project_id: str, fundraiser_id: str) -> None:
+        """Dissocie une levée de fonds d'un projet (conserve la levée)."""
+        fundraiser = await self.db.get(Fundraiser, fundraiser_id)
+        if not fundraiser or fundraiser.project_external_id != project_id:
+            raise NotFoundException("Levée de fonds non associée à ce projet")
+
+        fundraiser.project_external_id = None
+        await self.db.flush()
+
+    # =========================================================================
     # PROJECT CALLS
     # =========================================================================
 
@@ -673,25 +742,6 @@ class ProjectService:
             )
         )
         return result.scalar_one_or_none()
-
-    async def get_fundraising_featured_projects(
-        self, limit: int = 4
-    ) -> list[Project]:
-        """Récupère les projets publiés mis en avant pour la levée de fonds."""
-        result = await self.db.execute(
-            select(Project)
-            .options(selectinload(Project.categories))
-            .where(
-                Project.publication_status == PublicationStatus.PUBLISHED,
-                Project.is_fundraising_featured == True,  # noqa: E712
-            )
-            .order_by(
-                Project.fundraising_display_order.asc(),
-                Project.created_at.desc(),
-            )
-            .limit(limit)
-        )
-        return list(result.scalars().all())
 
     async def get_public_calls(
         self, status: ProjectCallStatus | None = None

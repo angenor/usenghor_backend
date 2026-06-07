@@ -14,6 +14,7 @@ from app.models.base import PublicationStatus
 from app.models.organization import ProjectStatus
 from app.models.project import Project, ProjectCall, ProjectCallStatus, ProjectCategory
 from app.schemas.common import IdResponse, MessageResponse
+from app.schemas.fundraising import FundraiserRead
 from app.schemas.project import (
     ProjectCallCreate,
     ProjectCallRead,
@@ -24,6 +25,8 @@ from app.schemas.project import (
     ProjectCountryCreate,
     ProjectCountryRead,
     ProjectCreate,
+    ProjectFundraiserAttach,
+    ProjectFundraiserPeriodUpdate,
     ProjectMediaCreate,
     ProjectMediaRead,
     ProjectPartnerCreate,
@@ -313,6 +316,84 @@ async def remove_project_partner(
     service = ProjectService(db)
     await service.remove_partner(project_id, partner_external_id)
     return MessageResponse(message="Partenaire retiré avec succès")
+
+
+# =============================================================================
+# PROJECT FUNDRAISERS (association projet <-> levée de fonds)
+# =============================================================================
+
+
+@router.get("/{project_id}/fundraisers", response_model=list[FundraiserRead])
+async def list_project_fundraisers(
+    project_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("project.view")),
+) -> list[FundraiserRead]:
+    """Liste les levées de fonds associées à un projet (historique)."""
+    service = ProjectService(db)
+    project = await service.get_project_by_id(project_id)
+    if not project:
+        raise NotFoundException("Projet non trouvé")
+    fundraisers = await service.get_project_fundraisers(project_id)
+    return [FundraiserRead.model_validate(f) for f in fundraisers]
+
+
+@router.post(
+    "/{project_id}/fundraisers",
+    response_model=FundraiserRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def attach_project_fundraiser(
+    project_id: str,
+    data: ProjectFundraiserAttach,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("project.edit")),
+) -> FundraiserRead:
+    """Associe une levée de fonds existante à un projet."""
+    service = ProjectService(db)
+    fundraiser = await service.attach_fundraiser(
+        project_id, data.fundraiser_external_id, data.start_date, data.end_date
+    )
+    return FundraiserRead.model_validate(fundraiser)
+
+
+@router.put(
+    "/{project_id}/fundraisers/{fundraiser_external_id}",
+    response_model=FundraiserRead,
+)
+async def update_project_fundraiser(
+    project_id: str,
+    fundraiser_external_id: str,
+    data: ProjectFundraiserPeriodUpdate,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("project.edit")),
+) -> FundraiserRead:
+    """Met à jour la période d'une levée associée à un projet."""
+    service = ProjectService(db)
+    fundraiser = await service.update_project_fundraiser(
+        project_id, fundraiser_external_id, data.start_date, data.end_date
+    )
+    return FundraiserRead.model_validate(fundraiser)
+
+
+@router.delete(
+    "/{project_id}/fundraisers/{fundraiser_external_id}",
+    response_model=MessageResponse,
+)
+async def detach_project_fundraiser(
+    project_id: str,
+    fundraiser_external_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("project.edit")),
+) -> MessageResponse:
+    """Dissocie une levée de fonds d'un projet (la levée est conservée)."""
+    service = ProjectService(db)
+    await service.detach_fundraiser(project_id, fundraiser_external_id)
+    return MessageResponse(message="Levée de fonds dissociée avec succès")
 
 
 # =============================================================================
