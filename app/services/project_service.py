@@ -6,6 +6,7 @@ Logique métier pour la gestion des projets institutionnels.
 """
 
 from decimal import Decimal
+from types import SimpleNamespace
 from uuid import uuid4
 
 from sqlalchemy import delete, func, or_, select, update
@@ -27,6 +28,39 @@ from app.models.project import (
     ProjectMediaLibrary,
     ProjectPartner,
 )
+from app.schemas.project import (
+    ProjectCallTranslateRequest,
+    ProjectCallTranslateResponse,
+    ProjectCategoryTranslateRequest,
+    ProjectCategoryTranslateResponse,
+    ProjectTranslateRequest,
+    ProjectTranslateResponse,
+)
+from app.services.translation_service import (
+    SUPPORTED_TARGETS,
+    _lang_attr,
+    autofill_translations,
+    translate_html,
+    translate_text,
+)
+
+# Champs traduisibles par table (base_attr, kind) — convention additive (§3.4).
+# kind ∈ {"text", "html"} : "html" préserve les balises du rich text.
+_PROJECT_CATEGORY_TRANSLATABLE = [("name", "text"), ("description", "text")]
+_PROJECT_TRANSLATABLE = [
+    ("title", "text"),
+    ("summary_html", "html"),
+    ("summary_md", "text"),
+    ("description_html", "html"),
+    ("description_md", "text"),
+]
+_PROJECT_CALL_TRANSLATABLE = [
+    ("title", "text"),
+    ("description_html", "html"),
+    ("description_md", "text"),
+    ("conditions_html", "html"),
+    ("conditions_md", "text"),
+]
 
 
 class ProjectService:
@@ -34,6 +68,125 @@ class ProjectService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    # =========================================================================
+    # TRADUCTION AUTO FR → EN/AR (convention additive — voir
+    # MIGRATION_TRADUCTION_AUTO.md §3.4/§3.5)
+    # =========================================================================
+
+    async def _autofill_into_kwargs(self, current, changes: dict, fields) -> None:
+        """Enrichit ``changes`` (kwargs d'un bulk UPDATE) avec les traductions
+        EN/AR des champs encore vides.
+
+        Les ``update_*`` utilisent ``update(...).values(**kwargs)`` (et NON une
+        mutation de l'objet ORM) : on construit donc un snapshot détaché (jamais
+        flushé) combinant l'état FR voulu (kwargs sinon valeur en base) et les
+        traductions déjà présentes, on réutilise ``autofill_translations``, puis
+        on reverse les nouvelles traductions dans ``changes``.
+        """
+        snapshot = SimpleNamespace()
+        was_empty: dict[str, bool] = {}
+        for base, _ in fields:
+            setattr(snapshot, base, changes.get(base, getattr(current, base, None)))
+            for lang in SUPPORTED_TARGETS:
+                target = _lang_attr(base, lang)
+                existing = changes.get(target, getattr(current, target, None))
+                setattr(snapshot, target, existing)
+                was_empty[target] = not existing
+        await autofill_translations(snapshot, fields)
+        for base, _ in fields:
+            for lang in SUPPORTED_TARGETS:
+                target = _lang_attr(base, lang)
+                value = getattr(snapshot, target, None)
+                # On ne touche au bulk UPDATE que pour les traductions
+                # NOUVELLEMENT remplies : les valeurs déjà présentes (en base ou
+                # fournies par l'admin) ne sont pas réécrites.
+                if value and was_empty[target]:
+                    changes[target] = value
+
+    async def translate_category_fields(
+        self, data: ProjectCategoryTranslateRequest
+    ) -> ProjectCategoryTranslateResponse:
+        """Traduit les champs FR d'une catégorie en EN/AR (sans persistance)."""
+        response = ProjectCategoryTranslateResponse()
+        for lang in SUPPORTED_TARGETS:
+            if data.name:
+                setattr(response, f"name_{lang}", await translate_text(data.name, lang))
+            if data.description:
+                setattr(
+                    response,
+                    f"description_{lang}",
+                    await translate_text(data.description, lang),
+                )
+        return response
+
+    async def translate_project_fields(
+        self, data: ProjectTranslateRequest
+    ) -> ProjectTranslateResponse:
+        """Traduit les champs FR d'un projet en EN/AR (sans persistance)."""
+        response = ProjectTranslateResponse()
+        for lang in SUPPORTED_TARGETS:
+            if data.title:
+                setattr(response, f"title_{lang}", await translate_text(data.title, lang))
+            if data.summary_html:
+                setattr(
+                    response,
+                    f"summary_{lang}_html",
+                    await translate_html(data.summary_html, lang),
+                )
+            if data.summary_md:
+                setattr(
+                    response,
+                    f"summary_{lang}_md",
+                    await translate_text(data.summary_md, lang),
+                )
+            if data.description_html:
+                setattr(
+                    response,
+                    f"description_{lang}_html",
+                    await translate_html(data.description_html, lang),
+                )
+            if data.description_md:
+                setattr(
+                    response,
+                    f"description_{lang}_md",
+                    await translate_text(data.description_md, lang),
+                )
+        return response
+
+    async def translate_call_fields(
+        self, data: ProjectCallTranslateRequest
+    ) -> ProjectCallTranslateResponse:
+        """Traduit les champs FR d'un appel de projet en EN/AR (sans persistance)."""
+        response = ProjectCallTranslateResponse()
+        for lang in SUPPORTED_TARGETS:
+            if data.title:
+                setattr(response, f"title_{lang}", await translate_text(data.title, lang))
+            if data.description_html:
+                setattr(
+                    response,
+                    f"description_{lang}_html",
+                    await translate_html(data.description_html, lang),
+                )
+            if data.description_md:
+                setattr(
+                    response,
+                    f"description_{lang}_md",
+                    await translate_text(data.description_md, lang),
+                )
+            if data.conditions_html:
+                setattr(
+                    response,
+                    f"conditions_{lang}_html",
+                    await translate_html(data.conditions_html, lang),
+                )
+            if data.conditions_md:
+                setattr(
+                    response,
+                    f"conditions_{lang}_md",
+                    await translate_text(data.conditions_md, lang),
+                )
+        return response
 
     # =========================================================================
     # CATEGORIES
@@ -86,6 +239,8 @@ class ProjectService:
             slug=slug,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(category, _PROJECT_CATEGORY_TRANSLATABLE)
         self.db.add(category)
         await self.db.flush()
         return category
@@ -104,6 +259,11 @@ class ProjectService:
                 raise ConflictException(
                     f"Une catégorie avec le slug '{kwargs['slug']}' existe déjà"
                 )
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(
+            category, kwargs, _PROJECT_CATEGORY_TRANSLATABLE
+        )
 
         await self.db.execute(
             update(ProjectCategory)
@@ -215,6 +375,8 @@ class ProjectService:
             slug=slug,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(project, _PROJECT_TRANSLATABLE)
         self.db.add(project)
         await self.db.flush()
 
@@ -253,6 +415,9 @@ class ProjectService:
                 raise ConflictException(
                     f"Un projet avec le slug '{kwargs['slug']}' existe déjà"
                 )
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(project, kwargs, _PROJECT_TRANSLATABLE)
 
         await self.db.execute(
             update(Project).where(Project.id == project_id).values(**kwargs)
@@ -545,6 +710,8 @@ class ProjectService:
             title=title,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(call, _PROJECT_CALL_TRANSLATABLE)
         self.db.add(call)
         await self.db.flush()
         return call
@@ -554,6 +721,9 @@ class ProjectService:
         call = await self.get_call_by_id(call_id)
         if not call:
             raise NotFoundException("Appel non trouvé")
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(call, kwargs, _PROJECT_CALL_TRANSLATABLE)
 
         await self.db.execute(
             update(ProjectCall).where(ProjectCall.id == call_id).values(**kwargs)

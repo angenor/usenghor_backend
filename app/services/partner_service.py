@@ -5,6 +5,7 @@ Service Partner
 Logique métier pour la gestion des partenaires.
 """
 
+from types import SimpleNamespace
 from uuid import uuid4
 
 from sqlalchemy import delete, or_, select, update
@@ -14,6 +15,17 @@ from app.core.exceptions import NotFoundException
 from app.models.campus import Campus, CampusPartner
 from app.models.partner import Partner, PartnerType
 from app.models.project import Project, ProjectPartner
+from app.schemas.partner import PartnerTranslateRequest, PartnerTranslateResponse
+from app.services.translation_service import (
+    SUPPORTED_TARGETS,
+    _lang_attr,
+    autofill_translations,
+    translate_text,
+)
+
+# Champs traduisibles (base_attr, kind) — convention additive (§3.4).
+# name reste en FR (raison sociale / nom propre, NON traduit).
+_PARTNER_TRANSLATABLE = [("description", "text")]
 
 
 class PartnerService:
@@ -21,6 +33,51 @@ class PartnerService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    # =========================================================================
+    # TRADUCTION AUTO FR → EN/AR (convention additive — voir
+    # MIGRATION_TRADUCTION_AUTO.md §3.4/§3.5)
+    # =========================================================================
+
+    async def _autofill_into_kwargs(self, current, changes: dict, fields) -> None:
+        """Enrichit ``changes`` (kwargs d'un bulk UPDATE) avec les traductions
+        EN/AR des champs encore vides.
+
+        ``update_partner`` utilise ``update(...).values(**kwargs)`` (et NON une
+        mutation de l'objet ORM) : on construit donc un snapshot détaché (jamais
+        flushé), on réutilise ``autofill_translations``, puis on reverse les
+        nouvelles traductions dans ``changes``.
+        """
+        snapshot = SimpleNamespace()
+        was_empty: dict[str, bool] = {}
+        for base, _ in fields:
+            setattr(snapshot, base, changes.get(base, getattr(current, base, None)))
+            for lang in SUPPORTED_TARGETS:
+                target = _lang_attr(base, lang)
+                existing = changes.get(target, getattr(current, target, None))
+                setattr(snapshot, target, existing)
+                was_empty[target] = not existing
+        await autofill_translations(snapshot, fields)
+        for base, _ in fields:
+            for lang in SUPPORTED_TARGETS:
+                target = _lang_attr(base, lang)
+                value = getattr(snapshot, target, None)
+                if value and was_empty[target]:
+                    changes[target] = value
+
+    async def translate_partner_fields(
+        self, data: PartnerTranslateRequest
+    ) -> PartnerTranslateResponse:
+        """Traduit la description FR d'un partenaire en EN/AR (sans persistance)."""
+        response = PartnerTranslateResponse()
+        for lang in SUPPORTED_TARGETS:
+            if data.description:
+                setattr(
+                    response,
+                    f"description_{lang}",
+                    await translate_text(data.description, lang),
+                )
+        return response
 
     async def get_partners(
         self,
@@ -94,6 +151,8 @@ class PartnerService:
             type=partner_type,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(partner, _PARTNER_TRANSLATABLE)
         self.db.add(partner)
         await self.db.flush()
         return partner
@@ -115,6 +174,9 @@ class PartnerService:
         partner = await self.get_partner_by_id(partner_id)
         if not partner:
             raise NotFoundException("Partenaire non trouvé")
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(partner, kwargs, _PARTNER_TRANSLATABLE)
 
         await self.db.execute(
             update(Partner).where(Partner.id == partner_id).values(**kwargs)
