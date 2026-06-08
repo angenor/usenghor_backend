@@ -5,6 +5,7 @@ Service Organization
 Logique métier pour la gestion de la structure organisationnelle.
 """
 
+from types import SimpleNamespace
 from uuid import uuid4
 
 from sqlalchemy import delete, or_, select, update
@@ -21,6 +22,41 @@ from app.models.organization import (
     ServiceProject,
     ServiceTeam,
 )
+from app.schemas.organization import (
+    SectorTranslateRequest,
+    SectorTranslateResponse,
+    ServiceAchievementTranslateRequest,
+    ServiceAchievementTranslateResponse,
+    ServiceObjectiveTranslateRequest,
+    ServiceObjectiveTranslateResponse,
+    ServiceProjectTranslateRequest,
+    ServiceProjectTranslateResponse,
+    ServiceTranslateRequest,
+    ServiceTranslateResponse,
+)
+from app.services.translation_service import (
+    SUPPORTED_TARGETS,
+    _lang_attr,
+    autofill_translations,
+    translate_html,
+    translate_text,
+)
+
+# Champs traduisibles par table (base_attr, kind) — convention additive (§3.4).
+# kind ∈ {"text", "html"} : "html" préserve les balises du rich text.
+_SECTOR_TRANSLATABLE = [
+    ("name", "text"),
+    ("description_html", "html"),
+    ("description_md", "text"),
+    ("mission_html", "html"),
+    ("mission_md", "text"),
+]
+_SERVICE_TRANSLATABLE = _SECTOR_TRANSLATABLE  # mêmes champs (name + description + mission)
+_SERVICE_SUBTABLE_TRANSLATABLE = [
+    ("title", "text"),
+    ("description_html", "html"),
+    ("description_md", "text"),
+]
 
 
 class OrganizationService:
@@ -28,6 +64,95 @@ class OrganizationService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    # =========================================================================
+    # TRADUCTION AUTO FR → EN/AR (convention additive — voir
+    # MIGRATION_TRADUCTION_AUTO.md §3.4/§3.5)
+    # =========================================================================
+
+    async def _autofill_into_kwargs(self, current, changes: dict, fields) -> None:
+        """Enrichit ``changes`` (kwargs d'un bulk UPDATE) avec les traductions
+        EN/AR des champs encore vides.
+
+        Les ``update_*`` utilisent ``update(...).values(**kwargs)`` (et NON une
+        mutation de l'objet ORM) : on construit un snapshot détaché (jamais
+        flushé) combinant l'état FR voulu (kwargs sinon valeur en base) et les
+        traductions déjà présentes, on réutilise ``autofill_translations``, puis
+        on reverse les traductions NOUVELLEMENT remplies dans ``changes``.
+        """
+        snapshot = SimpleNamespace()
+        was_empty: dict[str, bool] = {}
+        for base, _ in fields:
+            setattr(snapshot, base, changes.get(base, getattr(current, base, None)))
+            for lang in SUPPORTED_TARGETS:
+                target = _lang_attr(base, lang)
+                existing = changes.get(target, getattr(current, target, None))
+                setattr(snapshot, target, existing)
+                was_empty[target] = not existing
+        await autofill_translations(snapshot, fields)
+        for base, _ in fields:
+            for lang in SUPPORTED_TARGETS:
+                target = _lang_attr(base, lang)
+                value = getattr(snapshot, target, None)
+                if value and was_empty[target]:
+                    changes[target] = value
+
+    async def _translate_request(self, data, fields) -> dict:
+        """Traduit les champs FR d'une requête en EN/AR (sans persistance).
+
+        Renvoie un dict ``{target_attr: traduction}`` dont les clés correspondent
+        aux champs des schémas ``*TranslateResponse`` (ex. ``name_en``,
+        ``description_ar_html``).
+        """
+        out: dict[str, str | None] = {}
+        for base, kind in fields:
+            src = getattr(data, base, None)
+            if not src:
+                continue
+            translate = translate_html if kind == "html" else translate_text
+            for lang in SUPPORTED_TARGETS:
+                out[_lang_attr(base, lang)] = await translate(src, lang)
+        return out
+
+    async def translate_sector_fields(
+        self, data: SectorTranslateRequest
+    ) -> SectorTranslateResponse:
+        """Traduit les champs FR d'un secteur en EN/AR (sans persistance)."""
+        return SectorTranslateResponse(
+            **await self._translate_request(data, _SECTOR_TRANSLATABLE)
+        )
+
+    async def translate_service_fields(
+        self, data: ServiceTranslateRequest
+    ) -> ServiceTranslateResponse:
+        """Traduit les champs FR d'un service en EN/AR (sans persistance)."""
+        return ServiceTranslateResponse(
+            **await self._translate_request(data, _SERVICE_TRANSLATABLE)
+        )
+
+    async def translate_objective_fields(
+        self, data: ServiceObjectiveTranslateRequest
+    ) -> ServiceObjectiveTranslateResponse:
+        """Traduit les champs FR d'un objectif en EN/AR (sans persistance)."""
+        return ServiceObjectiveTranslateResponse(
+            **await self._translate_request(data, _SERVICE_SUBTABLE_TRANSLATABLE)
+        )
+
+    async def translate_achievement_fields(
+        self, data: ServiceAchievementTranslateRequest
+    ) -> ServiceAchievementTranslateResponse:
+        """Traduit les champs FR d'une réalisation en EN/AR (sans persistance)."""
+        return ServiceAchievementTranslateResponse(
+            **await self._translate_request(data, _SERVICE_SUBTABLE_TRANSLATABLE)
+        )
+
+    async def translate_service_project_fields(
+        self, data: ServiceProjectTranslateRequest
+    ) -> ServiceProjectTranslateResponse:
+        """Traduit les champs FR d'un projet de service en EN/AR (sans persistance)."""
+        return ServiceProjectTranslateResponse(
+            **await self._translate_request(data, _SERVICE_SUBTABLE_TRANSLATABLE)
+        )
 
     # =========================================================================
     # SECTORS
@@ -115,6 +240,8 @@ class OrganizationService:
             name=name,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(sector, _SECTOR_TRANSLATABLE)
         self.db.add(sector)
         await self.db.flush()
         return sector
@@ -147,6 +274,9 @@ class OrganizationService:
                     raise ConflictException(
                         f"Un secteur avec le code '{kwargs['code']}' existe déjà"
                     )
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(sector, kwargs, _SECTOR_TRANSLATABLE)
 
         await self.db.execute(
             update(Sector).where(Sector.id == sector_id).values(**kwargs)
@@ -257,6 +387,16 @@ class OrganizationService:
             description_md=sector.description_md,
             mission_html=sector.mission_html,
             mission_md=sector.mission_md,
+            # Traductions rich identiques à la source (name change → name_en/ar laissés
+            # vides : le repli FR affiche « … (copie) »).
+            description_en_html=sector.description_en_html,
+            description_en_md=sector.description_en_md,
+            description_ar_html=sector.description_ar_html,
+            description_ar_md=sector.description_ar_md,
+            mission_en_html=sector.mission_en_html,
+            mission_en_md=sector.mission_en_md,
+            mission_ar_html=sector.mission_ar_html,
+            mission_ar_md=sector.mission_ar_md,
             icon_external_id=sector.icon_external_id,
             cover_image_external_id=sector.cover_image_external_id,
             head_external_id=sector.head_external_id,
@@ -388,6 +528,8 @@ class OrganizationService:
             sector_id=sector_id,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(service, _SERVICE_TRANSLATABLE)
         self.db.add(service)
         await self.db.flush()
         return service
@@ -415,6 +557,9 @@ class OrganizationService:
             sector = await self.get_sector_by_id(kwargs["sector_id"])
             if not sector:
                 raise NotFoundException("Secteur non trouvé")
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(service, kwargs, _SERVICE_TRANSLATABLE)
 
         await self.db.execute(
             update(Service).where(Service.id == service_id).values(**kwargs)
@@ -504,6 +649,15 @@ class OrganizationService:
             description_md=service.description_md,
             mission_html=service.mission_html,
             mission_md=service.mission_md,
+            # Traductions rich identiques à la source (name change → name_en/ar vides).
+            description_en_html=service.description_en_html,
+            description_en_md=service.description_en_md,
+            description_ar_html=service.description_ar_html,
+            description_ar_md=service.description_ar_md,
+            mission_en_html=service.mission_en_html,
+            mission_en_md=service.mission_en_md,
+            mission_ar_html=service.mission_ar_html,
+            mission_ar_md=service.mission_ar_md,
             head_external_id=service.head_external_id,
             album_external_id=service.album_external_id,
             email=service.email,
@@ -514,7 +668,7 @@ class OrganizationService:
         self.db.add(new_service)
         await self.db.flush()
 
-        # Dupliquer les objectifs
+        # Dupliquer les objectifs (title inchangé → traductions copiées telles quelles)
         for obj in service.objectives:
             new_obj = ServiceObjective(
                 id=str(uuid4()),
@@ -522,6 +676,12 @@ class OrganizationService:
                 title=obj.title,
                 description_html=obj.description_html,
                 description_md=obj.description_md,
+                title_en=obj.title_en,
+                title_ar=obj.title_ar,
+                description_en_html=obj.description_en_html,
+                description_en_md=obj.description_en_md,
+                description_ar_html=obj.description_ar_html,
+                description_ar_md=obj.description_ar_md,
                 display_order=obj.display_order,
             )
             self.db.add(new_obj)
@@ -610,6 +770,8 @@ class OrganizationService:
             title=title,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(objective, _SERVICE_SUBTABLE_TRANSLATABLE)
         self.db.add(objective)
         await self.db.flush()
         return objective
@@ -624,6 +786,11 @@ class OrganizationService:
         objective = result.scalar_one_or_none()
         if not objective:
             raise NotFoundException("Objectif non trouvé")
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(
+            objective, kwargs, _SERVICE_SUBTABLE_TRANSLATABLE
+        )
 
         await self.db.execute(
             update(ServiceObjective)
@@ -686,6 +853,8 @@ class OrganizationService:
             title=title,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(achievement, _SERVICE_SUBTABLE_TRANSLATABLE)
         self.db.add(achievement)
         await self.db.flush()
         return achievement
@@ -700,6 +869,11 @@ class OrganizationService:
         achievement = result.scalar_one_or_none()
         if not achievement:
             raise NotFoundException("Réalisation non trouvée")
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(
+            achievement, kwargs, _SERVICE_SUBTABLE_TRANSLATABLE
+        )
 
         await self.db.execute(
             update(ServiceAchievement)
@@ -760,6 +934,8 @@ class OrganizationService:
             title=title,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(project, _SERVICE_SUBTABLE_TRANSLATABLE)
         self.db.add(project)
         await self.db.flush()
         return project
@@ -774,6 +950,11 @@ class OrganizationService:
         project = result.scalar_one_or_none()
         if not project:
             raise NotFoundException("Projet non trouvé")
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(
+            project, kwargs, _SERVICE_SUBTABLE_TRANSLATABLE
+        )
 
         await self.db.execute(
             update(ServiceProject)

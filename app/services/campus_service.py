@@ -6,6 +6,7 @@ Logique métier pour la gestion des campus.
 """
 
 from datetime import date
+from types import SimpleNamespace
 from uuid import uuid4
 
 from sqlalchemy import delete, or_, select, update
@@ -19,6 +20,22 @@ from app.models.campus import (
     CampusPartner,
     CampusTeam,
 )
+from app.schemas.campus import CampusTranslateRequest, CampusTranslateResponse
+from app.services.translation_service import (
+    SUPPORTED_TARGETS,
+    _lang_attr,
+    autofill_translations,
+    translate_html,
+    translate_text,
+)
+
+# Champs traduisibles (base_attr, kind) — convention additive (§3.4). On traduit
+# name + la paire rich description_html/_md (PAS la colonne legacy `description`).
+_CAMPUS_TRANSLATABLE = [
+    ("name", "text"),
+    ("description_html", "html"),
+    ("description_md", "text"),
+]
 
 
 class CampusService:
@@ -26,6 +43,45 @@ class CampusService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    # =========================================================================
+    # TRADUCTION AUTO FR → EN/AR (convention additive — voir
+    # MIGRATION_TRADUCTION_AUTO.md §3.4/§3.5)
+    # =========================================================================
+
+    async def _autofill_into_kwargs(self, current, changes: dict, fields) -> None:
+        """Enrichit ``changes`` (kwargs d'un bulk UPDATE) avec les traductions
+        EN/AR des champs encore vides (cf. ``OrganizationService``)."""
+        snapshot = SimpleNamespace()
+        was_empty: dict[str, bool] = {}
+        for base, _ in fields:
+            setattr(snapshot, base, changes.get(base, getattr(current, base, None)))
+            for lang in SUPPORTED_TARGETS:
+                target = _lang_attr(base, lang)
+                existing = changes.get(target, getattr(current, target, None))
+                setattr(snapshot, target, existing)
+                was_empty[target] = not existing
+        await autofill_translations(snapshot, fields)
+        for base, _ in fields:
+            for lang in SUPPORTED_TARGETS:
+                target = _lang_attr(base, lang)
+                value = getattr(snapshot, target, None)
+                if value and was_empty[target]:
+                    changes[target] = value
+
+    async def translate_campus_fields(
+        self, data: CampusTranslateRequest
+    ) -> CampusTranslateResponse:
+        """Traduit les champs FR d'un campus en EN/AR (sans persistance)."""
+        out: dict[str, str | None] = {}
+        for base, kind in _CAMPUS_TRANSLATABLE:
+            src = getattr(data, base, None)
+            if not src:
+                continue
+            translate = translate_html if kind == "html" else translate_text
+            for lang in SUPPORTED_TARGETS:
+                out[_lang_attr(base, lang)] = await translate(src, lang)
+        return CampusTranslateResponse(**out)
 
     # =========================================================================
     # CAMPUSES
@@ -130,6 +186,8 @@ class CampusService:
             name=name,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(campus, _CAMPUS_TRANSLATABLE)
         self.db.add(campus)
         await self.db.flush()
         return campus
@@ -173,6 +231,9 @@ class CampusService:
             )
             if result.scalar_one_or_none():
                 raise ConflictException("Un siège principal existe déjà")
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(campus, kwargs, _CAMPUS_TRANSLATABLE)
 
         await self.db.execute(
             update(Campus).where(Campus.id == campus_id).values(**kwargs)
