@@ -247,6 +247,7 @@ class ApplicationExportService:
             "Employeur",
             "Plus haut niveau de diplôme",
             "Intitulé du diplôme",
+            "Lettre de motivation",
         ]
         for index in range(1, max_docs + 1):
             header.extend([f"Document {index}", f"Lien document {index}"])
@@ -281,6 +282,7 @@ class ApplicationExportService:
                 _format_value(application.employer_name),
                 _format_value(application.highest_degree_level),
                 _format_value(application.highest_degree_title),
+                _format_value(application.motivation_text),
             ]
             for document in docs_by_app[application.id]:
                 row.append(_format_value(document.document_name) or "Document")
