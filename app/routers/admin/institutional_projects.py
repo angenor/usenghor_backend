@@ -18,9 +18,13 @@ from app.schemas.fundraising import FundraiserRead
 from app.schemas.project import (
     ProjectCallCreate,
     ProjectCallRead,
+    ProjectCallTranslateRequest,
+    ProjectCallTranslateResponse,
     ProjectCallUpdate,
     ProjectCategoryCreate,
     ProjectCategoryRead,
+    ProjectCategoryTranslateRequest,
+    ProjectCategoryTranslateResponse,
     ProjectCategoryUpdate,
     ProjectCountryCreate,
     ProjectCountryRead,
@@ -35,6 +39,8 @@ from app.schemas.project import (
     ProjectRead,
     ProjectReadWithRelations,
     ProjectStatistics,
+    ProjectTranslateRequest,
+    ProjectTranslateResponse,
     ProjectUpdate,
 )
 from app.services.project_service import ProjectService
@@ -59,6 +65,18 @@ async def list_categories(
     service = ProjectService(db)
     query = await service.get_categories(search=search)
     return await paginate(db, query, pagination, ProjectCategory, ProjectCategoryRead)
+
+
+# Route STATIQUE déclarée avant la route dynamique /categories/{category_id}.
+@router.post("/categories/translate", response_model=ProjectCategoryTranslateResponse)
+async def translate_category_fields(
+    data: ProjectCategoryTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("project.view")),
+) -> ProjectCategoryTranslateResponse:
+    """Traduit les champs FR → EN/AR sans persistance (pré-remplissage du formulaire)."""
+    return await ProjectService(db).translate_category_fields(data)
 
 
 @router.get("/categories/{category_id}", response_model=ProjectCategoryRead)
@@ -160,6 +178,18 @@ async def get_statistics(
     service = ProjectService(db)
     stats = await service.get_statistics()
     return ProjectStatistics(**stats)
+
+
+# Route STATIQUE déclarée avant la route dynamique /{project_id}.
+@router.post("/translate", response_model=ProjectTranslateResponse)
+async def translate_project_fields(
+    data: ProjectTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("project.view")),
+) -> ProjectTranslateResponse:
+    """Traduit les champs FR → EN/AR sans persistance (pré-remplissage du formulaire)."""
+    return await ProjectService(db).translate_project_fields(data)
 
 
 @router.get("/{project_id}", response_model=ProjectReadWithRelations)
@@ -503,6 +533,18 @@ async def create_project_call(
         project_id, **data.model_dump(exclude_unset=True)
     )
     return IdResponse(id=call.id, message="Appel créé avec succès")
+
+
+# Route STATIQUE déclarée avant la route dynamique /calls/{call_id}.
+@router.post("/calls/translate", response_model=ProjectCallTranslateResponse)
+async def translate_call_fields(
+    data: ProjectCallTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("project.view")),
+) -> ProjectCallTranslateResponse:
+    """Traduit les champs FR → EN/AR sans persistance (pré-remplissage du formulaire)."""
+    return await ProjectService(db).translate_call_fields(data)
 
 
 @router.get("/calls/{call_id}", response_model=ProjectCallRead)

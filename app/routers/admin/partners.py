@@ -16,11 +16,25 @@ from app.schemas.partner import (
     PartnerCreate,
     PartnerRead,
     PartnerReorder,
+    PartnerTranslateRequest,
+    PartnerTranslateResponse,
     PartnerUpdate,
 )
 from app.services.partner_service import PartnerService
 
 router = APIRouter(prefix="/partners", tags=["Partners"])
+
+
+# Route STATIQUE déclarée avant la route dynamique /{partner_id}.
+@router.post("/translate", response_model=PartnerTranslateResponse)
+async def translate_partner_fields(
+    data: PartnerTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("partners.view")),
+) -> PartnerTranslateResponse:
+    """Traduit la description FR → EN/AR sans persistance (pré-remplissage du formulaire)."""
+    return await PartnerService(db).translate_partner_fields(data)
 
 
 @router.get("", response_model=dict)
@@ -88,6 +102,8 @@ async def create_partner(
         name=partner_data.name,
         partner_type=partner_data.type,
         description=partner_data.description,
+        description_en=partner_data.description_en,
+        description_ar=partner_data.description_ar,
         logo_external_id=partner_data.logo_external_id,
         country_external_id=partner_data.country_external_id,
         website=partner_data.website,
