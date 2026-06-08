@@ -22,6 +22,11 @@ CREATE TABLE project_categories (
     name VARCHAR(100) NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
+    -- Traductions auto FR → EN/AR (convention additive, cf. migration 036)
+    name_en TEXT,
+    name_ar TEXT,
+    description_en TEXT,
+    description_ar TEXT,
     icon VARCHAR(50),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -34,6 +39,17 @@ CREATE TABLE projects (
     summary_md TEXT,
     description_html TEXT,
     description_md TEXT,
+    -- Traductions auto FR → EN/AR (convention additive, cf. migration 036)
+    title_en TEXT,
+    title_ar TEXT,
+    summary_en_html TEXT,
+    summary_en_md TEXT,
+    summary_ar_html TEXT,
+    summary_ar_md TEXT,
+    description_en_html TEXT,
+    description_en_md TEXT,
+    description_ar_html TEXT,
+    description_ar_md TEXT,
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
     sector_external_id UUID,        -- → ORGANIZATION.sectors.id
@@ -87,6 +103,17 @@ CREATE TABLE project_calls (
     status call_status DEFAULT 'upcoming',
     conditions_html TEXT,
     conditions_md TEXT,
+    -- Traductions auto FR → EN/AR (convention additive, cf. migration 036)
+    title_en TEXT,
+    title_ar TEXT,
+    description_en_html TEXT,
+    description_en_md TEXT,
+    description_ar_html TEXT,
+    description_ar_md TEXT,
+    conditions_en_html TEXT,
+    conditions_en_md TEXT,
+    conditions_ar_html TEXT,
+    conditions_ar_md TEXT,
     type call_type,
     deadline TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),

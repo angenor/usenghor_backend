@@ -19,6 +19,10 @@ CREATE TABLE partners (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    -- Traductions auto FR → EN/AR (convention additive, cf. migration 036).
+    -- name reste en FR (raison sociale / nom propre, NON traduit).
+    description_en TEXT,
+    description_ar TEXT,
     -- Références INTER-SERVICE (pas de FK)
     logo_external_id UUID,    -- → MEDIA.media.id
     country_external_id UUID, -- → CORE.countries.id
