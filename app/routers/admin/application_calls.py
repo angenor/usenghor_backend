@@ -15,25 +15,98 @@ from app.models.base import PublicationStatus
 from app.schemas.application import (
     ApplicationCallCreate,
     ApplicationCallRead,
+    ApplicationCallTranslateRequest,
+    ApplicationCallTranslateResponse,
     ApplicationCallUpdate,
     ApplicationCallWithDetails,
     CallCoverageCreate,
     CallCoverageRead,
+    CallCoverageTranslateRequest,
+    CallCoverageTranslateResponse,
     CallCoverageUpdate,
     CallEligibilityCriteriaCreate,
     CallEligibilityCriteriaRead,
+    CallEligibilityCriteriaTranslateRequest,
+    CallEligibilityCriteriaTranslateResponse,
     CallEligibilityCriteriaUpdate,
     CallRequiredDocumentCreate,
     CallRequiredDocumentRead,
+    CallRequiredDocumentTranslateRequest,
+    CallRequiredDocumentTranslateResponse,
     CallRequiredDocumentUpdate,
     CallScheduleCreate,
     CallScheduleRead,
+    CallScheduleTranslateRequest,
+    CallScheduleTranslateResponse,
     CallScheduleUpdate,
 )
 from app.schemas.common import IdResponse, MessageResponse
 from app.services.application_service import ApplicationService
 
 router = APIRouter(prefix="/application-calls", tags=["Application Calls"])
+
+
+# =============================================================================
+# TRADUCTION AUTO FR → EN/AR (routes STATIQUES — déclarées avant /{call_id})
+# =============================================================================
+
+
+@router.post("/translate", response_model=ApplicationCallTranslateResponse)
+async def translate_call_fields(
+    data: ApplicationCallTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("applications.view")),
+) -> ApplicationCallTranslateResponse:
+    """Traduit les champs FR d'un appel à candidature en EN/AR (sans persistance)."""
+    return await ApplicationService(db).translate_call_fields(data)
+
+
+@router.post("/criteria/translate", response_model=CallEligibilityCriteriaTranslateResponse)
+async def translate_criterion_fields(
+    data: CallEligibilityCriteriaTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("applications.view")),
+) -> CallEligibilityCriteriaTranslateResponse:
+    """Traduit les champs FR d'un critère d'éligibilité en EN/AR (sans persistance)."""
+    return await ApplicationService(db).translate_criterion_fields(data)
+
+
+@router.post("/coverage/translate", response_model=CallCoverageTranslateResponse)
+async def translate_coverage_fields(
+    data: CallCoverageTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("applications.view")),
+) -> CallCoverageTranslateResponse:
+    """Traduit les champs FR d'une prise en charge en EN/AR (sans persistance)."""
+    return await ApplicationService(db).translate_coverage_fields(data)
+
+
+@router.post(
+    "/required-documents/translate",
+    response_model=CallRequiredDocumentTranslateResponse,
+)
+async def translate_required_document_fields(
+    data: CallRequiredDocumentTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("applications.view")),
+) -> CallRequiredDocumentTranslateResponse:
+    """Traduit les champs FR d'un document requis en EN/AR (sans persistance)."""
+    return await ApplicationService(db).translate_required_document_fields(data)
+
+
+@router.post("/schedule/translate", response_model=CallScheduleTranslateResponse)
+async def translate_schedule_fields(
+    data: CallScheduleTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("applications.view")),
+) -> CallScheduleTranslateResponse:
+    """Traduit les champs FR d'une étape de calendrier en EN/AR (sans persistance)."""
+    return await ApplicationService(db).translate_schedule_fields(data)
 
 
 # =============================================================================

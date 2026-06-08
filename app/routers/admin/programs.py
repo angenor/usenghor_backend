@@ -24,6 +24,8 @@ from app.schemas.academic import (
     ProgramReorder,
     ProgramSemesterWithCourses,
     ProgramSkillRead,
+    ProgramTranslateRequest,
+    ProgramTranslateResponse,
     ProgramUpdate,
     ProgramWithDetails,
 )
@@ -31,6 +33,22 @@ from app.schemas.common import IdResponse, MessageResponse
 from app.services.academic_service import AcademicService
 
 router = APIRouter(prefix="/programs", tags=["Programs"])
+
+
+# =============================================================================
+# TRADUCTION AUTO FR → EN/AR (route STATIQUE — déclarée avant /{program_id})
+# =============================================================================
+
+
+@router.post("/translate", response_model=ProgramTranslateResponse)
+async def translate_program_fields(
+    data: ProgramTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("programs.view")),
+) -> ProgramTranslateResponse:
+    """Traduit les champs FR d'un programme en EN/AR (sans persistance)."""
+    return await AcademicService(db).translate_program_fields(data)
 
 
 @router.get("", response_model=dict)
@@ -81,28 +99,13 @@ async def create_program(
 ) -> IdResponse:
     """Crée un nouveau programme."""
     service = AcademicService(db)
+    # model_dump : forwarde TOUS les champs — y compris les traductions _en/_ar
+    # (éditées via « Traduire ») ET les champs format/evaluation_methods/objectives/
+    # target_audience qui étaient auparavant droppés par la liste blanche explicite.
+    # code/title/slug/type mappent les paramètres nommés de create_program ; le
+    # reste (dont status/is_featured/display_order) part en **kwargs sur le modèle.
     program = await service.create_program(
-        code=program_data.code,
-        title=program_data.title,
-        slug=program_data.slug,
-        type=program_data.type,
-        subtitle=program_data.subtitle,
-        description_html=program_data.description_html,
-        description_md=program_data.description_md,
-        teaching_methods_html=program_data.teaching_methods_html,
-        teaching_methods_md=program_data.teaching_methods_md,
-        cover_image_external_id=program_data.cover_image_external_id,
-        sector_external_id=program_data.sector_external_id,
-        campus_external_id=program_data.campus_external_id,
-        service_external_id=program_data.service_external_id,
-        coordinator_external_id=program_data.coordinator_external_id,
-        field_id=program_data.field_id,
-        duration_months=program_data.duration_months,
-        credits=program_data.credits,
-        degree_awarded=program_data.degree_awarded,
-        required_degree=program_data.required_degree,
-        status=program_data.status,
-        display_order=program_data.display_order,
+        **program_data.model_dump(exclude_unset=True)
     )
     return IdResponse(id=program.id, message="Programme créé avec succès")
 

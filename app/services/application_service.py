@@ -27,6 +27,41 @@ from app.models.application import (
     SubmittedApplicationStatus,
 )
 from app.models.base import PublicationStatus
+from app.schemas.application import (
+    ApplicationCallTranslateRequest,
+    ApplicationCallTranslateResponse,
+    CallCoverageTranslateRequest,
+    CallCoverageTranslateResponse,
+    CallEligibilityCriteriaTranslateRequest,
+    CallEligibilityCriteriaTranslateResponse,
+    CallRequiredDocumentTranslateRequest,
+    CallRequiredDocumentTranslateResponse,
+    CallScheduleTranslateRequest,
+    CallScheduleTranslateResponse,
+)
+from app.services.translation_service import (
+    SUPPORTED_TARGETS,
+    _lang_attr,
+    autofill_translations,
+    translate_html,
+    translate_text,
+)
+
+# Champs traduisibles par table (base_attr, kind) — convention additive (§3.4).
+# kind ∈ {"text", "html"} : "html" préserve les balises rich text.
+# ⚠ target_audience est RICH ici (paires _html/_md), contrairement au JSONB de
+# programs.target_audience.
+_CALL_TRANSLATABLE = [
+    ("title", "text"),
+    ("description_html", "html"),
+    ("description_md", "text"),
+    ("target_audience_html", "html"),
+    ("target_audience_md", "text"),
+]
+_CRITERION_TRANSLATABLE = [("criterion", "text")]
+_COVERAGE_TRANSLATABLE = [("item", "text"), ("description", "text")]
+_REQUIRED_DOCUMENT_TRANSLATABLE = [("document_name", "text"), ("description", "text")]
+_SCHEDULE_TRANSLATABLE = [("step", "text"), ("description", "text")]
 
 
 class ApplicationService:
@@ -34,6 +69,67 @@ class ApplicationService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    # =========================================================================
+    # TRADUCTION AUTO FR → EN/AR (convention additive — voir
+    # MIGRATION_TRADUCTION_AUTO.md §3.4/§3.5)
+    # =========================================================================
+
+    async def _translate_request(self, data, fields) -> dict:
+        """Traduit les champs FR d'une requête en EN/AR (sans persistance).
+
+        Renvoie un dict ``{target_attr: traduction}`` aligné sur les schémas
+        ``*TranslateResponse`` (ex. ``title_en``, ``description_ar_html``).
+        """
+        out: dict = {}
+        for base, kind in fields:
+            src = getattr(data, base, None)
+            if not src:
+                continue
+            translate = translate_html if kind == "html" else translate_text
+            for lang in SUPPORTED_TARGETS:
+                out[_lang_attr(base, lang)] = await translate(src, lang)
+        return out
+
+    async def translate_call_fields(
+        self, data: ApplicationCallTranslateRequest
+    ) -> ApplicationCallTranslateResponse:
+        """Traduit les champs FR d'un appel à candidature en EN/AR (sans persistance)."""
+        return ApplicationCallTranslateResponse(
+            **await self._translate_request(data, _CALL_TRANSLATABLE)
+        )
+
+    async def translate_criterion_fields(
+        self, data: CallEligibilityCriteriaTranslateRequest
+    ) -> CallEligibilityCriteriaTranslateResponse:
+        """Traduit les champs FR d'un critère d'éligibilité (sans persistance)."""
+        return CallEligibilityCriteriaTranslateResponse(
+            **await self._translate_request(data, _CRITERION_TRANSLATABLE)
+        )
+
+    async def translate_coverage_fields(
+        self, data: CallCoverageTranslateRequest
+    ) -> CallCoverageTranslateResponse:
+        """Traduit les champs FR d'une prise en charge (sans persistance)."""
+        return CallCoverageTranslateResponse(
+            **await self._translate_request(data, _COVERAGE_TRANSLATABLE)
+        )
+
+    async def translate_required_document_fields(
+        self, data: CallRequiredDocumentTranslateRequest
+    ) -> CallRequiredDocumentTranslateResponse:
+        """Traduit les champs FR d'un document requis (sans persistance)."""
+        return CallRequiredDocumentTranslateResponse(
+            **await self._translate_request(data, _REQUIRED_DOCUMENT_TRANSLATABLE)
+        )
+
+    async def translate_schedule_fields(
+        self, data: CallScheduleTranslateRequest
+    ) -> CallScheduleTranslateResponse:
+        """Traduit les champs FR d'une étape de calendrier (sans persistance)."""
+        return CallScheduleTranslateResponse(
+            **await self._translate_request(data, _SCHEDULE_TRANSLATABLE)
+        )
 
     # =========================================================================
     # APPLICATION CALLS
@@ -204,6 +300,8 @@ class ApplicationService:
             raise ConflictException("Un appel avec ce slug existe déjà")
 
         call = ApplicationCall(id=str(uuid4()), **data)
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(call, _CALL_TRANSLATABLE)
         self.db.add(call)
         await self.db.commit()
         await self.db.refresh(call)
@@ -224,6 +322,9 @@ class ApplicationService:
         for key, value in data.items():
             if hasattr(call, key):
                 setattr(call, key, value)
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await autofill_translations(call, _CALL_TRANSLATABLE)
 
         await self.db.commit()
         await self.db.refresh(call)
@@ -289,6 +390,7 @@ class ApplicationService:
             call_id=call_id,
             **data,
         )
+        await autofill_translations(criterion, _CRITERION_TRANSLATABLE)
         self.db.add(criterion)
         await self.db.commit()
         await self.db.refresh(criterion)
@@ -303,6 +405,8 @@ class ApplicationService:
         for key, value in data.items():
             if hasattr(criterion, key):
                 setattr(criterion, key, value)
+
+        await autofill_translations(criterion, _CRITERION_TRANSLATABLE)
 
         await self.db.commit()
         await self.db.refresh(criterion)
@@ -339,6 +443,7 @@ class ApplicationService:
             call_id=call_id,
             **data,
         )
+        await autofill_translations(coverage, _COVERAGE_TRANSLATABLE)
         self.db.add(coverage)
         await self.db.commit()
         await self.db.refresh(coverage)
@@ -353,6 +458,8 @@ class ApplicationService:
         for key, value in data.items():
             if hasattr(coverage, key):
                 setattr(coverage, key, value)
+
+        await autofill_translations(coverage, _COVERAGE_TRANSLATABLE)
 
         await self.db.commit()
         await self.db.refresh(coverage)
@@ -389,6 +496,7 @@ class ApplicationService:
             call_id=call_id,
             **data,
         )
+        await autofill_translations(document, _REQUIRED_DOCUMENT_TRANSLATABLE)
         self.db.add(document)
         await self.db.commit()
         await self.db.refresh(document)
@@ -403,6 +511,8 @@ class ApplicationService:
         for key, value in data.items():
             if hasattr(document, key):
                 setattr(document, key, value)
+
+        await autofill_translations(document, _REQUIRED_DOCUMENT_TRANSLATABLE)
 
         await self.db.commit()
         await self.db.refresh(document)
@@ -439,6 +549,7 @@ class ApplicationService:
             call_id=call_id,
             **data,
         )
+        await autofill_translations(schedule, _SCHEDULE_TRANSLATABLE)
         self.db.add(schedule)
         await self.db.commit()
         await self.db.refresh(schedule)
@@ -453,6 +564,8 @@ class ApplicationService:
         for key, value in data.items():
             if hasattr(schedule, key):
                 setattr(schedule, key, value)
+
+        await autofill_translations(schedule, _SCHEDULE_TRANSLATABLE)
 
         await self.db.commit()
         await self.db.refresh(schedule)

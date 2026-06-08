@@ -5,6 +5,7 @@ Service Academic
 Logique métier pour la gestion des programmes et formations.
 """
 
+from types import SimpleNamespace
 from uuid import uuid4
 
 from sqlalchemy import delete, or_, select, update
@@ -24,6 +25,43 @@ from app.models.academic import (
     ProgramSkill,
 )
 from app.models.base import PublicationStatus
+from app.schemas.academic import (
+    ProgramCourseTranslateRequest,
+    ProgramCourseTranslateResponse,
+    ProgramSemesterTranslateRequest,
+    ProgramSemesterTranslateResponse,
+    ProgramTranslateRequest,
+    ProgramTranslateResponse,
+)
+from app.services.translation_service import (
+    SUPPORTED_TARGETS,
+    _lang_attr,
+    autofill_translations,
+    translate_html,
+    translate_string_list,
+    translate_text,
+)
+
+# Champs traduisibles par table (base_attr, kind) — convention additive (§3.4).
+# kind ∈ {"text", "html", "list"} : "html" préserve les balises rich text ;
+# "list" traduit une liste JSONB élément par élément.
+_PROGRAM_TRANSLATABLE = [
+    ("title", "text"),
+    ("subtitle", "text"),
+    ("description_html", "html"),
+    ("description_md", "text"),
+    ("teaching_methods_html", "html"),
+    ("teaching_methods_md", "text"),
+    ("format_html", "html"),
+    ("format_md", "text"),
+    ("evaluation_methods_html", "html"),
+    ("evaluation_methods_md", "text"),
+    ("required_degree", "text"),
+    ("objectives", "list"),
+    ("target_audience", "list"),
+]
+_SEMESTER_TRANSLATABLE = [("title", "text")]
+_COURSE_TRANSLATABLE = [("title", "text"), ("description", "text")]
 
 
 class AcademicService:
@@ -31,6 +69,86 @@ class AcademicService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    # =========================================================================
+    # TRADUCTION AUTO FR → EN/AR (convention additive — voir
+    # MIGRATION_TRADUCTION_AUTO.md §3.4/§3.5)
+    # =========================================================================
+
+    async def _autofill_into_kwargs(self, current, changes: dict, fields) -> None:
+        """Enrichit ``changes`` (kwargs d'un bulk UPDATE) avec les traductions
+        EN/AR des champs encore vides.
+
+        Les ``update_*`` utilisent ``update(...).values(**kwargs)`` (et NON une
+        mutation de l'objet ORM) : on construit un snapshot détaché (jamais
+        flushé) combinant l'état FR voulu (kwargs sinon valeur en base) et les
+        traductions déjà présentes, on réutilise ``autofill_translations`` (qui
+        gère text/html/list), puis on reverse les traductions NOUVELLEMENT
+        remplies dans ``changes``.
+        """
+        snapshot = SimpleNamespace()
+        was_empty: dict[str, bool] = {}
+        for base, _ in fields:
+            setattr(snapshot, base, changes.get(base, getattr(current, base, None)))
+            for lang in SUPPORTED_TARGETS:
+                target = _lang_attr(base, lang)
+                existing = changes.get(target, getattr(current, target, None))
+                setattr(snapshot, target, existing)
+                was_empty[target] = not existing
+        await autofill_translations(snapshot, fields)
+        for base, _ in fields:
+            for lang in SUPPORTED_TARGETS:
+                target = _lang_attr(base, lang)
+                value = getattr(snapshot, target, None)
+                if value and was_empty[target]:
+                    changes[target] = value
+
+    async def _translate_request(self, data, fields) -> dict:
+        """Traduit les champs FR d'une requête en EN/AR (sans persistance).
+
+        Gère les trois kinds : "text", "html" et "list" (JSONB élément par
+        élément). Renvoie un dict ``{target_attr: traduction}`` aligné sur les
+        schémas ``*TranslateResponse`` (ex. ``title_en``, ``objectives_ar``).
+        """
+        out: dict = {}
+        for base, kind in fields:
+            src = getattr(data, base, None)
+            if not src:
+                continue
+            if kind == "list":
+                if not isinstance(src, list):
+                    continue
+                for lang in SUPPORTED_TARGETS:
+                    out[_lang_attr(base, lang)] = await translate_string_list(src, lang)
+            else:
+                translate = translate_html if kind == "html" else translate_text
+                for lang in SUPPORTED_TARGETS:
+                    out[_lang_attr(base, lang)] = await translate(src, lang)
+        return out
+
+    async def translate_program_fields(
+        self, data: ProgramTranslateRequest
+    ) -> ProgramTranslateResponse:
+        """Traduit les champs FR d'un programme en EN/AR (sans persistance)."""
+        return ProgramTranslateResponse(
+            **await self._translate_request(data, _PROGRAM_TRANSLATABLE)
+        )
+
+    async def translate_semester_fields(
+        self, data: ProgramSemesterTranslateRequest
+    ) -> ProgramSemesterTranslateResponse:
+        """Traduit les champs FR d'un semestre en EN/AR (sans persistance)."""
+        return ProgramSemesterTranslateResponse(
+            **await self._translate_request(data, _SEMESTER_TRANSLATABLE)
+        )
+
+    async def translate_course_fields(
+        self, data: ProgramCourseTranslateRequest
+    ) -> ProgramCourseTranslateResponse:
+        """Traduit les champs FR d'un cours en EN/AR (sans persistance)."""
+        return ProgramCourseTranslateResponse(
+            **await self._translate_request(data, _COURSE_TRANSLATABLE)
+        )
 
     # =========================================================================
     # PROGRAMS
@@ -238,6 +356,8 @@ class AcademicService:
             type=type,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(program, _PROGRAM_TRANSLATABLE)
         self.db.add(program)
         await self.db.flush()
 
@@ -290,6 +410,9 @@ class AcademicService:
                     raise ConflictException(
                         f"Un programme avec le slug '{kwargs['slug']}' existe déjà"
                     )
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(program, kwargs, _PROGRAM_TRANSLATABLE)
 
         await self.db.execute(
             update(Program).where(Program.id == program_id).values(**kwargs)
@@ -366,17 +489,30 @@ class AcademicService:
         if not program:
             raise NotFoundException("Programme non trouvé")
 
-        # Créer le nouveau programme
+        # Créer le nouveau programme. Les traductions des champs COPIÉS sont
+        # reprises telles quelles (subtitle/description/teaching_methods/
+        # required_degree) ; title change (new_title) → title_en/ar laissés vides,
+        # create_program les régénère via autofill (repli FR sinon).
         new_program = await self.create_program(
             code=new_code,
             title=new_title,
             slug=new_slug,
             type=program.type,
             subtitle=program.subtitle,
+            subtitle_en=program.subtitle_en,
+            subtitle_ar=program.subtitle_ar,
             description_html=program.description_html,
             description_md=program.description_md,
+            description_en_html=program.description_en_html,
+            description_en_md=program.description_en_md,
+            description_ar_html=program.description_ar_html,
+            description_ar_md=program.description_ar_md,
             teaching_methods_html=program.teaching_methods_html,
             teaching_methods_md=program.teaching_methods_md,
+            teaching_methods_en_html=program.teaching_methods_en_html,
+            teaching_methods_en_md=program.teaching_methods_en_md,
+            teaching_methods_ar_html=program.teaching_methods_ar_html,
+            teaching_methods_ar_md=program.teaching_methods_ar_md,
             cover_image_external_id=program.cover_image_external_id,
             sector_external_id=program.sector_external_id,
             coordinator_external_id=program.coordinator_external_id,
@@ -385,6 +521,8 @@ class AcademicService:
             credits=program.credits,
             degree_awarded=program.degree_awarded,
             required_degree=program.required_degree,
+            required_degree_en=program.required_degree_en,
+            required_degree_ar=program.required_degree_ar,
             status=PublicationStatus.DRAFT,
             display_order=program.display_order,
         )
@@ -396,6 +534,8 @@ class AcademicService:
                 program_id=new_program.id,
                 number=semester.number,
                 title=semester.title,
+                title_en=semester.title_en,
+                title_ar=semester.title_ar,
                 credits=semester.credits,
                 display_order=semester.display_order,
             )
@@ -409,6 +549,10 @@ class AcademicService:
                     code=course.code,
                     title=course.title,
                     description=course.description,
+                    title_en=course.title_en,
+                    title_ar=course.title_ar,
+                    description_en=course.description_en,
+                    description_ar=course.description_ar,
                     credits=course.credits,
                     lecture_hours=course.lecture_hours,
                     tutorial_hours=course.tutorial_hours,
@@ -636,6 +780,8 @@ class AcademicService:
             number=number,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(semester, _SEMESTER_TRANSLATABLE)
         self.db.add(semester)
         await self.db.flush()
         return semester
@@ -672,6 +818,9 @@ class AcademicService:
                 raise ConflictException(
                     f"Le semestre {kwargs['number']} existe déjà pour ce programme"
                 )
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(semester, kwargs, _SEMESTER_TRANSLATABLE)
 
         await self.db.execute(
             update(ProgramSemester).where(ProgramSemester.id == semester_id).values(**kwargs)
@@ -752,6 +901,8 @@ class AcademicService:
             title=title,
             **kwargs,
         )
+        # Remplissage auto des traductions EN/AR vides (non bloquant).
+        await autofill_translations(course, _COURSE_TRANSLATABLE)
         self.db.add(course)
         await self.db.flush()
         return course
@@ -773,6 +924,9 @@ class AcademicService:
         course = await self.get_course_by_id(course_id)
         if not course:
             raise NotFoundException("Cours non trouvé")
+
+        # Remplissage auto des traductions EN/AR encore vides (non bloquant).
+        await self._autofill_into_kwargs(course, kwargs, _COURSE_TRANSLATABLE)
 
         await self.db.execute(
             update(ProgramCourse).where(ProgramCourse.id == course_id).values(**kwargs)

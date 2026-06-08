@@ -15,9 +15,13 @@ from app.schemas.academic import (
     ProgramCourseCreate,
     ProgramCourseRead,
     ProgramCourseReorder,
+    ProgramCourseTranslateRequest,
+    ProgramCourseTranslateResponse,
     ProgramCourseUpdate,
     ProgramSemesterCreate,
     ProgramSemesterRead,
+    ProgramSemesterTranslateRequest,
+    ProgramSemesterTranslateResponse,
     ProgramSemesterUpdate,
     ProgramSemesterWithCourses,
 )
@@ -25,6 +29,33 @@ from app.schemas.common import IdResponse, MessageResponse
 from app.services.academic_service import AcademicService
 
 router = APIRouter(prefix="/program-semesters", tags=["Program Semesters"])
+
+
+# =============================================================================
+# TRADUCTION AUTO FR → EN/AR (routes STATIQUES — déclarées avant /{semester_id})
+# =============================================================================
+
+
+@router.post("/translate", response_model=ProgramSemesterTranslateResponse)
+async def translate_semester_fields(
+    data: ProgramSemesterTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("programs.view")),
+) -> ProgramSemesterTranslateResponse:
+    """Traduit les champs FR d'un semestre en EN/AR (sans persistance)."""
+    return await AcademicService(db).translate_semester_fields(data)
+
+
+@router.post("/courses/translate", response_model=ProgramCourseTranslateResponse)
+async def translate_course_fields(
+    data: ProgramCourseTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("programs.view")),
+) -> ProgramCourseTranslateResponse:
+    """Traduit les champs FR d'un cours en EN/AR (sans persistance)."""
+    return await AcademicService(db).translate_course_fields(data)
 
 
 @router.get("", response_model=dict)

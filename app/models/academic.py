@@ -72,6 +72,35 @@ class Program(Base, UUIDMixin, TimestampMixin):
     evaluation_methods_html: Mapped[str | None] = mapped_column(Text)
     evaluation_methods_md: Mapped[str | None] = mapped_column(Text)
 
+    # Traductions auto FR → EN/AR (convention additive). objectives/target_audience
+    # sont des listes JSONB (traduites élément par élément côté service).
+    title_en: Mapped[str | None] = mapped_column(Text)
+    title_ar: Mapped[str | None] = mapped_column(Text)
+    subtitle_en: Mapped[str | None] = mapped_column(Text)
+    subtitle_ar: Mapped[str | None] = mapped_column(Text)
+    description_en_html: Mapped[str | None] = mapped_column(Text)
+    description_en_md: Mapped[str | None] = mapped_column(Text)
+    description_ar_html: Mapped[str | None] = mapped_column(Text)
+    description_ar_md: Mapped[str | None] = mapped_column(Text)
+    teaching_methods_en_html: Mapped[str | None] = mapped_column(Text)
+    teaching_methods_en_md: Mapped[str | None] = mapped_column(Text)
+    teaching_methods_ar_html: Mapped[str | None] = mapped_column(Text)
+    teaching_methods_ar_md: Mapped[str | None] = mapped_column(Text)
+    format_en_html: Mapped[str | None] = mapped_column(Text)
+    format_en_md: Mapped[str | None] = mapped_column(Text)
+    format_ar_html: Mapped[str | None] = mapped_column(Text)
+    format_ar_md: Mapped[str | None] = mapped_column(Text)
+    evaluation_methods_en_html: Mapped[str | None] = mapped_column(Text)
+    evaluation_methods_en_md: Mapped[str | None] = mapped_column(Text)
+    evaluation_methods_ar_html: Mapped[str | None] = mapped_column(Text)
+    evaluation_methods_ar_md: Mapped[str | None] = mapped_column(Text)
+    required_degree_en: Mapped[str | None] = mapped_column(Text)
+    required_degree_ar: Mapped[str | None] = mapped_column(Text)
+    objectives_en: Mapped[list[str] | None] = mapped_column(JSONB)
+    objectives_ar: Mapped[list[str] | None] = mapped_column(JSONB)
+    target_audience_en: Mapped[list[str] | None] = mapped_column(JSONB)
+    target_audience_ar: Mapped[list[str] | None] = mapped_column(JSONB)
+
     # Références externes (pas de FK) - UUID pour compatibilité avec le schéma DB
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     sector_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -214,6 +243,9 @@ class ProgramSemester(Base, UUIDMixin):
     )
     number: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str | None] = mapped_column(String(255))
+    # Traductions auto FR → EN/AR (additif).
+    title_en: Mapped[str | None] = mapped_column(Text)
+    title_ar: Mapped[str | None] = mapped_column(Text)
     credits: Mapped[Decimal] = mapped_column(Numeric(5, 1), default=1)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
 
@@ -239,6 +271,11 @@ class ProgramCourse(Base, UUIDMixin):
     code: Mapped[str | None] = mapped_column(String(20))
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    # Traductions auto FR → EN/AR (additif).
+    title_en: Mapped[str | None] = mapped_column(Text)
+    title_ar: Mapped[str | None] = mapped_column(Text)
+    description_en: Mapped[str | None] = mapped_column(Text)
+    description_ar: Mapped[str | None] = mapped_column(Text)
     credits: Mapped[Decimal | None] = mapped_column(Numeric(5, 1))
     lecture_hours: Mapped[int] = mapped_column(Integer, default=0)
     tutorial_hours: Mapped[int] = mapped_column(Integer, default=0)

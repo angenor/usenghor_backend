@@ -25,6 +25,12 @@ class ProgramCourseBase(BaseModel):
     code: str | None = Field(None, max_length=20, description="Code du cours")
     title: str = Field(..., min_length=1, max_length=255, description="Titre du cours")
     description: str | None = Field(None, description="Description du cours")
+    # Traductions auto FR → EN/AR (optionnelles, sans max_length : la traduction
+    # peut dépasser la longueur de la source).
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
     credits: float | None = Field(None, ge=0, description="Crédits ECTS")
     lecture_hours: int = Field(0, ge=0, description="Heures de cours magistraux")
     tutorial_hours: int = Field(0, ge=0, description="Heures de TD")
@@ -45,6 +51,10 @@ class ProgramCourseUpdate(BaseModel):
     code: str | None = Field(None, max_length=20)
     title: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
     credits: float | None = Field(None, ge=0)
     lecture_hours: int | None = Field(None, ge=0)
     tutorial_hours: int | None = Field(None, ge=0)
@@ -78,6 +88,9 @@ class ProgramSemesterBase(BaseModel):
 
     number: int = Field(..., ge=1, description="Numéro du semestre")
     title: str | None = Field(None, max_length=255, description="Titre du semestre")
+    # Traductions auto FR → EN/AR (optionnelles).
+    title_en: str | None = None
+    title_ar: str | None = None
     credits: float = Field(1, ge=0, description="Crédits du semestre")
     display_order: int = Field(0, ge=0, description="Ordre d'affichage")
 
@@ -93,6 +106,8 @@ class ProgramSemesterUpdate(BaseModel):
 
     number: int | None = Field(None, ge=1)
     title: str | None = Field(None, max_length=255)
+    title_en: str | None = None
+    title_ar: str | None = None
     credits: float | None = Field(None, ge=0)
     display_order: int | None = Field(None, ge=0)
 
@@ -328,6 +343,33 @@ class ProgramBase(BaseModel):
     format_md: str | None = Field(None, description="Format de la formation (Markdown)")
     evaluation_methods_html: str | None = Field(None, description="Modalités d'évaluation (HTML)")
     evaluation_methods_md: str | None = Field(None, description="Modalités d'évaluation (Markdown)")
+    # Traductions auto FR → EN/AR (optionnelles). objectives/target_audience = listes.
+    title_en: str | None = None
+    title_ar: str | None = None
+    subtitle_en: str | None = None
+    subtitle_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    teaching_methods_en_html: str | None = None
+    teaching_methods_en_md: str | None = None
+    teaching_methods_ar_html: str | None = None
+    teaching_methods_ar_md: str | None = None
+    format_en_html: str | None = None
+    format_en_md: str | None = None
+    format_ar_html: str | None = None
+    format_ar_md: str | None = None
+    evaluation_methods_en_html: str | None = None
+    evaluation_methods_en_md: str | None = None
+    evaluation_methods_ar_html: str | None = None
+    evaluation_methods_ar_md: str | None = None
+    required_degree_en: str | None = None
+    required_degree_ar: str | None = None
+    objectives_en: list[str] | None = None
+    objectives_ar: list[str] | None = None
+    target_audience_en: list[str] | None = None
+    target_audience_ar: list[str] | None = None
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     sector_external_id: str | None = Field(None, description="ID du secteur")
     campus_external_id: str | None = Field(None, description="ID du campus")
@@ -368,6 +410,33 @@ class ProgramUpdate(BaseModel):
     format_md: str | None = None
     evaluation_methods_html: str | None = None
     evaluation_methods_md: str | None = None
+    # Traductions auto FR → EN/AR (optionnelles).
+    title_en: str | None = None
+    title_ar: str | None = None
+    subtitle_en: str | None = None
+    subtitle_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    teaching_methods_en_html: str | None = None
+    teaching_methods_en_md: str | None = None
+    teaching_methods_ar_html: str | None = None
+    teaching_methods_ar_md: str | None = None
+    format_en_html: str | None = None
+    format_en_md: str | None = None
+    format_ar_html: str | None = None
+    format_ar_md: str | None = None
+    evaluation_methods_en_html: str | None = None
+    evaluation_methods_en_md: str | None = None
+    evaluation_methods_ar_html: str | None = None
+    evaluation_methods_ar_md: str | None = None
+    required_degree_en: str | None = None
+    required_degree_ar: str | None = None
+    objectives_en: list[str] | None = None
+    objectives_ar: list[str] | None = None
+    target_audience_en: list[str] | None = None
+    target_audience_ar: list[str] | None = None
     cover_image_external_id: str | None = None
     sector_external_id: str | None = None
     campus_external_id: str | None = None
@@ -422,6 +491,33 @@ class ProgramPublic(BaseModel):
     format_md: str | None = None
     evaluation_methods_html: str | None = None
     evaluation_methods_md: str | None = None
+    # Traductions auto FR → EN/AR (repli FR côté lecture).
+    title_en: str | None = None
+    title_ar: str | None = None
+    subtitle_en: str | None = None
+    subtitle_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    teaching_methods_en_html: str | None = None
+    teaching_methods_en_md: str | None = None
+    teaching_methods_ar_html: str | None = None
+    teaching_methods_ar_md: str | None = None
+    format_en_html: str | None = None
+    format_en_md: str | None = None
+    format_ar_html: str | None = None
+    format_ar_md: str | None = None
+    evaluation_methods_en_html: str | None = None
+    evaluation_methods_en_md: str | None = None
+    evaluation_methods_ar_html: str | None = None
+    evaluation_methods_ar_md: str | None = None
+    required_degree_en: str | None = None
+    required_degree_ar: str | None = None
+    objectives_en: list[str] | None = None
+    objectives_ar: list[str] | None = None
+    target_audience_en: list[str] | None = None
+    target_audience_ar: list[str] | None = None
     cover_image_external_id: str | None
     sector_external_id: str | None
     service_external_id: str | None = None
@@ -462,3 +558,86 @@ class ProgramDuplicate(BaseModel):
     new_code: str = Field(..., min_length=1, max_length=30, description="Nouveau code")
     new_title: str = Field(..., min_length=1, max_length=255, description="Nouveau titre")
     new_slug: str = Field(..., min_length=1, max_length=255, description="Nouveau slug")
+
+
+# =============================================================================
+# TRADUCTION AUTO FR → EN/AR (requêtes/réponses sans persistance — bouton admin)
+# =============================================================================
+
+
+class ProgramTranslateRequest(BaseModel):
+    """Champs source FR d'un programme à traduire (sans persistance)."""
+
+    title: str | None = None
+    subtitle: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+    teaching_methods_html: str | None = None
+    teaching_methods_md: str | None = None
+    format_html: str | None = None
+    format_md: str | None = None
+    evaluation_methods_html: str | None = None
+    evaluation_methods_md: str | None = None
+    required_degree: str | None = None
+    objectives: list[str] | None = None
+    target_audience: list[str] | None = None
+
+
+class ProgramTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    title_en: str | None = None
+    title_ar: str | None = None
+    subtitle_en: str | None = None
+    subtitle_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    teaching_methods_en_html: str | None = None
+    teaching_methods_en_md: str | None = None
+    teaching_methods_ar_html: str | None = None
+    teaching_methods_ar_md: str | None = None
+    format_en_html: str | None = None
+    format_en_md: str | None = None
+    format_ar_html: str | None = None
+    format_ar_md: str | None = None
+    evaluation_methods_en_html: str | None = None
+    evaluation_methods_en_md: str | None = None
+    evaluation_methods_ar_html: str | None = None
+    evaluation_methods_ar_md: str | None = None
+    required_degree_en: str | None = None
+    required_degree_ar: str | None = None
+    objectives_en: list[str] | None = None
+    objectives_ar: list[str] | None = None
+    target_audience_en: list[str] | None = None
+    target_audience_ar: list[str] | None = None
+
+
+class ProgramSemesterTranslateRequest(BaseModel):
+    """Champs source FR d'un semestre à traduire (sans persistance)."""
+
+    title: str | None = None
+
+
+class ProgramSemesterTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    title_en: str | None = None
+    title_ar: str | None = None
+
+
+class ProgramCourseTranslateRequest(BaseModel):
+    """Champs source FR d'un cours à traduire (sans persistance)."""
+
+    title: str | None = None
+    description: str | None = None
+
+
+class ProgramCourseTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None

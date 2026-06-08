@@ -168,6 +168,42 @@ async def translate_html(
         return None
 
 
+async def translate_string_list(
+    values: list | None,
+    target: str,
+    source: str | None = None,
+) -> list | None:
+    """
+    Traduit une **liste de chaînes** (champ JSONB type ``objectives``,
+    ``target_audience``) en traduisant **chaque élément** via ``translate_text``.
+
+    - Mappe ``translate_text`` sur chaque élément, en préservant l'ordre.
+    - Les éléments non-chaînes (ou vides) sont laissés tels quels.
+    - Repli sur l'élément d'origine si la traduction d'un élément échoue
+      (``translate_text`` renvoie ``None``) → on ne perd jamais d'entrée.
+    - Ne traduit **jamais** le JSON brut : la structure de la liste est conservée.
+
+    Renvoie ``None`` si la traduction est désactivée, l'entrée vide / non-liste,
+    ou si la langue cible est la source.
+    """
+    if not settings.auto_translate_enabled:
+        return None
+    if not values or not isinstance(values, list):
+        return None
+    source = source or settings.auto_translate_source
+    if target == source:
+        return values
+
+    out: list = []
+    for element in values:
+        if isinstance(element, str) and _is_translatable(element):
+            translated = await translate_text(element, target, source)
+            out.append(translated if translated else element)
+        else:
+            out.append(element)
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Remplissage automatique des champs traduits (convention additive)
 # ---------------------------------------------------------------------------
@@ -210,9 +246,10 @@ async def autofill_translations(
         Instance (modèle SQLAlchemy ou autre) portant les attributs source FR
         et les attributs cibles traduits.
     fields
-        Liste de tuples ``(base_attr, kind)`` où ``kind`` ∈ ``{"text", "html"}``.
-        ``base_attr`` est l'attribut FR existant (ex. ``"content_html"``,
-        ``"title"``).
+        Liste de tuples ``(base_attr, kind)`` où ``kind`` ∈
+        ``{"text", "html", "list"}``. ``base_attr`` est l'attribut FR existant
+        (ex. ``"content_html"``, ``"title"``, ``"objectives"``). ``"list"``
+        traduit une liste de chaînes (JSONB) élément par élément.
     force
         Si ``False`` (défaut), ne remplit que les champs cibles **vides** :
         les corrections manuelles déjà saisies sont préservées. Si ``True``,
@@ -227,9 +264,15 @@ async def autofill_translations(
     """
     for base, kind in fields:
         src = getattr(obj, base, None)
-        if not _is_translatable(src):
-            continue
-        translate = translate_html if kind == "html" else translate_text
+        if kind == "list":
+            # Champ JSONB (liste de chaînes) : traduit élément par élément.
+            if not src or not isinstance(src, list):
+                continue
+            translate = translate_string_list
+        else:
+            if not _is_translatable(src):
+                continue
+            translate = translate_html if kind == "html" else translate_text
         for lang in langs:
             target = _lang_attr(base, lang)
             if force or not getattr(obj, target, None):

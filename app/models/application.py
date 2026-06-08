@@ -99,6 +99,15 @@ class ApplicationCall(Base, UUIDMixin, TimestampMixin):
     description_html: Mapped[str | None] = mapped_column(Text)
     description_md: Mapped[str | None] = mapped_column(Text)
 
+    # Traductions auto FR → EN/AR (additif). title court ; description et
+    # target_audience = rich. ⚠ target_audience est RICH ici (≠ JSONB de programs).
+    title_en: Mapped[str | None] = mapped_column(Text)
+    title_ar: Mapped[str | None] = mapped_column(Text)
+    description_en_html: Mapped[str | None] = mapped_column(Text)
+    description_en_md: Mapped[str | None] = mapped_column(Text)
+    description_ar_html: Mapped[str | None] = mapped_column(Text)
+    description_ar_md: Mapped[str | None] = mapped_column(Text)
+
     # Références externes (pas de FK) - UUID pour correspondre au schéma SQL
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     program_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -125,6 +134,10 @@ class ApplicationCall(Base, UUIDMixin, TimestampMixin):
 
     target_audience_html: Mapped[str | None] = mapped_column(Text)
     target_audience_md: Mapped[str | None] = mapped_column(Text)
+    target_audience_en_html: Mapped[str | None] = mapped_column(Text)
+    target_audience_en_md: Mapped[str | None] = mapped_column(Text)
+    target_audience_ar_html: Mapped[str | None] = mapped_column(Text)
+    target_audience_ar_md: Mapped[str | None] = mapped_column(Text)
     registration_fee: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     currency: Mapped[str] = mapped_column(String(10), default="EUR")
 
@@ -186,6 +199,9 @@ class CallEligibilityCriteria(Base, UUIDMixin):
         ForeignKey("application_calls.id", ondelete="CASCADE"), nullable=False
     )
     criterion: Mapped[str] = mapped_column(Text, nullable=False)
+    # Traductions auto FR → EN/AR (additif).
+    criterion_en: Mapped[str | None] = mapped_column(Text)
+    criterion_ar: Mapped[str | None] = mapped_column(Text)
     is_mandatory: Mapped[bool] = mapped_column(Boolean, default=True)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
 
@@ -205,6 +221,11 @@ class CallCoverage(Base, UUIDMixin):
     )
     item: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    # Traductions auto FR → EN/AR (additif).
+    item_en: Mapped[str | None] = mapped_column(Text)
+    item_ar: Mapped[str | None] = mapped_column(Text)
+    description_en: Mapped[str | None] = mapped_column(Text)
+    description_ar: Mapped[str | None] = mapped_column(Text)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
 
     # Relations
@@ -223,6 +244,11 @@ class CallRequiredDocument(Base, UUIDMixin):
     )
     document_name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    # Traductions auto FR → EN/AR (additif). accepted_formats reste en FR.
+    document_name_en: Mapped[str | None] = mapped_column(Text)
+    document_name_ar: Mapped[str | None] = mapped_column(Text)
+    description_en: Mapped[str | None] = mapped_column(Text)
+    description_ar: Mapped[str | None] = mapped_column(Text)
     is_mandatory: Mapped[bool] = mapped_column(Boolean, default=True)
     accepted_formats: Mapped[str | None] = mapped_column(String(100))
     max_size_mb: Mapped[int | None] = mapped_column(Integer)
@@ -246,6 +272,11 @@ class CallSchedule(Base, UUIDMixin):
     start_date: Mapped[date | None] = mapped_column(Date)
     end_date: Mapped[date | None] = mapped_column(Date)
     description: Mapped[str | None] = mapped_column(Text)
+    # Traductions auto FR → EN/AR (additif).
+    step_en: Mapped[str | None] = mapped_column(Text)
+    step_ar: Mapped[str | None] = mapped_column(Text)
+    description_en: Mapped[str | None] = mapped_column(Text)
+    description_ar: Mapped[str | None] = mapped_column(Text)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
 
     # Relations

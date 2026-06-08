@@ -30,6 +30,9 @@ class CallEligibilityCriteriaBase(BaseModel):
     """Schéma de base pour les critères d'éligibilité."""
 
     criterion: str = Field(..., min_length=1, description="Critère d'éligibilité")
+    # Traductions auto FR → EN/AR (optionnelles).
+    criterion_en: str | None = None
+    criterion_ar: str | None = None
     is_mandatory: bool = Field(True, description="Critère obligatoire")
     display_order: int = Field(0, ge=0, description="Ordre d'affichage")
 
@@ -44,6 +47,8 @@ class CallEligibilityCriteriaUpdate(BaseModel):
     """Schéma pour la mise à jour d'un critère."""
 
     criterion: str | None = Field(None, min_length=1)
+    criterion_en: str | None = None
+    criterion_ar: str | None = None
     is_mandatory: bool | None = None
     display_order: int | None = Field(None, ge=0)
 
@@ -67,6 +72,11 @@ class CallCoverageBase(BaseModel):
 
     item: str = Field(..., min_length=1, max_length=500, description="Élément pris en charge")
     description: str | None = Field(None, description="Description")
+    # Traductions auto FR → EN/AR (optionnelles).
+    item_en: str | None = None
+    item_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
     display_order: int = Field(0, ge=0, description="Ordre d'affichage")
 
 
@@ -81,6 +91,10 @@ class CallCoverageUpdate(BaseModel):
 
     item: str | None = Field(None, min_length=1, max_length=500)
     description: str | None = None
+    item_en: str | None = None
+    item_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
     display_order: int | None = Field(None, ge=0)
 
 
@@ -103,6 +117,11 @@ class CallRequiredDocumentBase(BaseModel):
 
     document_name: str = Field(..., min_length=1, max_length=255, description="Nom du document")
     description: str | None = Field(None, description="Description")
+    # Traductions auto FR → EN/AR (optionnelles).
+    document_name_en: str | None = None
+    document_name_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
     is_mandatory: bool = Field(True, description="Document obligatoire")
     accepted_formats: str | None = Field(None, max_length=100, description="Formats acceptés (ex: pdf,doc)")
     max_size_mb: int | None = Field(None, ge=1, description="Taille max en Mo")
@@ -120,6 +139,10 @@ class CallRequiredDocumentUpdate(BaseModel):
 
     document_name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
+    document_name_en: str | None = None
+    document_name_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
     is_mandatory: bool | None = None
     accepted_formats: str | None = Field(None, max_length=100)
     max_size_mb: int | None = Field(None, ge=1)
@@ -147,6 +170,11 @@ class CallScheduleBase(BaseModel):
     start_date: date | None = Field(None, description="Date de début")
     end_date: date | None = Field(None, description="Date de fin")
     description: str | None = Field(None, description="Description")
+    # Traductions auto FR → EN/AR (optionnelles).
+    step_en: str | None = None
+    step_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
     display_order: int = Field(0, ge=0, description="Ordre d'affichage")
 
 
@@ -163,6 +191,10 @@ class CallScheduleUpdate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     description: str | None = None
+    step_en: str | None = None
+    step_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
     display_order: int | None = Field(None, ge=0)
 
 
@@ -187,6 +219,14 @@ class ApplicationCallBase(BaseModel):
     slug: str = Field(..., min_length=1, max_length=255, description="Slug URL")
     description_html: str | None = Field(None, description="Description (HTML)")
     description_md: str | None = Field(None, description="Description (Markdown)")
+    # Traductions auto FR → EN/AR (optionnelles). title court ; description et
+    # target_audience = rich (paires _html/_md).
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     program_external_id: str | None = Field(None, description="ID du programme associé")
     campus_external_id: str | None = Field(None, description="ID du campus")
@@ -201,6 +241,10 @@ class ApplicationCallBase(BaseModel):
     program_end_date: date | None = Field(None, description="Fin du programme")
     target_audience_html: str | None = Field(None, description="Public cible (HTML)")
     target_audience_md: str | None = Field(None, description="Public cible (Markdown)")
+    target_audience_en_html: str | None = None
+    target_audience_en_md: str | None = None
+    target_audience_ar_html: str | None = None
+    target_audience_ar_md: str | None = None
     registration_fee: Decimal | None = Field(None, ge=0, description="Frais d'inscription")
     currency: str = Field("EUR", max_length=10, description="Devise")
     external_form_url: str | None = Field(None, max_length=500, description="URL formulaire externe")
@@ -223,6 +267,12 @@ class ApplicationCallUpdate(BaseModel):
     slug: str | None = Field(None, min_length=1, max_length=255)
     description_html: str | None = None
     description_md: str | None = None
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
     cover_image_external_id: str | None = None
     program_external_id: str | None = None
     campus_external_id: str | None = None
@@ -237,6 +287,10 @@ class ApplicationCallUpdate(BaseModel):
     program_end_date: date | None = None
     target_audience_html: str | None = None
     target_audience_md: str | None = None
+    target_audience_en_html: str | None = None
+    target_audience_en_md: str | None = None
+    target_audience_ar_html: str | None = None
+    target_audience_ar_md: str | None = None
     registration_fee: Decimal | None = Field(None, ge=0)
     currency: str | None = Field(None, max_length=10)
     external_form_url: str | None = Field(None, max_length=500)
@@ -273,6 +327,13 @@ class ApplicationCallPublic(BaseModel):
     slug: str
     description_html: str | None
     description_md: str | None
+    # Traductions auto FR → EN/AR (repli FR côté lecture).
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
     cover_image_external_id: str | None
     program_external_id: str | None
     campus_external_id: str | None
@@ -287,6 +348,10 @@ class ApplicationCallPublic(BaseModel):
     program_end_date: date | None
     target_audience_html: str | None
     target_audience_md: str | None
+    target_audience_en_html: str | None = None
+    target_audience_en_md: str | None = None
+    target_audience_ar_html: str | None = None
+    target_audience_ar_md: str | None = None
     registration_fee: Decimal | None
     currency: str
     external_form_url: str | None
@@ -302,6 +367,97 @@ class ApplicationCallPublicWithDetails(ApplicationCallPublic):
     coverage: list[CallCoverageRead] = []
     required_documents: list[CallRequiredDocumentRead] = []
     schedule: list[CallScheduleRead] = []
+
+
+# =============================================================================
+# TRADUCTION AUTO FR → EN/AR (requêtes/réponses sans persistance — bouton admin)
+# =============================================================================
+
+
+class ApplicationCallTranslateRequest(BaseModel):
+    """Champs source FR d'un appel à candidature à traduire (sans persistance)."""
+
+    title: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+    target_audience_html: str | None = None
+    target_audience_md: str | None = None
+
+
+class ApplicationCallTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    target_audience_en_html: str | None = None
+    target_audience_en_md: str | None = None
+    target_audience_ar_html: str | None = None
+    target_audience_ar_md: str | None = None
+
+
+class CallEligibilityCriteriaTranslateRequest(BaseModel):
+    """Champs source FR d'un critère d'éligibilité (sans persistance)."""
+
+    criterion: str | None = None
+
+
+class CallEligibilityCriteriaTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    criterion_en: str | None = None
+    criterion_ar: str | None = None
+
+
+class CallCoverageTranslateRequest(BaseModel):
+    """Champs source FR d'une prise en charge (sans persistance)."""
+
+    item: str | None = None
+    description: str | None = None
+
+
+class CallCoverageTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    item_en: str | None = None
+    item_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
+
+
+class CallRequiredDocumentTranslateRequest(BaseModel):
+    """Champs source FR d'un document requis (sans persistance)."""
+
+    document_name: str | None = None
+    description: str | None = None
+
+
+class CallRequiredDocumentTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    document_name_en: str | None = None
+    document_name_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
+
+
+class CallScheduleTranslateRequest(BaseModel):
+    """Champs source FR d'une étape de calendrier (sans persistance)."""
+
+    step: str | None = None
+    description: str | None = None
+
+
+class CallScheduleTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    step_en: str | None = None
+    step_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
 
 
 # =============================================================================

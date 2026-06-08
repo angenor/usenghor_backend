@@ -45,6 +45,34 @@ CREATE TABLE programs (
     format_md TEXT,
     evaluation_methods_html TEXT,
     evaluation_methods_md TEXT,
+    -- Traductions auto FR → EN/AR (convention additive). Champs courts en TEXT
+    -- (la traduction n'a aucune garantie de longueur). JSONB pour les listes.
+    title_en TEXT,
+    title_ar TEXT,
+    subtitle_en TEXT,
+    subtitle_ar TEXT,
+    description_en_html TEXT,
+    description_en_md TEXT,
+    description_ar_html TEXT,
+    description_ar_md TEXT,
+    teaching_methods_en_html TEXT,
+    teaching_methods_en_md TEXT,
+    teaching_methods_ar_html TEXT,
+    teaching_methods_ar_md TEXT,
+    format_en_html TEXT,
+    format_en_md TEXT,
+    format_ar_html TEXT,
+    format_ar_md TEXT,
+    evaluation_methods_en_html TEXT,
+    evaluation_methods_en_md TEXT,
+    evaluation_methods_ar_html TEXT,
+    evaluation_methods_ar_md TEXT,
+    required_degree_en TEXT,
+    required_degree_ar TEXT,
+    objectives_en JSONB,
+    objectives_ar JSONB,
+    target_audience_en JSONB,
+    target_audience_ar JSONB,
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
     sector_external_id UUID,        -- → ORGANIZATION.sectors.id
@@ -89,6 +117,9 @@ CREATE TABLE program_semesters (
     program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
     number INT NOT NULL,
     title VARCHAR(255),
+    -- Traductions auto FR → EN/AR (additif).
+    title_en TEXT,
+    title_ar TEXT,
     credits NUMERIC(5, 1) DEFAULT 1,
     display_order INT DEFAULT 0,
     UNIQUE (program_id, number)
@@ -101,6 +132,11 @@ CREATE TABLE program_courses (
     code VARCHAR(20),
     title VARCHAR(255) NOT NULL,
     description TEXT,
+    -- Traductions auto FR → EN/AR (additif).
+    title_en TEXT,
+    title_ar TEXT,
+    description_en TEXT,
+    description_ar TEXT,
     credits NUMERIC(5, 1),
     lecture_hours INT DEFAULT 0,
     tutorial_hours INT DEFAULT 0,

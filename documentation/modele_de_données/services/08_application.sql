@@ -30,6 +30,15 @@ CREATE TABLE application_calls (
     slug VARCHAR(255) UNIQUE NOT NULL,
     description_html TEXT,
     description_md TEXT,
+    -- Traductions auto FR → EN/AR (additif). title court en TEXT ; description et
+    -- target_audience = rich (paires _html/_md). ⚠ target_audience est RICH ici,
+    -- contrairement au JSONB (liste) de programs.target_audience.
+    title_en TEXT,
+    title_ar TEXT,
+    description_en_html TEXT,
+    description_en_md TEXT,
+    description_ar_html TEXT,
+    description_ar_md TEXT,
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID,  -- → MEDIA.media.id
     program_external_id UUID,      -- → ACADEMIC.programs.id
@@ -46,6 +55,10 @@ CREATE TABLE application_calls (
     program_end_date DATE,
     target_audience_html TEXT,
     target_audience_md TEXT,
+    target_audience_en_html TEXT,
+    target_audience_en_md TEXT,
+    target_audience_ar_html TEXT,
+    target_audience_ar_md TEXT,
     registration_fee DECIMAL(10, 2),
     currency VARCHAR(10) DEFAULT 'EUR',
     external_form_url VARCHAR(500),
@@ -68,6 +81,9 @@ CREATE TABLE call_eligibility_criteria (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     call_id UUID REFERENCES application_calls(id) ON DELETE CASCADE,
     criterion TEXT NOT NULL,
+    -- Traductions auto FR → EN/AR (additif).
+    criterion_en TEXT,
+    criterion_ar TEXT,
     is_mandatory BOOLEAN DEFAULT TRUE,
     display_order INT DEFAULT 0
 );
@@ -78,6 +94,11 @@ CREATE TABLE call_coverage (
     call_id UUID REFERENCES application_calls(id) ON DELETE CASCADE,
     item VARCHAR(500) NOT NULL,
     description TEXT,
+    -- Traductions auto FR → EN/AR (additif).
+    item_en TEXT,
+    item_ar TEXT,
+    description_en TEXT,
+    description_ar TEXT,
     display_order INT DEFAULT 0
 );
 
@@ -87,6 +108,11 @@ CREATE TABLE call_required_documents (
     call_id UUID REFERENCES application_calls(id) ON DELETE CASCADE,
     document_name VARCHAR(255) NOT NULL,
     description TEXT,
+    -- Traductions auto FR → EN/AR (additif). accepted_formats reste en FR.
+    document_name_en TEXT,
+    document_name_ar TEXT,
+    description_en TEXT,
+    description_ar TEXT,
     is_mandatory BOOLEAN DEFAULT TRUE,
     accepted_formats VARCHAR(100), -- ex: 'pdf,doc,docx'
     max_size_mb INT,
@@ -101,6 +127,11 @@ CREATE TABLE call_schedule (
     start_date DATE,
     end_date DATE,
     description TEXT,
+    -- Traductions auto FR → EN/AR (additif). dates inchangées.
+    step_en TEXT,
+    step_ar TEXT,
+    description_en TEXT,
+    description_ar TEXT,
     display_order INT DEFAULT 0
 );
 
