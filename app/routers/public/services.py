@@ -143,6 +143,13 @@ async def get_service(
         description_md=svc.description_md,
         mission_html=svc.mission_html,
         mission_md=svc.mission_md,
+        # Traductions auto FR → EN/AR (repli FR côté frontend via localized)
+        name_en=svc.name_en,
+        name_ar=svc.name_ar,
+        description_en_html=svc.description_en_html,
+        description_ar_html=svc.description_ar_html,
+        mission_en_html=svc.mission_en_html,
+        mission_ar_html=svc.mission_ar_html,
         email=svc.email,
         phone=svc.phone,
         sector_id=svc.sector_id,

@@ -39,6 +39,11 @@ class CampusPublicEnriched(BaseModel):
     description: str | None
     description_html: str | None = None
     description_md: str | None = None
+    # Traductions auto FR → EN/AR (repli FR côté frontend via localized). city = FR.
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en_html: str | None = None
+    description_ar_html: str | None = None
     cover_image_url: str | None  # Résolu depuis cover_image_external_id
     city: str | None
     email: str | None
@@ -192,6 +197,10 @@ async def list_all_campuses(
             description=campus.description,
             description_html=campus.description_html,
             description_md=campus.description_md,
+            name_en=campus.name_en,
+            name_ar=campus.name_ar,
+            description_en_html=campus.description_en_html,
+            description_ar_html=campus.description_ar_html,
             cover_image_url=resolve_media_url(cover_media),
             city=campus.city,
             email=campus.email,
@@ -310,6 +319,10 @@ async def get_campus_by_code(
         description=campus.description,
         description_html=campus.description_html,
         description_md=campus.description_md,
+        name_en=campus.name_en,
+        name_ar=campus.name_ar,
+        description_en_html=campus.description_en_html,
+        description_ar_html=campus.description_ar_html,
         cover_image_url=resolve_media_url(cover_media),
         city=campus.city,
         email=campus.email,
