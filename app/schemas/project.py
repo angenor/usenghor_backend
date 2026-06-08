@@ -27,6 +27,11 @@ class ProjectCategoryBase(BaseModel):
     slug: str = Field(..., min_length=1, max_length=100, description="Slug URL")
     description: str | None = Field(None, description="Description")
     icon: str | None = Field(None, max_length=50, description="Icône")
+    # Traductions auto FR → EN/AR (convention additive, sans max_length)
+    name_en: str | None = Field(None, description="Nom (EN)")
+    name_ar: str | None = Field(None, description="Nom (AR)")
+    description_en: str | None = Field(None, description="Description (EN)")
+    description_ar: str | None = Field(None, description="Description (AR)")
 
 
 class ProjectCategoryCreate(ProjectCategoryBase):
@@ -42,6 +47,11 @@ class ProjectCategoryUpdate(BaseModel):
     slug: str | None = Field(None, min_length=1, max_length=100)
     description: str | None = None
     icon: str | None = None
+    # Traductions auto FR → EN/AR (convention additive)
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
 
 
 class ProjectCategoryRead(ProjectCategoryBase):
@@ -51,6 +61,22 @@ class ProjectCategoryRead(ProjectCategoryBase):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ProjectCategoryTranslateRequest(BaseModel):
+    """Champs source FR d'une catégorie à traduire (sans persistance)."""
+
+    name: str | None = None
+    description: str | None = None
+
+
+class ProjectCategoryTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en: str | None = None
+    description_ar: str | None = None
 
 
 # =============================================================================
@@ -67,6 +93,17 @@ class ProjectBase(BaseModel):
     summary_md: str | None = Field(None, description="Résumé (Markdown)")
     description_html: str | None = Field(None, description="Description complète (HTML)")
     description_md: str | None = Field(None, description="Description complète (Markdown)")
+    # Traductions auto FR → EN/AR (convention additive)
+    title_en: str | None = Field(None, description="Titre (EN)")
+    title_ar: str | None = Field(None, description="Titre (AR)")
+    summary_en_html: str | None = Field(None, description="Résumé EN (HTML)")
+    summary_en_md: str | None = Field(None, description="Résumé EN (Markdown)")
+    summary_ar_html: str | None = Field(None, description="Résumé AR (HTML)")
+    summary_ar_md: str | None = Field(None, description="Résumé AR (Markdown)")
+    description_en_html: str | None = Field(None, description="Description EN (HTML)")
+    description_en_md: str | None = Field(None, description="Description EN (Markdown)")
+    description_ar_html: str | None = Field(None, description="Description AR (HTML)")
+    description_ar_md: str | None = Field(None, description="Description AR (Markdown)")
 
 
 class ProjectCreate(ProjectBase):
@@ -98,6 +135,17 @@ class ProjectUpdate(BaseModel):
     summary_md: str | None = None
     description_html: str | None = None
     description_md: str | None = None
+    # Traductions auto FR → EN/AR (convention additive)
+    title_en: str | None = None
+    title_ar: str | None = None
+    summary_en_html: str | None = None
+    summary_en_md: str | None = None
+    summary_ar_html: str | None = None
+    summary_ar_md: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
     cover_image_external_id: str | None = None
     sector_external_id: str | None = None
     manager_external_id: str | None = None
@@ -150,12 +198,44 @@ class ProjectPublic(BaseModel):
     summary_md: str | None
     description_html: str | None
     description_md: str | None
+    # Traductions auto FR → EN/AR (repli FR côté lecture publique)
+    title_en: str | None = None
+    title_ar: str | None = None
+    summary_en_html: str | None = None
+    summary_ar_html: str | None = None
+    description_en_html: str | None = None
+    description_ar_html: str | None = None
     cover_image_external_id: str | None
     start_date: date | None
     end_date: date | None
     status: ProjectStatus
 
     model_config = {"from_attributes": True}
+
+
+class ProjectTranslateRequest(BaseModel):
+    """Champs source FR d'un projet à traduire (sans persistance)."""
+
+    title: str | None = None
+    summary_html: str | None = None
+    summary_md: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+
+
+class ProjectTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    title_en: str | None = None
+    title_ar: str | None = None
+    summary_en_html: str | None = None
+    summary_en_md: str | None = None
+    summary_ar_html: str | None = None
+    summary_ar_md: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
 
 
 # =============================================================================
@@ -242,6 +322,17 @@ class ProjectCallBase(BaseModel):
     conditions_md: str | None = Field(None, description="Conditions (Markdown)")
     type: ProjectCallType | None = Field(None, description="Type d'appel")
     deadline: datetime | None = Field(None, description="Date limite")
+    # Traductions auto FR → EN/AR (convention additive)
+    title_en: str | None = Field(None, description="Titre (EN)")
+    title_ar: str | None = Field(None, description="Titre (AR)")
+    description_en_html: str | None = Field(None, description="Description EN (HTML)")
+    description_en_md: str | None = Field(None, description="Description EN (Markdown)")
+    description_ar_html: str | None = Field(None, description="Description AR (HTML)")
+    description_ar_md: str | None = Field(None, description="Description AR (Markdown)")
+    conditions_en_html: str | None = Field(None, description="Conditions EN (HTML)")
+    conditions_en_md: str | None = Field(None, description="Conditions EN (Markdown)")
+    conditions_ar_html: str | None = Field(None, description="Conditions AR (HTML)")
+    conditions_ar_md: str | None = Field(None, description="Conditions AR (Markdown)")
 
 
 class ProjectCallCreate(ProjectCallBase):
@@ -264,6 +355,17 @@ class ProjectCallUpdate(BaseModel):
     conditions_md: str | None = None
     type: ProjectCallType | None = None
     deadline: datetime | None = None
+    # Traductions auto FR → EN/AR (convention additive)
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    conditions_en_html: str | None = None
+    conditions_en_md: str | None = None
+    conditions_ar_html: str | None = None
+    conditions_ar_md: str | None = None
 
 
 class ProjectCallRead(ProjectCallBase):
@@ -276,6 +378,31 @@ class ProjectCallRead(ProjectCallBase):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ProjectCallTranslateRequest(BaseModel):
+    """Champs source FR d'un appel de projet à traduire (sans persistance)."""
+
+    title: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+    conditions_html: str | None = None
+    conditions_md: str | None = None
+
+
+class ProjectCallTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    conditions_en_html: str | None = None
+    conditions_en_md: str | None = None
+    conditions_ar_html: str | None = None
+    conditions_ar_md: str | None = None
 
 
 # =============================================================================

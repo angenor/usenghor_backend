@@ -17,6 +17,9 @@ class PartnerBase(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=255, description="Nom du partenaire")
     description: str | None = Field(None, description="Description du partenaire")
+    # Traductions auto FR → EN/AR (convention additive). name reste en FR.
+    description_en: str | None = Field(None, description="Description (EN)")
+    description_ar: str | None = Field(None, description="Description (AR)")
     logo_external_id: str | None = Field(None, description="ID du logo")
     country_external_id: str | None = Field(None, description="ID du pays")
     website: str | None = Field(None, max_length=500, description="Site web")
@@ -37,6 +40,9 @@ class PartnerUpdate(BaseModel):
 
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
+    # Traductions auto FR → EN/AR (convention additive)
+    description_en: str | None = None
+    description_ar: str | None = None
     logo_external_id: str | None = None
     country_external_id: str | None = None
     website: str | None = Field(None, max_length=500)
@@ -64,6 +70,9 @@ class PartnerPublic(BaseModel):
     id: str
     name: str
     description: str | None
+    # Traductions auto FR → EN/AR (repli FR côté lecture publique)
+    description_en: str | None = None
+    description_ar: str | None = None
     logo_external_id: str | None
     country_external_id: str | None
     website: str | None
@@ -76,3 +85,16 @@ class PartnerReorder(BaseModel):
     """Schéma pour le réordonnancement des partenaires."""
 
     partner_ids: list[str] = Field(..., min_length=1, description="Liste ordonnée des IDs")
+
+
+class PartnerTranslateRequest(BaseModel):
+    """Champ source FR d'un partenaire à traduire (sans persistance)."""
+
+    description: str | None = None
+
+
+class PartnerTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    description_en: str | None = None
+    description_ar: str | None = None
