@@ -17,9 +17,18 @@ CREATE TABLE campuses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
-    description TEXT,
+    description TEXT,             -- legacy (TEXT brut) : reste en FR, NON traduit
     description_html TEXT,
     description_md TEXT,
+    -- Traductions auto FR → EN/AR (convention additive, migration 037). On traduit
+    -- la paire rich description_html/_md (pas la colonne legacy `description`).
+    -- city/address restent en FR.
+    name_en TEXT,
+    name_ar TEXT,
+    description_en_html TEXT,
+    description_en_md TEXT,
+    description_ar_html TEXT,
+    description_ar_md TEXT,
     -- Références INTER-SERVICE (pas de FK)
     cover_image_external_id UUID, -- → MEDIA.media.id
     country_external_id UUID,     -- → CORE.countries.id

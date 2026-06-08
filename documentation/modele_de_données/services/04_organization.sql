@@ -24,6 +24,18 @@ CREATE TABLE sectors (
     description_md TEXT,
     mission_html TEXT,
     mission_md TEXT,
+    -- Traductions auto FR → EN/AR (convention additive, migration 037 ; TEXT car
+    -- une traduction n'a aucune garantie de longueur). FR = colonnes ci-dessus.
+    name_en TEXT,
+    name_ar TEXT,
+    description_en_html TEXT,
+    description_en_md TEXT,
+    description_ar_html TEXT,
+    description_ar_md TEXT,
+    mission_en_html TEXT,
+    mission_en_md TEXT,
+    mission_ar_html TEXT,
+    mission_ar_md TEXT,
     -- Références INTER-SERVICE (pas de FK)
     icon_external_id UUID,        -- → MEDIA.media.id
     cover_image_external_id UUID, -- → MEDIA.media.id
@@ -41,12 +53,23 @@ CREATE TABLE services (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sector_id UUID REFERENCES sectors(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    sigle VARCHAR(50),
+    sigle VARCHAR(50),  -- acronyme : NON traduit
     color VARCHAR(7),
     description_html TEXT,
     description_md TEXT,
     mission_html TEXT,
     mission_md TEXT,
+    -- Traductions auto FR → EN/AR (convention additive, migration 037). sigle = FR.
+    name_en TEXT,
+    name_ar TEXT,
+    description_en_html TEXT,
+    description_en_md TEXT,
+    description_ar_html TEXT,
+    description_ar_md TEXT,
+    mission_en_html TEXT,
+    mission_en_md TEXT,
+    mission_ar_html TEXT,
+    mission_ar_md TEXT,
     -- Références INTER-SERVICE (pas de FK)
     head_external_id UUID,   -- → IDENTITY.users.id
     album_external_id UUID,  -- → MEDIA.albums.id
@@ -67,6 +90,13 @@ CREATE TABLE service_objectives (
     title VARCHAR(255) NOT NULL,
     description_html TEXT,
     description_md TEXT,
+    -- Traductions auto FR → EN/AR (convention additive, migration 037).
+    title_en TEXT,
+    title_ar TEXT,
+    description_en_html TEXT,
+    description_en_md TEXT,
+    description_ar_html TEXT,
+    description_ar_md TEXT,
     display_order INT DEFAULT 0
 );
 
@@ -77,6 +107,13 @@ CREATE TABLE service_achievements (
     title VARCHAR(255) NOT NULL,
     description_html TEXT,
     description_md TEXT,
+    -- Traductions auto FR → EN/AR (convention additive, migration 037). type = FR.
+    title_en TEXT,
+    title_ar TEXT,
+    description_en_html TEXT,
+    description_en_md TEXT,
+    description_ar_html TEXT,
+    description_ar_md TEXT,
     type VARCHAR(100),
     cover_image_external_id UUID,  -- → MEDIA.media.id
     achievement_date TIMESTAMPTZ,
@@ -90,6 +127,13 @@ CREATE TABLE service_projects (
     title VARCHAR(255) NOT NULL,
     description_html TEXT,
     description_md TEXT,
+    -- Traductions auto FR → EN/AR (convention additive, migration 037). status = enum FR.
+    title_en TEXT,
+    title_ar TEXT,
+    description_en_html TEXT,
+    description_en_md TEXT,
+    description_ar_html TEXT,
+    description_ar_md TEXT,
     cover_image_external_id UUID,  -- → MEDIA.media.id
     progress INT DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
     status project_status DEFAULT 'planned',
