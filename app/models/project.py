@@ -56,6 +56,11 @@ class ProjectCategory(Base, UUIDMixin):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    # Traductions auto FR → EN/AR (convention additive)
+    name_en: Mapped[str | None] = mapped_column(Text)
+    name_ar: Mapped[str | None] = mapped_column(Text)
+    description_en: Mapped[str | None] = mapped_column(Text)
+    description_ar: Mapped[str | None] = mapped_column(Text)
     icon: Mapped[str | None] = mapped_column(String(50))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -81,6 +86,18 @@ class Project(Base, UUIDMixin, TimestampMixin):
     summary_md: Mapped[str | None] = mapped_column(Text)
     description_html: Mapped[str | None] = mapped_column(Text)
     description_md: Mapped[str | None] = mapped_column(Text)
+
+    # Traductions auto FR → EN/AR (convention additive)
+    title_en: Mapped[str | None] = mapped_column(Text)
+    title_ar: Mapped[str | None] = mapped_column(Text)
+    summary_en_html: Mapped[str | None] = mapped_column(Text)
+    summary_en_md: Mapped[str | None] = mapped_column(Text)
+    summary_ar_html: Mapped[str | None] = mapped_column(Text)
+    summary_ar_md: Mapped[str | None] = mapped_column(Text)
+    description_en_html: Mapped[str | None] = mapped_column(Text)
+    description_en_md: Mapped[str | None] = mapped_column(Text)
+    description_ar_html: Mapped[str | None] = mapped_column(Text)
+    description_ar_md: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (sans FK)
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -217,6 +234,18 @@ class ProjectCall(Base, UUIDMixin, TimestampMixin):
     )
     conditions_html: Mapped[str | None] = mapped_column(Text)
     conditions_md: Mapped[str | None] = mapped_column(Text)
+
+    # Traductions auto FR → EN/AR (convention additive)
+    title_en: Mapped[str | None] = mapped_column(Text)
+    title_ar: Mapped[str | None] = mapped_column(Text)
+    description_en_html: Mapped[str | None] = mapped_column(Text)
+    description_en_md: Mapped[str | None] = mapped_column(Text)
+    description_ar_html: Mapped[str | None] = mapped_column(Text)
+    description_ar_md: Mapped[str | None] = mapped_column(Text)
+    conditions_en_html: Mapped[str | None] = mapped_column(Text)
+    conditions_en_md: Mapped[str | None] = mapped_column(Text)
+    conditions_ar_html: Mapped[str | None] = mapped_column(Text)
+    conditions_ar_md: Mapped[str | None] = mapped_column(Text)
     type: Mapped[ProjectCallType | None] = mapped_column(
         Enum(
             ProjectCallType,

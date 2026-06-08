@@ -32,6 +32,10 @@ class Partner(Base, UUIDMixin, TimestampMixin):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    # Traductions auto FR → EN/AR (convention additive).
+    # name reste en FR (raison sociale / nom propre, NON traduit).
+    description_en: Mapped[str | None] = mapped_column(Text)
+    description_ar: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (pas de FK, car cross-service)
     logo_external_id: Mapped[str | None] = mapped_column(
