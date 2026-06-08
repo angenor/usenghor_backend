@@ -6,6 +6,7 @@ Endpoints CRUD pour la gestion des candidatures.
 """
 
 from datetime import date
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import StreamingResponse
@@ -113,16 +114,38 @@ async def export_applications(
     status: SubmittedApplicationStatus | None = Query(None, description="Filtrer par statut"),
     program_id: str | None = Query(None, description="Filtrer par programme"),
     ids: str | None = Query(None, description="Identifiants séparés par des virgules (sélection)"),
+    export_format: Literal["zip", "csv"] = Query(
+        "zip",
+        alias="format",
+        description="Format d'export : 'zip' (un dossier par candidat) ou 'csv' (récapitulatif unique avec liens)",
+    ),
     _: bool = Depends(PermissionChecker("applications.view")),
 ) -> StreamingResponse:
-    """Exporte les candidatures en archive ZIP (un dossier par candidat).
+    """Exporte les candidatures.
 
-    Chaque dossier contient les documents soumis ainsi qu'un fichier Excel
-    récapitulant les informations du candidat.
+    - ``format=zip`` (défaut) : archive ZIP avec un dossier par candidat
+      (documents soumis + fichier Excel récapitulatif).
+    - ``format=csv`` : un unique fichier CSV, une ligne par candidat, avec des
+      colonnes pointant vers les fichiers téléversés (CV, diplômes...).
     """
     id_list = [i.strip() for i in ids.split(",") if i.strip()] if ids else None
 
     export_service = ApplicationExportService(db)
+
+    if export_format == "csv":
+        csv_buffer, filename = await export_service.build_csv(
+            search=search,
+            call_id=call_id,
+            status=status,
+            program_id=program_id,
+            ids=id_list,
+        )
+        return StreamingResponse(
+            csv_buffer,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
     zip_buffer, filename = await export_service.build_zip(
         search=search,
         call_id=call_id,

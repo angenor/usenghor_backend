@@ -7,6 +7,7 @@ regroupe l'ensemble des documents soumis (CV, diplômes, pièces justificatives)
 ainsi qu'un fichier Excel récapitulant ses informations.
 """
 
+import csv
 import io
 import os
 import re
@@ -19,6 +20,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+from app.config import settings
 
 from app.models.application import (
     Application,
@@ -174,6 +177,128 @@ class ApplicationExportService:
         zip_buffer.seek(0)
         filename = f"candidatures_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
         return zip_buffer, filename
+
+    async def build_csv(
+        self,
+        *,
+        search: str | None = None,
+        call_id: str | None = None,
+        status: SubmittedApplicationStatus | None = None,
+        program_id: str | None = None,
+        ids: list[str] | None = None,
+    ) -> tuple[io.BytesIO, str]:
+        """Construit un unique fichier CSV récapitulatif des candidatures.
+
+        Une ligne par candidat avec ses informations principales, suivies de
+        colonnes « Document N » / « Lien document N » pointant (en URL absolue)
+        vers les fichiers téléversés (CV, diplômes, justificatifs...).
+
+        Args:
+            search, call_id, status, program_id: Mêmes filtres que la liste.
+            ids: Restreint l'export à ces identifiants de candidature.
+
+        Returns:
+            Tuple (buffer CSV positionné au début, nom de fichier suggéré).
+        """
+        query = await self.application_service.get_applications(
+            search=search,
+            call_id=call_id,
+            status=status,
+            program_id=program_id,
+        )
+        query = query.options(selectinload(Application.call))
+        result = await self.db.execute(query)
+        applications = list(result.scalars().unique().all())
+
+        if ids:
+            id_set = set(ids)
+            applications = [app for app in applications if app.id in id_set]
+
+        # Documents triés par date d'ajout pour un ordre de colonnes stable.
+        docs_by_app = {
+            app.id: sorted(app.documents, key=lambda d: d.created_at)
+            for app in applications
+        }
+        max_docs = max((len(docs) for docs in docs_by_app.values()), default=0)
+        base = settings.frontend_url.rstrip("/")
+
+        header = [
+            "Référence",
+            "Appel à candidature",
+            "Statut",
+            "Date de soumission",
+            "Score d'évaluation",
+            "Civilité",
+            "Nom",
+            "Prénom",
+            "Date de naissance",
+            "Ville de naissance",
+            "Situation matrimoniale",
+            "Email",
+            "Téléphone",
+            "WhatsApp",
+            "Adresse",
+            "Ville",
+            "Code postal",
+            "Statut professionnel",
+            "Expérience professionnelle",
+            "Durée d'expérience",
+            "Poste actuel",
+            "Employeur",
+            "Plus haut niveau de diplôme",
+            "Intitulé du diplôme",
+        ]
+        for index in range(1, max_docs + 1):
+            header.extend([f"Document {index}", f"Lien document {index}"])
+
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=";")
+        writer.writerow(header)
+
+        for application in applications:
+            row = [
+                _format_value(application.reference_number),
+                application.call.title if application.call else "Candidature spontanée",
+                _format_value(application.status),
+                _format_value(application.submitted_at),
+                _format_value(application.review_score),
+                _format_value(application.salutation),
+                _format_value(application.last_name),
+                _format_value(application.first_name),
+                _format_value(application.birth_date),
+                _format_value(application.birth_city),
+                _format_value(application.marital_status),
+                _format_value(application.email),
+                _format_value(application.phone),
+                _format_value(application.phone_whatsapp),
+                _format_value(application.address),
+                _format_value(application.city),
+                _format_value(application.postal_code),
+                _format_value(application.employment_status),
+                _format_value(application.has_work_experience),
+                _format_value(application.experience_duration),
+                _format_value(application.job_title or application.current_job),
+                _format_value(application.employer_name),
+                _format_value(application.highest_degree_level),
+                _format_value(application.highest_degree_title),
+            ]
+            for document in docs_by_app[application.id]:
+                row.append(_format_value(document.document_name) or "Document")
+                if document.media_external_id and base:
+                    row.append(
+                        f"{base}/api/public/media/"
+                        f"{document.media_external_id}/download?download=1"
+                    )
+                else:
+                    row.append("")
+            writer.writerow(row)
+
+        # Encodage UTF-8 avec BOM pour une ouverture correcte des accents
+        # dans Excel (séparateur point-virgule, locale francophone).
+        csv_buffer = io.BytesIO(output.getvalue().encode("utf-8-sig"))
+        csv_buffer.seek(0)
+        filename = f"candidatures_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        return csv_buffer, filename
 
     def _unique_folder_name(
         self, application: Application, used_folders: set[str]
