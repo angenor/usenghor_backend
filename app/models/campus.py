@@ -22,9 +22,18 @@ class Campus(Base, UUIDMixin, TimestampMixin):
 
     code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)  # legacy : reste en FR
     description_html: Mapped[str | None] = mapped_column(Text)
     description_md: Mapped[str | None] = mapped_column(Text)
+
+    # Traductions auto FR → EN/AR (convention additive, migration 037). On traduit
+    # name + la paire rich description_html/_md (pas la colonne legacy `description`).
+    name_en: Mapped[str | None] = mapped_column(Text)
+    name_ar: Mapped[str | None] = mapped_column(Text)
+    description_en_html: Mapped[str | None] = mapped_column(Text)
+    description_en_md: Mapped[str | None] = mapped_column(Text)
+    description_ar_html: Mapped[str | None] = mapped_column(Text)
+    description_ar_md: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (pas de FK, car cross-service) - UUID pour correspondre au schéma SQL
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))

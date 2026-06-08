@@ -37,6 +37,18 @@ class Sector(Base, UUIDMixin, TimestampMixin):
     mission_html: Mapped[str | None] = mapped_column(Text)
     mission_md: Mapped[str | None] = mapped_column(Text)
 
+    # Traductions auto FR → EN/AR (convention additive, migration 037)
+    name_en: Mapped[str | None] = mapped_column(Text)
+    name_ar: Mapped[str | None] = mapped_column(Text)
+    description_en_html: Mapped[str | None] = mapped_column(Text)
+    description_en_md: Mapped[str | None] = mapped_column(Text)
+    description_ar_html: Mapped[str | None] = mapped_column(Text)
+    description_ar_md: Mapped[str | None] = mapped_column(Text)
+    mission_en_html: Mapped[str | None] = mapped_column(Text)
+    mission_en_md: Mapped[str | None] = mapped_column(Text)
+    mission_ar_html: Mapped[str | None] = mapped_column(Text)
+    mission_ar_md: Mapped[str | None] = mapped_column(Text)
+
     # Références externes (pas de FK, car cross-service) - UUID pour correspondre au schéma SQL
     icon_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -63,12 +75,24 @@ class Service(Base, UUIDMixin, TimestampMixin):
         ForeignKey("sectors.id", ondelete="CASCADE")
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    sigle: Mapped[str | None] = mapped_column(String(50))
+    sigle: Mapped[str | None] = mapped_column(String(50))  # acronyme : non traduit
     color: Mapped[str | None] = mapped_column(String(7))
     description_html: Mapped[str | None] = mapped_column(Text)
     description_md: Mapped[str | None] = mapped_column(Text)
     mission_html: Mapped[str | None] = mapped_column(Text)
     mission_md: Mapped[str | None] = mapped_column(Text)
+
+    # Traductions auto FR → EN/AR (convention additive, migration 037). sigle = FR.
+    name_en: Mapped[str | None] = mapped_column(Text)
+    name_ar: Mapped[str | None] = mapped_column(Text)
+    description_en_html: Mapped[str | None] = mapped_column(Text)
+    description_en_md: Mapped[str | None] = mapped_column(Text)
+    description_ar_html: Mapped[str | None] = mapped_column(Text)
+    description_ar_md: Mapped[str | None] = mapped_column(Text)
+    mission_en_html: Mapped[str | None] = mapped_column(Text)
+    mission_en_md: Mapped[str | None] = mapped_column(Text)
+    mission_ar_html: Mapped[str | None] = mapped_column(Text)
+    mission_ar_md: Mapped[str | None] = mapped_column(Text)
 
     # Références externes (pas de FK) - UUID pour correspondre au schéma SQL
     head_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
@@ -121,6 +145,13 @@ class ServiceObjective(Base, UUIDMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description_html: Mapped[str | None] = mapped_column(Text)
     description_md: Mapped[str | None] = mapped_column(Text)
+    # Traductions auto FR → EN/AR (convention additive, migration 037)
+    title_en: Mapped[str | None] = mapped_column(Text)
+    title_ar: Mapped[str | None] = mapped_column(Text)
+    description_en_html: Mapped[str | None] = mapped_column(Text)
+    description_en_md: Mapped[str | None] = mapped_column(Text)
+    description_ar_html: Mapped[str | None] = mapped_column(Text)
+    description_ar_md: Mapped[str | None] = mapped_column(Text)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
 
     # Relation
@@ -140,6 +171,13 @@ class ServiceAchievement(Base, UUIDMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description_html: Mapped[str | None] = mapped_column(Text)
     description_md: Mapped[str | None] = mapped_column(Text)
+    # Traductions auto FR → EN/AR (convention additive, migration 037). type = FR.
+    title_en: Mapped[str | None] = mapped_column(Text)
+    title_ar: Mapped[str | None] = mapped_column(Text)
+    description_en_html: Mapped[str | None] = mapped_column(Text)
+    description_en_md: Mapped[str | None] = mapped_column(Text)
+    description_ar_html: Mapped[str | None] = mapped_column(Text)
+    description_ar_md: Mapped[str | None] = mapped_column(Text)
     type: Mapped[str | None] = mapped_column(String(100))
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     achievement_date: Mapped[str | None] = mapped_column(Date)
@@ -168,6 +206,13 @@ class ServiceProject(Base, UUIDMixin, TimestampMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description_html: Mapped[str | None] = mapped_column(Text)
     description_md: Mapped[str | None] = mapped_column(Text)
+    # Traductions auto FR → EN/AR (convention additive, migration 037). status = enum FR.
+    title_en: Mapped[str | None] = mapped_column(Text)
+    title_ar: Mapped[str | None] = mapped_column(Text)
+    description_en_html: Mapped[str | None] = mapped_column(Text)
+    description_en_md: Mapped[str | None] = mapped_column(Text)
+    description_ar_html: Mapped[str | None] = mapped_column(Text)
+    description_ar_md: Mapped[str | None] = mapped_column(Text)
     cover_image_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     progress: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[ProjectStatus] = mapped_column(
