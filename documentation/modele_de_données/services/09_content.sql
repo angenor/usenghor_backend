@@ -27,8 +27,9 @@ CREATE TABLE events (
     content_html TEXT, -- Contenu riche (HTML pour affichage public)
     content_md TEXT,   -- Contenu riche (Markdown pour edition)
     -- Traductions automatiques FR → EN/AR (convention additive, NULL par défaut)
-    title_en VARCHAR(255),
-    title_ar VARCHAR(255),
+    -- TEXT : une traduction n'a pas de garantie de longueur (peut dépasser la source)
+    title_en TEXT,
+    title_ar TEXT,
     description_en TEXT,
     description_ar TEXT,
     content_en_html TEXT,
@@ -111,8 +112,9 @@ CREATE TABLE tags (
     icon VARCHAR(50),
     description TEXT,
     -- Traductions automatiques FR → EN/AR (convention additive, NULL par défaut)
-    name_en VARCHAR(100),
-    name_ar VARCHAR(100),
+    -- TEXT : une traduction n'a pas de garantie de longueur (peut dépasser la source)
+    name_en TEXT,
+    name_ar TEXT,
     description_en TEXT,
     description_ar TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -127,8 +129,9 @@ CREATE TABLE news (
     content_html TEXT, -- Contenu riche (HTML pour affichage public)
     content_md TEXT,   -- Contenu riche (Markdown pour edition)
     -- Traductions automatiques FR → EN/AR (convention additive, NULL par défaut)
-    title_en VARCHAR(255),
-    title_ar VARCHAR(255),
+    -- TEXT : une traduction n'a pas de garantie de longueur (peut dépasser la source)
+    title_en TEXT,
+    title_ar TEXT,
     summary_en TEXT,
     summary_ar TEXT,
     content_en_html TEXT,

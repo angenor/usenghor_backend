@@ -30,9 +30,10 @@ class TagBase(BaseModel):
     slug: str = Field(..., min_length=1, max_length=100, description="Slug URL")
     icon: str | None = Field(None, max_length=50, description="Icône du tag")
     description: str | None = Field(None, description="Description du tag")
-    # Traductions automatiques FR → EN/AR (convention additive)
-    name_en: str | None = Field(None, max_length=100, description="Nom (EN)")
-    name_ar: str | None = Field(None, max_length=100, description="Nom (AR)")
+    # Traductions automatiques FR → EN/AR (convention additive) — sans max_length :
+    # une traduction n'a pas de garantie de longueur (peut dépasser la source FR)
+    name_en: str | None = Field(None, description="Nom (EN)")
+    name_ar: str | None = Field(None, description="Nom (AR)")
     description_en: str | None = Field(None, description="Description (EN)")
     description_ar: str | None = Field(None, description="Description (AR)")
 
@@ -50,9 +51,9 @@ class TagUpdate(BaseModel):
     slug: str | None = Field(None, min_length=1, max_length=100)
     icon: str | None = Field(None, max_length=50)
     description: str | None = None
-    # Traductions automatiques FR → EN/AR (convention additive)
-    name_en: str | None = Field(None, max_length=100)
-    name_ar: str | None = Field(None, max_length=100)
+    # Traductions automatiques FR → EN/AR (convention additive, sans max_length)
+    name_en: str | None = None
+    name_ar: str | None = None
     description_en: str | None = None
     description_ar: str | None = None
 
@@ -162,8 +163,8 @@ class EventBase(BaseModel):
     content_md: str | None = Field(None, description="Contenu riche (Markdown)")
 
     # Traductions automatiques FR → EN/AR (convention additive)
-    title_en: str | None = Field(None, max_length=255)
-    title_ar: str | None = Field(None, max_length=255)
+    title_en: str | None = None
+    title_ar: str | None = None
     description_en: str | None = None
     description_ar: str | None = None
     content_en_html: str | None = None
@@ -223,8 +224,8 @@ class EventUpdate(BaseModel):
     content_md: str | None = None
 
     # Traductions automatiques FR → EN/AR (convention additive)
-    title_en: str | None = Field(None, max_length=255)
-    title_ar: str | None = Field(None, max_length=255)
+    title_en: str | None = None
+    title_ar: str | None = None
     description_en: str | None = None
     description_ar: str | None = None
     content_en_html: str | None = None
@@ -366,8 +367,8 @@ class NewsBase(BaseModel):
     content_html: str | None = Field(None, description="Contenu riche (HTML)")
     content_md: str | None = Field(None, description="Contenu riche (Markdown)")
     # Traductions automatiques FR → EN/AR (convention additive)
-    title_en: str | None = Field(None, max_length=255)
-    title_ar: str | None = Field(None, max_length=255)
+    title_en: str | None = None
+    title_ar: str | None = None
     summary_en: str | None = None
     summary_ar: str | None = None
     content_en_html: str | None = None
@@ -415,8 +416,8 @@ class NewsUpdate(BaseModel):
     content_html: str | None = None
     content_md: str | None = None
     # Traductions automatiques FR → EN/AR (convention additive)
-    title_en: str | None = Field(None, max_length=255)
-    title_ar: str | None = Field(None, max_length=255)
+    title_en: str | None = None
+    title_ar: str | None = None
     summary_en: str | None = None
     summary_ar: str | None = None
     content_en_html: str | None = None
