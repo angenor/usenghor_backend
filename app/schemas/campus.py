@@ -124,9 +124,17 @@ class CampusBase(BaseModel):
 
     code: str = Field(..., min_length=1, max_length=20, description="Code unique du campus")
     name: str = Field(..., min_length=1, max_length=255, description="Nom du campus")
-    description: str | None = Field(None, description="Description du campus")
+    description: str | None = Field(None, description="Description du campus (legacy, FR)")
     description_html: str | None = Field(None, description="Description HTML (rendu public)")
     description_md: str | None = Field(None, description="Description Markdown (édition)")
+    # Traductions auto FR → EN/AR (convention additive). On traduit name + la paire
+    # rich description_html/_md (pas la colonne legacy `description`). city/address = FR.
+    name_en: str | None = Field(None, description="Nom (EN)")
+    name_ar: str | None = Field(None, description="Nom (AR)")
+    description_en_html: str | None = Field(None, description="Description EN (HTML)")
+    description_en_md: str | None = Field(None, description="Description EN (Markdown)")
+    description_ar_html: str | None = Field(None, description="Description AR (HTML)")
+    description_ar_md: str | None = Field(None, description="Description AR (Markdown)")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     country_external_id: str | None = Field(None, description="ID du pays")
     head_external_id: str | None = Field(None, description="ID du responsable")
@@ -155,6 +163,13 @@ class CampusUpdate(BaseModel):
     description: str | None = None
     description_html: str | None = None
     description_md: str | None = None
+    # Traductions auto FR → EN/AR (convention additive)
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
     cover_image_external_id: str | None = None
     country_external_id: str | None = None
     head_external_id: str | None = None
@@ -196,6 +211,11 @@ class CampusPublic(BaseModel):
     description: str | None
     description_html: str | None = None
     description_md: str | None = None
+    # Traductions auto FR → EN/AR (repli FR côté lecture publique). city = FR.
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en_html: str | None = None
+    description_ar_html: str | None = None
     cover_image_external_id: str | None
     country_external_id: str | None
     city: str | None
@@ -204,3 +224,27 @@ class CampusPublic(BaseModel):
     is_headquarters: bool
 
     model_config = {"from_attributes": True}
+
+
+# =============================================================================
+# TRADUCTION AUTO FR → EN/AR (requête/réponse sans persistance — bouton admin)
+# =============================================================================
+
+
+class CampusTranslateRequest(BaseModel):
+    """Champs source FR d'un campus à traduire (sans persistance)."""
+
+    name: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+
+
+class CampusTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None

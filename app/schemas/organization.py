@@ -23,6 +23,13 @@ class ServiceObjectiveBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255, description="Titre de l'objectif")
     description_html: str | None = Field(None, description="Description de l'objectif (HTML)")
     description_md: str | None = Field(None, description="Description de l'objectif (Markdown)")
+    # Traductions auto FR → EN/AR (convention additive)
+    title_en: str | None = Field(None, description="Titre (EN)")
+    title_ar: str | None = Field(None, description="Titre (AR)")
+    description_en_html: str | None = Field(None, description="Description EN (HTML)")
+    description_en_md: str | None = Field(None, description="Description EN (Markdown)")
+    description_ar_html: str | None = Field(None, description="Description AR (HTML)")
+    description_ar_md: str | None = Field(None, description="Description AR (Markdown)")
     display_order: int = Field(0, ge=0, description="Ordre d'affichage")
 
 
@@ -38,6 +45,13 @@ class ServiceObjectiveUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=255)
     description_html: str | None = None
     description_md: str | None = None
+    # Traductions auto FR → EN/AR (convention additive)
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
     display_order: int | None = Field(None, ge=0)
 
 
@@ -61,6 +75,13 @@ class ServiceAchievementBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255, description="Titre de la réalisation")
     description_html: str | None = Field(None, description="Description (HTML)")
     description_md: str | None = Field(None, description="Description (Markdown)")
+    # Traductions auto FR → EN/AR (convention additive). type = NON traduit.
+    title_en: str | None = Field(None, description="Titre (EN)")
+    title_ar: str | None = Field(None, description="Titre (AR)")
+    description_en_html: str | None = Field(None, description="Description EN (HTML)")
+    description_en_md: str | None = Field(None, description="Description EN (Markdown)")
+    description_ar_html: str | None = Field(None, description="Description AR (HTML)")
+    description_ar_md: str | None = Field(None, description="Description AR (Markdown)")
     type: str | None = Field(None, max_length=100, description="Type de réalisation")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     achievement_date: date | None = Field(None, description="Date de la réalisation")
@@ -78,6 +99,13 @@ class ServiceAchievementUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=255)
     description_html: str | None = None
     description_md: str | None = None
+    # Traductions auto FR → EN/AR (convention additive)
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
     type: str | None = Field(None, max_length=100)
     cover_image_external_id: str | None = None
     achievement_date: date | None = None
@@ -104,6 +132,13 @@ class ServiceProjectBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255, description="Titre du projet")
     description_html: str | None = Field(None, description="Description (HTML)")
     description_md: str | None = Field(None, description="Description (Markdown)")
+    # Traductions auto FR → EN/AR (convention additive). status = NON traduit.
+    title_en: str | None = Field(None, description="Titre (EN)")
+    title_ar: str | None = Field(None, description="Titre (AR)")
+    description_en_html: str | None = Field(None, description="Description EN (HTML)")
+    description_en_md: str | None = Field(None, description="Description EN (Markdown)")
+    description_ar_html: str | None = Field(None, description="Description AR (HTML)")
+    description_ar_md: str | None = Field(None, description="Description AR (Markdown)")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     progress: int = Field(0, ge=0, le=100, description="Progression en %")
     status: ProjectStatus = Field(ProjectStatus.PLANNED, description="Statut du projet")
@@ -123,6 +158,13 @@ class ServiceProjectUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=255)
     description_html: str | None = None
     description_md: str | None = None
+    # Traductions auto FR → EN/AR (convention additive)
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
     cover_image_external_id: str | None = None
     progress: int | None = Field(None, ge=0, le=100)
     status: ProjectStatus | None = None
@@ -199,6 +241,17 @@ class ServiceBase(BaseModel):
     description_md: str | None = Field(None, description="Description du service (Markdown)")
     mission_html: str | None = Field(None, description="Mission du service (HTML)")
     mission_md: str | None = Field(None, description="Mission du service (Markdown)")
+    # Traductions auto FR → EN/AR (convention additive). sigle = NON traduit.
+    name_en: str | None = Field(None, description="Nom (EN)")
+    name_ar: str | None = Field(None, description="Nom (AR)")
+    description_en_html: str | None = Field(None, description="Description EN (HTML)")
+    description_en_md: str | None = Field(None, description="Description EN (Markdown)")
+    description_ar_html: str | None = Field(None, description="Description AR (HTML)")
+    description_ar_md: str | None = Field(None, description="Description AR (Markdown)")
+    mission_en_html: str | None = Field(None, description="Mission EN (HTML)")
+    mission_en_md: str | None = Field(None, description="Mission EN (Markdown)")
+    mission_ar_html: str | None = Field(None, description="Mission AR (HTML)")
+    mission_ar_md: str | None = Field(None, description="Mission AR (Markdown)")
     email: EmailStr | None = Field(None, description="Email du service")
     phone: str | None = Field(None, max_length=30, description="Téléphone du service")
     head_external_id: str | None = Field(None, description="ID du responsable")
@@ -223,6 +276,17 @@ class ServiceUpdate(BaseModel):
     description_md: str | None = None
     mission_html: str | None = None
     mission_md: str | None = None
+    # Traductions auto FR → EN/AR (convention additive)
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    mission_en_html: str | None = None
+    mission_en_md: str | None = None
+    mission_ar_html: str | None = None
+    mission_ar_md: str | None = None
     email: EmailStr | None = None
     phone: str | None = Field(None, max_length=30)
     sector_id: str | None = None
@@ -273,6 +337,17 @@ class SectorBase(BaseModel):
     description_md: str | None = Field(None, description="Description du secteur (Markdown)")
     mission_html: str | None = Field(None, description="Mission du secteur (HTML)")
     mission_md: str | None = Field(None, description="Mission du secteur (Markdown)")
+    # Traductions auto FR → EN/AR (convention additive)
+    name_en: str | None = Field(None, description="Nom (EN)")
+    name_ar: str | None = Field(None, description="Nom (AR)")
+    description_en_html: str | None = Field(None, description="Description EN (HTML)")
+    description_en_md: str | None = Field(None, description="Description EN (Markdown)")
+    description_ar_html: str | None = Field(None, description="Description AR (HTML)")
+    description_ar_md: str | None = Field(None, description="Description AR (Markdown)")
+    mission_en_html: str | None = Field(None, description="Mission EN (HTML)")
+    mission_en_md: str | None = Field(None, description="Mission EN (Markdown)")
+    mission_ar_html: str | None = Field(None, description="Mission AR (HTML)")
+    mission_ar_md: str | None = Field(None, description="Mission AR (Markdown)")
     icon_external_id: str | None = Field(None, description="ID de l'icône")
     cover_image_external_id: str | None = Field(None, description="ID de l'image de couverture")
     head_external_id: str | None = Field(None, description="ID du responsable")
@@ -294,6 +369,17 @@ class SectorUpdate(BaseModel):
     description_md: str | None = None
     mission_html: str | None = None
     mission_md: str | None = None
+    # Traductions auto FR → EN/AR (convention additive)
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    mission_en_html: str | None = None
+    mission_en_md: str | None = None
+    mission_ar_html: str | None = None
+    mission_ar_md: str | None = None
     icon_external_id: str | None = None
     cover_image_external_id: str | None = None
     head_external_id: str | None = None
@@ -339,6 +425,13 @@ class SectorPublic(BaseModel):
     description_md: str | None
     mission_html: str | None
     mission_md: str | None
+    # Traductions auto FR → EN/AR (repli FR côté lecture publique)
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en_html: str | None = None
+    description_ar_html: str | None = None
+    mission_en_html: str | None = None
+    mission_ar_html: str | None = None
     icon_external_id: str | None
     cover_image_external_id: str | None
     display_order: int
@@ -357,6 +450,13 @@ class ServicePublic(BaseModel):
     description_md: str | None
     mission_html: str | None
     mission_md: str | None
+    # Traductions auto FR → EN/AR (repli FR côté lecture publique). sigle = FR.
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en_html: str | None = None
+    description_ar_html: str | None = None
+    mission_en_html: str | None = None
+    mission_ar_html: str | None = None
     email: str | None
     phone: str | None
     sector_id: str | None
@@ -380,3 +480,115 @@ class SectorPublicWithServices(SectorPublic):
     """Schéma public pour un secteur avec ses services."""
 
     services: list[ServicePublic] = []
+
+
+# =============================================================================
+# TRADUCTION AUTO FR → EN/AR (requêtes/réponses sans persistance — bouton admin)
+# =============================================================================
+
+
+class SectorTranslateRequest(BaseModel):
+    """Champs source FR d'un secteur à traduire (sans persistance)."""
+
+    name: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+    mission_html: str | None = None
+    mission_md: str | None = None
+
+
+class SectorTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    mission_en_html: str | None = None
+    mission_en_md: str | None = None
+    mission_ar_html: str | None = None
+    mission_ar_md: str | None = None
+
+
+class ServiceTranslateRequest(BaseModel):
+    """Champs source FR d'un service à traduire (sans persistance)."""
+
+    name: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+    mission_html: str | None = None
+    mission_md: str | None = None
+
+
+class ServiceTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    name_en: str | None = None
+    name_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+    mission_en_html: str | None = None
+    mission_en_md: str | None = None
+    mission_ar_html: str | None = None
+    mission_ar_md: str | None = None
+
+
+class ServiceObjectiveTranslateRequest(BaseModel):
+    """Champs source FR d'un objectif à traduire (sans persistance)."""
+
+    title: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+
+
+class ServiceObjectiveTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+
+
+class ServiceAchievementTranslateRequest(BaseModel):
+    """Champs source FR d'une réalisation à traduire (sans persistance)."""
+
+    title: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+
+
+class ServiceAchievementTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
+
+
+class ServiceProjectTranslateRequest(BaseModel):
+    """Champs source FR d'un projet de service à traduire (sans persistance)."""
+
+    title: str | None = None
+    description_html: str | None = None
+    description_md: str | None = None
+
+
+class ServiceProjectTranslateResponse(BaseModel):
+    """Traductions EN/AR générées pour pré-remplir le formulaire admin."""
+
+    title_en: str | None = None
+    title_ar: str | None = None
+    description_en_html: str | None = None
+    description_en_md: str | None = None
+    description_ar_html: str | None = None
+    description_ar_md: str | None = None
