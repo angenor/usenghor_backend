@@ -285,9 +285,12 @@ class ApplicationExportService:
             for document in docs_by_app[application.id]:
                 row.append(_format_value(document.document_name) or "Document")
                 if document.media_external_id and base:
+                    # Sans ?download=1 : le fichier est servi en Content-Disposition
+                    # inline, donc prévisualisable directement dans le navigateur
+                    # (PDF, images...) au lieu d'être téléchargé.
                     row.append(
                         f"{base}/api/public/media/"
-                        f"{document.media_external_id}/download?download=1"
+                        f"{document.media_external_id}/download"
                     )
                 else:
                     row.append("")
