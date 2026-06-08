@@ -21,6 +21,8 @@ from app.schemas.campus import (
     CampusTeamCreate,
     CampusTeamRead,
     CampusTeamUpdate,
+    CampusTranslateRequest,
+    CampusTranslateResponse,
     CampusUpdate,
     CampusWithTeam,
 )
@@ -28,6 +30,18 @@ from app.schemas.common import IdResponse, MessageResponse
 from app.services.campus_service import CampusService
 
 router = APIRouter(prefix="/campuses", tags=["Campuses"])
+
+
+# NOTE: route STATIQUE déclarée avant /{campus_id} (ordre des routes FastAPI).
+@router.post("/translate", response_model=CampusTranslateResponse)
+async def translate_campus_fields(
+    data: CampusTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("campuses.view")),
+) -> CampusTranslateResponse:
+    """Traduit les champs FR d'un campus en EN/AR (sans persistance — bouton admin)."""
+    return await CampusService(db).translate_campus_fields(data)
 
 
 @router.get("", response_model=dict)
@@ -76,24 +90,9 @@ async def create_campus(
 ) -> IdResponse:
     """Crée un nouveau campus."""
     service = CampusService(db)
-    campus = await service.create_campus(
-        code=campus_data.code,
-        name=campus_data.name,
-        description=campus_data.description,
-        cover_image_external_id=campus_data.cover_image_external_id,
-        country_external_id=campus_data.country_external_id,
-        head_external_id=campus_data.head_external_id,
-        album_external_id=campus_data.album_external_id,
-        email=campus_data.email,
-        phone=campus_data.phone,
-        city=campus_data.city,
-        address=campus_data.address,
-        postal_code=campus_data.postal_code,
-        latitude=campus_data.latitude,
-        longitude=campus_data.longitude,
-        is_headquarters=campus_data.is_headquarters,
-        active=campus_data.active,
-    )
+    # model_dump : forwarde la paire rich description_html/_md ET les traductions
+    # _en/_ar (édités via le bouton « Traduire ») ; code/name mappent les params nommés.
+    campus = await service.create_campus(**campus_data.model_dump(exclude_unset=True))
     return IdResponse(id=campus.id, message="Campus créé avec succès")
 
 

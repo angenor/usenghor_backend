@@ -15,25 +15,82 @@ from app.schemas.common import IdResponse, MessageResponse
 from app.schemas.organization import (
     ServiceAchievementCreate,
     ServiceAchievementRead,
+    ServiceAchievementTranslateRequest,
+    ServiceAchievementTranslateResponse,
     ServiceAchievementUpdate,
     ServiceCreate,
     ServiceObjectiveCreate,
     ServiceObjectiveRead,
+    ServiceObjectiveTranslateRequest,
+    ServiceObjectiveTranslateResponse,
     ServiceObjectiveUpdate,
     ServiceProjectCreate,
     ServiceProjectRead,
+    ServiceProjectTranslateRequest,
+    ServiceProjectTranslateResponse,
     ServiceProjectUpdate,
     ServiceRead,
     ServiceReorder,
     ServiceTeamCreate,
     ServiceTeamRead,
     ServiceTeamUpdate,
+    ServiceTranslateRequest,
+    ServiceTranslateResponse,
     ServiceUpdate,
     ServiceWithDetails,
 )
 from app.services.organization_service import OrganizationService
 
 router = APIRouter(prefix="/services", tags=["Services"])
+
+
+# =============================================================================
+# TRADUCTION AUTO FR → EN/AR (routes STATIQUES — déclarées avant /{service_id})
+# =============================================================================
+
+
+@router.post("/translate", response_model=ServiceTranslateResponse)
+async def translate_service_fields(
+    data: ServiceTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.view")),
+) -> ServiceTranslateResponse:
+    """Traduit les champs FR d'un service en EN/AR (sans persistance)."""
+    return await OrganizationService(db).translate_service_fields(data)
+
+
+@router.post("/objectives/translate", response_model=ServiceObjectiveTranslateResponse)
+async def translate_objective_fields(
+    data: ServiceObjectiveTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.view")),
+) -> ServiceObjectiveTranslateResponse:
+    """Traduit les champs FR d'un objectif en EN/AR (sans persistance)."""
+    return await OrganizationService(db).translate_objective_fields(data)
+
+
+@router.post("/achievements/translate", response_model=ServiceAchievementTranslateResponse)
+async def translate_achievement_fields(
+    data: ServiceAchievementTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.view")),
+) -> ServiceAchievementTranslateResponse:
+    """Traduit les champs FR d'une réalisation en EN/AR (sans persistance)."""
+    return await OrganizationService(db).translate_achievement_fields(data)
+
+
+@router.post("/projects/translate", response_model=ServiceProjectTranslateResponse)
+async def translate_service_project_fields(
+    data: ServiceProjectTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.view")),
+) -> ServiceProjectTranslateResponse:
+    """Traduit les champs FR d'un projet de service en EN/AR (sans persistance)."""
+    return await OrganizationService(db).translate_service_project_fields(data)
 
 
 # =============================================================================
@@ -97,20 +154,9 @@ async def create_service(
 ) -> IdResponse:
     """Crée un nouveau service."""
     org_service = OrganizationService(db)
-    svc = await org_service.create_service(
-        name=service_data.name,
-        sector_id=service_data.sector_id,
-        description_html=service_data.description_html,
-        description_md=service_data.description_md,
-        mission_html=service_data.mission_html,
-        mission_md=service_data.mission_md,
-        email=service_data.email,
-        phone=service_data.phone,
-        head_external_id=service_data.head_external_id,
-        album_external_id=service_data.album_external_id,
-        display_order=service_data.display_order,
-        active=service_data.active,
-    )
+    # model_dump : forwarde aussi sigle/color et les champs de traduction _en/_ar
+    # (édités via le bouton « Traduire ») ; name/sector_id mappent les params nommés.
+    svc = await org_service.create_service(**service_data.model_dump(exclude_unset=True))
     return IdResponse(id=svc.id, message="Service créé avec succès")
 
 
@@ -198,12 +244,10 @@ async def create_service_objective(
 ):
     """Crée un objectif pour un service."""
     org_service = OrganizationService(db)
+    # model_dump : forwarde aussi les traductions _en/_ar éditées dans le sous-formulaire.
     return await org_service.create_service_objective(
         service_id=service_id,
-        title=objective_data.title,
-        description_html=objective_data.description_html,
-        description_md=objective_data.description_md,
-        display_order=objective_data.display_order,
+        **objective_data.model_dump(exclude_unset=True),
     )
 
 
@@ -269,14 +313,10 @@ async def create_service_achievement(
 ):
     """Crée une réalisation pour un service."""
     org_service = OrganizationService(db)
+    # model_dump : forwarde aussi les traductions _en/_ar éditées dans le sous-formulaire.
     return await org_service.create_service_achievement(
         service_id=service_id,
-        title=achievement_data.title,
-        description_html=achievement_data.description_html,
-        description_md=achievement_data.description_md,
-        type=achievement_data.type,
-        cover_image_external_id=achievement_data.cover_image_external_id,
-        achievement_date=achievement_data.achievement_date,
+        **achievement_data.model_dump(exclude_unset=True),
     )
 
 
@@ -344,16 +384,10 @@ async def create_service_project(
 ):
     """Crée un projet pour un service."""
     org_service = OrganizationService(db)
+    # model_dump : forwarde aussi les traductions _en/_ar éditées dans le sous-formulaire.
     return await org_service.create_service_project(
         service_id=service_id,
-        title=project_data.title,
-        description_html=project_data.description_html,
-        description_md=project_data.description_md,
-        cover_image_external_id=project_data.cover_image_external_id,
-        progress=project_data.progress,
-        status=project_data.status,
-        start_date=project_data.start_date,
-        expected_end_date=project_data.expected_end_date,
+        **project_data.model_dump(exclude_unset=True),
     )
 
 

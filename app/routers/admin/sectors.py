@@ -16,6 +16,8 @@ from app.schemas.organization import (
     SectorCreate,
     SectorRead,
     SectorReorder,
+    SectorTranslateRequest,
+    SectorTranslateResponse,
     SectorUpdate,
     SectorWithServices,
     ServiceRead,
@@ -23,6 +25,18 @@ from app.schemas.organization import (
 from app.services.organization_service import OrganizationService
 
 router = APIRouter(prefix="/sectors", tags=["Sectors"])
+
+
+# NOTE: route STATIQUE déclarée avant /{sector_id} (ordre des routes FastAPI).
+@router.post("/translate", response_model=SectorTranslateResponse)
+async def translate_sector_fields(
+    data: SectorTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.view")),
+) -> SectorTranslateResponse:
+    """Traduit les champs FR d'un secteur en EN/AR (sans persistance — bouton admin)."""
+    return await OrganizationService(db).translate_sector_fields(data)
 
 
 @router.get("", response_model=dict)
@@ -64,19 +78,9 @@ async def create_sector(
 ) -> IdResponse:
     """Crée un nouveau secteur."""
     service = OrganizationService(db)
-    sector = await service.create_sector(
-        code=sector_data.code,
-        name=sector_data.name,
-        description_html=sector_data.description_html,
-        description_md=sector_data.description_md,
-        mission_html=sector_data.mission_html,
-        mission_md=sector_data.mission_md,
-        icon_external_id=sector_data.icon_external_id,
-        cover_image_external_id=sector_data.cover_image_external_id,
-        head_external_id=sector_data.head_external_id,
-        display_order=sector_data.display_order,
-        active=sector_data.active,
-    )
+    # model_dump : forwarde aussi les champs de traduction _en/_ar (édités via le
+    # bouton « Traduire ») ; code et name mappent les paramètres nommés du service.
+    sector = await service.create_sector(**sector_data.model_dump(exclude_unset=True))
     return IdResponse(id=sector.id, message="Secteur créé avec succès")
 
 
