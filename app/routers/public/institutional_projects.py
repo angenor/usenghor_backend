@@ -12,6 +12,7 @@ from app.core.exceptions import NotFoundException
 from app.core.pagination import PaginationParams, paginate
 from app.models.organization import ProjectStatus
 from app.models.project import Project, ProjectCallStatus
+from app.schemas.fundraising import FundraiserPublic
 from app.schemas.partner import PartnerPublic
 from app.schemas.project import (
     ProjectCallRead,
@@ -19,6 +20,7 @@ from app.schemas.project import (
     ProjectPublic,
     ProjectReadWithRelations,
 )
+from app.services.fundraising_service import FundraisingService
 from app.services.project_service import ProjectService
 
 router = APIRouter(prefix="/projects", tags=["Institutional Projects"])
@@ -69,6 +71,20 @@ async def list_all_projects_partners(
     """
     service = ProjectService(db)
     return await service.get_all_projects_partners()
+
+
+@router.get("/{project_id}/fundraisers", response_model=list[FundraiserPublic])
+async def list_project_fundraisers(
+    project_id: str,
+    db: DbSession,
+) -> list:
+    """
+    Liste les levées de fonds publiées (active + completed) associées à un projet.
+
+    Conserve l'historique : les levées terminées restent affichées.
+    """
+    service = FundraisingService(db)
+    return await service.get_project_published_fundraisers(project_id)
 
 
 @router.get("/by-slug/{slug}", response_model=ProjectReadWithRelations)

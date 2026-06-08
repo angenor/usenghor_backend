@@ -68,8 +68,25 @@ class FundraisingService:
             "progress_percentage": totals["progress_percentage"],
             "contributor_count": totals["contributor_count"],
             "status": fundraiser.status,
+            "start_date": fundraiser.start_date,
+            "end_date": fundraiser.end_date,
             "created_at": fundraiser.created_at,
         }
+
+    async def get_project_published_fundraisers(self, project_id: str) -> list[dict]:
+        """Levées publiées (active + completed) associées à un projet, enrichies."""
+        result = await self.db.execute(
+            select(Fundraiser)
+            .where(
+                Fundraiser.project_external_id == project_id,
+                Fundraiser.status.in_(["active", "completed"]),
+            )
+            .order_by(
+                Fundraiser.start_date.desc().nullslast(),
+                Fundraiser.created_at.desc(),
+            )
+        )
+        return [self._enrich_fundraiser_public(f) for f in result.scalars().all()]
 
     def _enrich_fundraiser_public_detail(self, fundraiser: Fundraiser) -> dict:
         """Enrichit une campagne avec tous les détails publics."""

@@ -85,6 +85,8 @@ class FundraiserPublic(BaseModel):
     progress_percentage: float = 0
     contributor_count: int = 0
     status: str
+    start_date: date | None = None
+    end_date: date | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
