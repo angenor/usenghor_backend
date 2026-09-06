@@ -19,6 +19,7 @@ from app.schemas.academic import (
     ProgramDuplicate,
     ProgramPartnerCreate,
     ProgramPartnerRead,
+    ProgramPartnerReorder,
     ProgramPartnerUpdate,
     ProgramRead,
     ProgramReorder,
@@ -323,6 +324,24 @@ async def add_partner_to_program(
         partner_external_id=partner_data.partner_external_id,
         partnership_type=partner_data.partnership_type,
     )
+
+
+@router.put("/{program_id}/partners/reorder", response_model=list[ProgramPartnerRead])
+async def reorder_program_partners(
+    program_id: str,
+    reorder_data: ProgramPartnerReorder,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("programs.edit")),
+) -> list:
+    """
+    Réordonne les partenaires d'un programme.
+
+    ATTENTION : cette route doit rester déclarée AVANT `/{program_id}/partners/{partner_id}`,
+    sinon « reorder » serait capturé comme un `partner_id`.
+    """
+    service = AcademicService(db)
+    return await service.reorder_program_partners(program_id, reorder_data.partner_ids)
 
 
 @router.put("/{program_id}/partners/{partner_id}", response_model=ProgramPartnerRead)

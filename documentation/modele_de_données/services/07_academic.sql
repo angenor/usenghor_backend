@@ -108,8 +108,10 @@ CREATE TABLE program_partners (
     program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
     partner_external_id UUID NOT NULL,  -- → PARTNER.partners.id
     partnership_type VARCHAR(100),
+    display_order INT DEFAULT 0,
     PRIMARY KEY (program_id, partner_external_id)
 );
+CREATE INDEX idx_program_partners_program_order ON program_partners(program_id, display_order);
 
 -- Programme de formation (semestres)
 CREATE TABLE program_semesters (

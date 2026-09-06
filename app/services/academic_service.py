@@ -8,7 +8,7 @@ Logique métier pour la gestion des programmes et formations.
 from types import SimpleNamespace
 from uuid import uuid4
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -1351,7 +1351,9 @@ class AcademicService:
             raise NotFoundException("Programme non trouvé")
 
         result = await self.db.execute(
-            select(ProgramPartner).where(ProgramPartner.program_id == program_id)
+            select(ProgramPartner)
+            .where(ProgramPartner.program_id == program_id)
+            .order_by(ProgramPartner.display_order, ProgramPartner.partner_external_id)
         )
         return list(result.scalars().all())
 
@@ -1390,10 +1392,19 @@ class AcademicService:
         if result.scalar_one_or_none():
             raise ConflictException("Ce partenaire est déjà associé au programme")
 
+        # Placer le nouveau partenaire en fin de liste
+        max_order = await self.db.execute(
+            select(func.max(ProgramPartner.display_order)).where(
+                ProgramPartner.program_id == program_id
+            )
+        )
+        next_order = (max_order.scalar() or 0) + 1
+
         partner = ProgramPartner(
             program_id=program_id,
             partner_external_id=partner_external_id,
             partnership_type=partnership_type,
+            display_order=next_order,
         )
         self.db.add(partner)
         await self.db.flush()
@@ -1476,6 +1487,7 @@ class AcademicService:
             select(
                 ProgramPartner.partner_external_id,
                 ProgramPartner.partnership_type,
+                ProgramPartner.display_order,
                 Partner.name,
                 Partner.logo_external_id,
                 Partner.website,
@@ -1489,6 +1501,7 @@ class AcademicService:
                 ProgramPartner.program_id == program_id,
                 Partner.active == True,
             )
+            .order_by(ProgramPartner.display_order, Partner.name)
         )
 
         return [
@@ -1499,9 +1512,43 @@ class AcademicService:
                 "website": row.website,
                 "partner_type": row.type.value if hasattr(row.type, "value") else str(row.type),
                 "partnership_type": row.partnership_type,
+                "display_order": row.display_order or 0,
             }
             for row in result.fetchall()
         ]
+
+    async def reorder_program_partners(
+        self, program_id: str, partner_ids: list[str]
+    ) -> list[ProgramPartner]:
+        """
+        Réordonne les partenaires d'un programme.
+
+        Args:
+            program_id: ID du programme.
+            partner_ids: Liste ordonnée des IDs de partenaires.
+
+        Returns:
+            Partenaires du programme dans leur nouvel ordre.
+
+        Raises:
+            NotFoundException: Si le programme n'existe pas.
+        """
+        program = await self.get_program_by_id(program_id)
+        if not program:
+            raise NotFoundException("Programme non trouvé")
+
+        for index, partner_external_id in enumerate(partner_ids):
+            await self.db.execute(
+                update(ProgramPartner)
+                .where(
+                    ProgramPartner.program_id == program_id,
+                    ProgramPartner.partner_external_id == partner_external_id,
+                )
+                .values(display_order=index)
+            )
+        await self.db.flush()
+
+        return await self.get_program_partners(program_id)
 
     # =========================================================================
     # PROGRAM MEDIA LIBRARY

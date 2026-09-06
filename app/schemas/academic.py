@@ -286,6 +286,7 @@ class ProgramPartnerBase(BaseModel):
 
     partner_external_id: str = Field(..., description="ID du partenaire")
     partnership_type: str | None = Field(None, max_length=100, description="Type de partenariat")
+    display_order: int = Field(0, description="Ordre d'affichage")
 
 
 class ProgramPartnerCreate(ProgramPartnerBase):
@@ -298,6 +299,7 @@ class ProgramPartnerUpdate(BaseModel):
     """Schéma pour la mise à jour d'un partenariat."""
 
     partnership_type: str | None = Field(None, max_length=100)
+    display_order: int | None = Field(None, description="Ordre d'affichage")
 
 
 class ProgramPartnerRead(ProgramPartnerBase):
@@ -317,8 +319,15 @@ class ProgramPartnerPublic(BaseModel):
     website: str | None = None
     partner_type: str
     partnership_type: str | None = None
+    display_order: int = 0
 
     model_config = {"from_attributes": True}
+
+
+class ProgramPartnerReorder(BaseModel):
+    """Schéma pour le réordonnancement des partenaires d'un programme."""
+
+    partner_ids: list[str] = Field(..., min_length=1, description="Liste ordonnée des IDs")
 
 
 # =============================================================================

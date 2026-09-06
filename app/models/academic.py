@@ -231,6 +231,7 @@ class ProgramPartner(Base):
     )
     partner_external_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     partnership_type: Mapped[str | None] = mapped_column(String(100))
+    display_order: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class ProgramSemester(Base, UUIDMixin):
