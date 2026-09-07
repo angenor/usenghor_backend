@@ -398,7 +398,7 @@ async def seed():
                 "title": "Appel à candidatures - Cohorte 2026",
                 "description": "Candidature ouverte pour la nouvelle cohorte du programme Transform'Action Africa.",
                 "status": ProjectCallStatus.ONGOING,
-                "type": ProjectCallType.APPLICATION,
+                "type": ProjectCallType.TRAINING,
                 "deadline": now + timedelta(days=90),
             },
             # Appel bourse

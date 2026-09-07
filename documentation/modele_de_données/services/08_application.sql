@@ -16,6 +16,9 @@
 -- ============================================================================
 
 -- Types ENUM spécifiques à ce service
+-- NB : la valeur 'application' (« Candidature ») est DÉPRÉCIÉE depuis la migration 044
+--      (fusionnée dans 'training'). Elle est conservée dans l'ENUM pour compatibilité
+--      mais n'est plus proposée ni dans le backoffice ni dans les filtres publics.
 CREATE TYPE call_type AS ENUM ('application', 'scholarship', 'project', 'recruitment', 'training');
 CREATE TYPE call_status AS ENUM ('ongoing', 'closed', 'upcoming');
 CREATE TYPE submitted_application_status AS ENUM ('submitted', 'under_review', 'accepted', 'rejected', 'waitlisted', 'incomplete');

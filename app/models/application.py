@@ -31,7 +31,7 @@ from app.models.base import PublicationStatus, Salutation, TimestampMixin, UUIDM
 class CallType(str, enum.Enum):
     """Type d'appel à candidature."""
 
-    APPLICATION = "application"
+    APPLICATION = "application"  # Déprécié (migration 044) : fusionné dans TRAINING, masqué dans l'UI
     SCHOLARSHIP = "scholarship"
     PROJECT = "project"
     RECRUITMENT = "recruitment"

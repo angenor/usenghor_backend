@@ -33,7 +33,7 @@ from app.models.organization import ProjectStatus
 class ProjectCallType(str, enum.Enum):
     """Type d'appel lié à un projet."""
 
-    APPLICATION = "application"
+    APPLICATION = "application"  # Déprécié (migration 044) : fusionné dans TRAINING, masqué dans l'UI
     SCHOLARSHIP = "scholarship"
     PROJECT = "project"
     RECRUITMENT = "recruitment"
