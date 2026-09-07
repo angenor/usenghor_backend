@@ -49,6 +49,9 @@ INSERT INTO permissions (code, name_fr, category) VALUES
 ('programs.delete', 'Supprimer des formations', 'programs'),
 -- Gestion des candidatures
 ('applications.view', 'Voir les candidatures', 'applications'),
+('applications.create', 'Créer des appels et candidatures', 'applications'),
+('applications.edit', 'Modifier des appels et candidatures', 'applications'),
+('applications.delete', 'Supprimer des appels et candidatures', 'applications'),
 ('applications.evaluate', 'Évaluer les candidatures', 'applications'),
 ('applications.export', 'Exporter les candidatures', 'applications'),
 -- Gestion des événements
@@ -73,11 +76,35 @@ INSERT INTO permissions (code, name_fr, category) VALUES
 ('partners.delete', 'Supprimer des partenaires', 'partners'),
 -- Gestion des contenus éditoriaux
 ('editorial.view', 'Voir les contenus éditoriaux', 'editorial'),
+('editorial.create', 'Créer des contenus éditoriaux', 'editorial'),
 ('editorial.edit', 'Modifier les contenus éditoriaux', 'editorial'),
+('editorial.delete', 'Supprimer des contenus éditoriaux', 'editorial'),
 -- Gestion de la newsletter
 ('newsletter.view', 'Voir les newsletters', 'newsletter'),
 ('newsletter.create', 'Créer des newsletters', 'newsletter'),
+('newsletter.edit', 'Modifier des newsletters', 'newsletter'),
+('newsletter.delete', 'Supprimer des newsletters', 'newsletter'),
 ('newsletter.send', 'Envoyer des newsletters', 'newsletter'),
+-- Médiathèque
+('media.view', 'Voir la médiathèque', 'media'),
+('media.create', 'Ajouter des médias', 'media'),
+('media.edit', 'Modifier des médias', 'media'),
+('media.delete', 'Supprimer des médias', 'media'),
+-- Tableau de bord
+('dashboard.view', 'Voir le tableau de bord', 'dashboard'),
+-- Organisation (secteurs, services)
+('organization.view', 'Voir l''organisation', 'organization'),
+('organization.edit', 'Modifier l''organisation', 'organization'),
+-- Projets institutionnels
+('project.view', 'Voir les projets', 'project'),
+('project.create', 'Créer des projets', 'project'),
+('project.edit', 'Modifier des projets', 'project'),
+('project.delete', 'Supprimer des projets', 'project'),
+-- Levées de fonds
+('fundraisers.view', 'Voir les levées de fonds', 'fundraisers'),
+('fundraisers.create', 'Créer des levées de fonds', 'fundraisers'),
+('fundraisers.edit', 'Modifier des levées de fonds', 'fundraisers'),
+('fundraisers.delete', 'Supprimer des levées de fonds', 'fundraisers'),
 -- Gestion de la FAQ
 ('faq.view', 'Voir la FAQ', 'faq'),
 ('faq.create', 'Créer des questions FAQ', 'faq'),
