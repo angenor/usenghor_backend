@@ -5,6 +5,7 @@ Service Application
 Logique métier pour la gestion des appels à candidature et candidatures.
 """
 
+import asyncio
 from datetime import datetime
 from uuid import uuid4
 
@@ -62,6 +63,17 @@ _CRITERION_TRANSLATABLE = [("criterion", "text")]
 _COVERAGE_TRANSLATABLE = [("item", "text"), ("description", "text")]
 _REQUIRED_DOCUMENT_TRANSLATABLE = [("document_name", "text"), ("description", "text")]
 _SCHEDULE_TRANSLATABLE = [("step", "text"), ("description", "text")]
+
+# Listes synchronisables en bloc : attribut de relation → (modèle, champs traduisibles).
+_CALL_SYNC_SPECS: dict[str, tuple[type, list[tuple[str, str]]]] = {
+    "eligibility_criteria": (CallEligibilityCriteria, _CRITERION_TRANSLATABLE),
+    "coverage": (CallCoverage, _COVERAGE_TRANSLATABLE),
+    "required_documents": (CallRequiredDocument, _REQUIRED_DOCUMENT_TRANSLATABLE),
+    "schedule": (CallSchedule, _SCHEDULE_TRANSLATABLE),
+}
+
+# Nombre maximal de traductions concurrentes lors d'une synchronisation.
+_SYNC_TRANSLATION_CONCURRENCY = 4
 
 
 class ApplicationService:
@@ -363,6 +375,86 @@ class ApplicationService:
             raise NotFoundException("Appel non trouvé")
 
         call.status = status
+        await self.db.commit()
+        await self.db.refresh(call)
+        return await self.get_call_by_id(call.id)
+
+    # =========================================================================
+    # SYNCHRONISATION ATOMIQUE DES SOUS-ENTITÉS (critères, prises en charge,
+    # documents requis, calendrier)
+    # =========================================================================
+
+    async def sync_call_details(self, call_id: str, data: dict) -> ApplicationCall:
+        """Remplace en une seule transaction les listes d'un appel.
+
+        Pour chaque liste présente dans ``data`` :
+
+        - élément avec un ``id`` connu → mise à jour en place (les traductions
+          EN/AR existantes sont conservées tant que le texte FR n'a pas changé) ;
+        - élément sans ``id`` (ou ``id`` inconnu) → création ;
+        - élément existant absent du payload → suppression (``delete-orphan``).
+
+        L'ordre du payload devient l'ordre d'affichage. L'opération est
+        idempotente : rejouer le même payload (double clic, nouvel essai après
+        un timeout) produit le même état, sans doublon.
+        """
+        call = await self.get_call_by_id(call_id)
+        if not call:
+            raise NotFoundException("Appel non trouvé")
+
+        pending_translations: list[tuple[object, list[tuple[str, str]]]] = []
+
+        for attr, (model, translatable) in _CALL_SYNC_SPECS.items():
+            items = data.get(attr)
+            if items is None:
+                continue
+
+            existing = {obj.id: obj for obj in getattr(call, attr)}
+            kept: list = []
+
+            for position, raw in enumerate(items):
+                item = dict(raw)
+                item_id = item.pop("id", None)
+                item["display_order"] = position + 1
+                obj = existing.pop(item_id, None) if item_id else None
+
+                if obj is None:
+                    obj = model(id=str(uuid4()), call_id=call_id, **item)
+                    self.db.add(obj)
+                else:
+                    changed: set[str] = set()
+                    for key, value in item.items():
+                        if hasattr(obj, key) and getattr(obj, key) != value:
+                            setattr(obj, key, value)
+                            changed.add(key)
+                    # Texte FR modifié sans traduction fournie → invalider la
+                    # traduction stockée pour qu'elle soit régénérée.
+                    for base, _kind in translatable:
+                        if base not in changed:
+                            continue
+                        for lang in SUPPORTED_TARGETS:
+                            target = _lang_attr(base, lang)
+                            if not item.get(target):
+                                setattr(obj, target, None)
+
+                pending_translations.append((obj, translatable))
+                kept.append(obj)
+
+            # Les éléments retirés de la collection sont supprimés au flush
+            # (cascade ``delete-orphan``).
+            setattr(call, attr, kept)
+
+        # Traductions auto (non bloquantes), limitées en concurrence. Seuls les
+        # champs cibles vides sont remplis : aucun appel réseau pour un
+        # élément inchangé déjà traduit.
+        semaphore = asyncio.Semaphore(_SYNC_TRANSLATION_CONCURRENCY)
+
+        async def _fill(obj, fields):
+            async with semaphore:
+                await autofill_translations(obj, fields)
+
+        await asyncio.gather(*(_fill(obj, fields) for obj, fields in pending_translations))
+
         await self.db.commit()
         await self.db.refresh(call)
         return await self.get_call_by_id(call.id)

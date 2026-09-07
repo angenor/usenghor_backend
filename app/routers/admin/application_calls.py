@@ -14,6 +14,7 @@ from app.models.application import ApplicationCall, CallStatus, CallType
 from app.models.base import PublicationStatus
 from app.schemas.application import (
     ApplicationCallCreate,
+    ApplicationCallDetailsSync,
     ApplicationCallRead,
     ApplicationCallTranslateRequest,
     ApplicationCallTranslateResponse,
@@ -220,6 +221,31 @@ async def update_status(
     """Met à jour le statut d'un appel (ongoing, closed, upcoming)."""
     service = ApplicationService(db)
     return await service.update_call_status(call_id, new_status)
+
+
+# =============================================================================
+# SYNCHRONISATION ATOMIQUE DES SOUS-ENTITÉS
+# =============================================================================
+
+
+@router.put("/{call_id}/details", response_model=ApplicationCallWithDetails)
+async def sync_call_details(
+    call_id: str,
+    sync_data: ApplicationCallDetailsSync,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("applications.edit")),
+) -> ApplicationCall:
+    """Remplace en une transaction les listes d'un appel (critères, prises en
+    charge, documents requis, calendrier).
+
+    Idempotent : un élément avec ``id`` est mis à jour, sans ``id`` il est créé,
+    un élément existant absent du payload est supprimé. Une liste omise reste
+    intacte. Remplace le cycle « tout supprimer / tout recréer » qui produisait
+    des doublons en cas d'erreur réseau ou de nouvel essai.
+    """
+    service = ApplicationService(db)
+    return await service.sync_call_details(call_id, sync_data.model_dump(exclude_unset=True))
 
 
 # =============================================================================

@@ -319,6 +319,52 @@ class ApplicationCallWithDetails(ApplicationCallRead):
     schedule: list[CallScheduleRead] = []
 
 
+# =============================================================================
+# SYNCHRONISATION ATOMIQUE DES SOUS-ENTITÉS D'UN APPEL
+# =============================================================================
+# Chaque élément porte un ``id`` optionnel : présent → l'élément existant est
+# mis à jour en place ; absent (ou inconnu) → création. Les éléments existants
+# non listés sont supprimés. L'opération est idempotente : renvoyer deux fois
+# le même payload produit exactement le même état (aucun doublon possible).
+
+
+class CallEligibilityCriteriaSyncItem(CallEligibilityCriteriaCreate):
+    """Critère d'éligibilité dans un payload de synchronisation."""
+
+    id: str | None = None
+
+
+class CallCoverageSyncItem(CallCoverageCreate):
+    """Prise en charge dans un payload de synchronisation."""
+
+    id: str | None = None
+
+
+class CallRequiredDocumentSyncItem(CallRequiredDocumentCreate):
+    """Document requis dans un payload de synchronisation."""
+
+    id: str | None = None
+
+
+class CallScheduleSyncItem(CallScheduleCreate):
+    """Étape de calendrier dans un payload de synchronisation."""
+
+    id: str | None = None
+
+
+class ApplicationCallDetailsSync(BaseModel):
+    """Payload de remplacement complet des listes d'un appel.
+
+    Une liste absente (``None``) est laissée intacte ; une liste vide ``[]``
+    supprime tous les éléments existants.
+    """
+
+    eligibility_criteria: list[CallEligibilityCriteriaSyncItem] | None = None
+    coverage: list[CallCoverageSyncItem] | None = None
+    required_documents: list[CallRequiredDocumentSyncItem] | None = None
+    schedule: list[CallScheduleSyncItem] | None = None
+
+
 class ApplicationCallPublic(BaseModel):
     """Schéma pour l'affichage public d'un appel."""
 
