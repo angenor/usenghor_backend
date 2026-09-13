@@ -269,7 +269,8 @@ ON CONFLICT (key) DO NOTHING;
 INSERT INTO editorial_contents (key, value, value_type, category_id, description)
 SELECT 'entrepreneurship.dde_service_id',
        COALESCE((SELECT id::text FROM services
-                 WHERE name ILIKE '%Développement et de l''Entrepreneuriat%'
+                 -- « _ » accepte l'apostrophe droite ou typographique ; « veloppement » évite la casse du é
+                 WHERE name ILIKE '%veloppement et de l_entrepreneuriat%'
                  ORDER BY created_at LIMIT 1), ''),
        'text',
        (SELECT id FROM editorial_categories WHERE code = 'values'),
