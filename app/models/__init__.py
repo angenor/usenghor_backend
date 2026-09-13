@@ -95,6 +95,14 @@ from app.models.editorial import (
     EditorialValueType,
 )
 from app.models.faq import FaqCategory, FaqEntry
+from app.models.entrepreneurship import (
+    PeiCohort,
+    PeiCohortType,
+    PeiProgram,
+    PeiProgramPhase,
+    PeiResource,
+    PeiResourceType,
+)
 from app.models.short_links import AllowedDomain, ShortLink
 from app.models.project import (
     Project,
@@ -200,6 +208,13 @@ __all__ = [
     # FAQ
     "FaqCategory",
     "FaqEntry",
+    # Entrepreneurship (PEI)
+    "PeiProgramPhase",
+    "PeiCohortType",
+    "PeiResourceType",
+    "PeiProgram",
+    "PeiCohort",
+    "PeiResource",
     # Short Links
     "ShortLink",
     "AllowedDomain",

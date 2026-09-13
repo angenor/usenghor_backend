@@ -11,6 +11,7 @@ from app.routers.public import (
     campuses,
     countries,
     editorial,
+    entrepreneurship,
     events,
     faq,
     fundraisers,
@@ -54,5 +55,6 @@ router.include_router(short_links.router)
 router.include_router(surveys.router)
 router.include_router(users.router)
 router.include_router(faq.router)
+router.include_router(entrepreneurship.router)
 
 __all__ = ["router"]

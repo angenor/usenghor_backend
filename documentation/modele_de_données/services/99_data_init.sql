@@ -110,6 +110,11 @@ INSERT INTO permissions (code, name_fr, category) VALUES
 ('faq.create', 'Créer des questions FAQ', 'faq'),
 ('faq.edit', 'Modifier des questions FAQ', 'faq'),
 ('faq.delete', 'Supprimer des questions FAQ', 'faq'),
+-- Pôle Entrepreneuriat et Innovation (PEI)
+('entrepreneurship.view', 'Voir le pôle Entrepreneuriat', 'entrepreneurship'),
+('entrepreneurship.create', 'Créer des contenus du pôle Entrepreneuriat', 'entrepreneurship'),
+('entrepreneurship.edit', 'Modifier des contenus du pôle Entrepreneuriat', 'entrepreneurship'),
+('entrepreneurship.delete', 'Supprimer des contenus du pôle Entrepreneuriat', 'entrepreneurship'),
 -- Administration
 ('admin.settings', 'Gérer les paramètres', 'admin'),
 ('admin.audit', 'Voir les logs d''audit', 'admin');
@@ -128,6 +133,15 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r, permissions p
 WHERE r.code = 'super_admin';
+
+-- ============================================================================
+-- [PEI] Permissions du pôle Entrepreneuriat pour les administrateurs et éditeurs
+-- ============================================================================
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r, permissions p
+WHERE r.code IN ('admin', 'editor') AND p.category = 'entrepreneurship'
+ON CONFLICT DO NOTHING;
 
 -- ============================================================================
 -- FIN DU FICHIER 99_data_init.sql

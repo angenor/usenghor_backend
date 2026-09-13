@@ -17,6 +17,7 @@ from app.routers.admin import (
     dashboard,
     editorial,
     email,
+    entrepreneurship,
     event_registrations,
     events,
     faq,
@@ -78,5 +79,6 @@ router.include_router(institutional_projects.router)
 router.include_router(surveys.router)
 router.include_router(short_links.router)
 router.include_router(faq.router)
+router.include_router(entrepreneurship.router)
 
 __all__ = ["router"]
