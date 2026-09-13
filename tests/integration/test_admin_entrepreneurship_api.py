@@ -687,16 +687,16 @@ async def test_translate_missing_is_idempotent(
 
     first = await authenticated_client.post(f"{BASE}/translate-missing")
     assert first.status_code == 200, first.text
-    assert first.json() == {"programs": 2, "cohorts": 1, "resources": 0, "complete": True}
+    assert first.json() == {"programs": 2, "cohorts": 1, "resources": 0, "laureates": 0, "complete": True}
 
     logs = await _audits(db_session, "entrepreneurship.translate_missing")
     assert len(logs) == 1
     assert logs[0].record_id is None
     assert logs[0].table_name is None
-    assert logs[0].new_values == {"programs": 2, "cohorts": 1, "resources": 0, "complete": True}
+    assert logs[0].new_values == {"programs": 2, "cohorts": 1, "resources": 0, "laureates": 0, "complete": True}
 
     second = await authenticated_client.post(f"{BASE}/translate-missing")
-    assert second.json() == {"programs": 0, "cohorts": 0, "resources": 0, "complete": True}
+    assert second.json() == {"programs": 0, "cohorts": 0, "resources": 0, "laureates": 0, "complete": True}
 
     program = (
         await db_session.execute(
@@ -723,10 +723,10 @@ async def test_translate_missing_stops_at_time_budget(
     await db_session.commit()
 
     partial = await EntrepreneurshipService(db_session).translate_missing(user_id=None, time_budget=0)
-    assert partial.model_dump() == {"programs": 0, "cohorts": 0, "resources": 0, "complete": False}
+    assert partial.model_dump() == {"programs": 0, "cohorts": 0, "resources": 0, "laureates": 0, "complete": False}
 
     full = await EntrepreneurshipService(db_session).translate_missing(user_id=None)
-    assert full.model_dump() == {"programs": 1, "cohorts": 1, "resources": 0, "complete": True}
+    assert full.model_dump() == {"programs": 1, "cohorts": 1, "resources": 0, "laureates": 0, "complete": True}
 
 
 @pytest.mark.asyncio

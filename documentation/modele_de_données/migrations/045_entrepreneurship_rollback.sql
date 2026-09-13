@@ -5,6 +5,8 @@
 -- permissions entrepreneurship.* (et leurs attributions), clés éditoriales
 -- entrepreneurship.* (l'historique suit par ON DELETE CASCADE).
 -- ATTENTION : les dispositifs, cohortes et ressources saisis sont perdus.
+-- Prérequis : jouer d'abord 046_pei_laureates_partners_rollback.sql
+-- (pei_laureates référence pei_cohorts, ON DELETE RESTRICT).
 -- =============================================================================
 
 BEGIN;

@@ -112,3 +112,76 @@ async def test_reorder_unknown_id_raises(db_session: AsyncSession):
             "entrepreneurship.cohort.reorder",
             None,
         )
+
+
+# ---------------------------------------------------------------------------
+# Feature 022 : verbatim, cohérence type / cohorte, reorder scopé
+# ---------------------------------------------------------------------------
+
+from app.models.entrepreneurship import PeiLaureate, PeiLaureateType  # noqa: E402
+from app.services.entrepreneurship_service import _clamp_text  # noqa: E402
+
+
+def test_clamp_text_keeps_short_values():
+    assert _clamp_text(None) is None
+    assert _clamp_text("a" * 600) == "a" * 600
+
+
+def test_clamp_text_cuts_at_last_space():
+    value = ("mot " * 200).strip()  # 799 caractères
+    clamped = _clamp_text(value)
+    assert len(clamped) <= 600
+    assert clamped.endswith("mot…")
+
+
+def test_clamp_quote_on_object():
+    obj = SimpleNamespace(quote="ok", quote_en="x" * 700, quote_ar=None)
+    EntrepreneurshipService._clamp_quote(obj)
+    assert obj.quote == "ok"
+    assert len(obj.quote_en) == 600
+    assert obj.quote_ar is None
+
+
+@pytest.mark.parametrize(
+    ("laureate_type", "cohort_type", "ok"),
+    [
+        (PeiLaureateType.FSE_LAUREATE, PeiCohortType.FSE, True),
+        (PeiLaureateType.STUDENT_ENTREPRENEUR, PeiCohortType.SEE, True),
+        ("fse_laureate", "see", False),
+        (PeiLaureateType.STUDENT_ENTREPRENEUR, PeiCohortType.FSE, False),
+    ],
+)
+def test_assert_laureate_cohort(laureate_type, cohort_type, ok):
+    cohort = SimpleNamespace(type=cohort_type)
+    if ok:
+        EntrepreneurshipService._assert_laureate_cohort(laureate_type, cohort)
+    else:
+        with pytest.raises(ValidationException):
+            EntrepreneurshipService._assert_laureate_cohort(laureate_type, cohort)
+
+
+@pytest.mark.asyncio
+async def test_scoped_reorder_rejects_ids_from_another_cohort(db_session: AsyncSession):
+    cohort_ids = await _seed_cohorts(db_session, 2)
+    laureates = [
+        PeiLaureate(cohort_id=cohort_ids[i % 2], type=PeiLaureateType.FSE_LAUREATE,
+                    full_name=f"Portrait {i}", project_name="Projet", display_order=i)
+        for i in range(3)
+    ]
+    db_session.add_all(laureates)
+    await db_session.commit()
+    in_first = [laureates[0].id, laureates[2].id]
+
+    service = EntrepreneurshipService(db_session)
+    with pytest.raises(ValidationException):
+        await service._reorder(
+            PeiLaureate, [*in_first, laureates[1].id], "pei_laureates",
+            "entrepreneurship.laureate.reorder", None, scope={"cohort_id": cohort_ids[0]},
+        )
+
+    result = await service._reorder(
+        PeiLaureate, list(reversed(in_first)), "pei_laureates",
+        "entrepreneurship.laureate.reorder", None, scope={"cohort_id": cohort_ids[0]},
+    )
+    assert result.updated == 2
+    assert await service._next_display_order(PeiLaureate, cohort_id=cohort_ids[1]) == 2

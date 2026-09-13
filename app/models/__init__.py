@@ -98,6 +98,10 @@ from app.models.faq import FaqCategory, FaqEntry
 from app.models.entrepreneurship import (
     PeiCohort,
     PeiCohortType,
+    PeiLaureate,
+    PeiLaureateType,
+    PeiPartner,
+    PeiPartnerFamily,
     PeiProgram,
     PeiProgramPhase,
     PeiResource,
@@ -215,6 +219,10 @@ __all__ = [
     "PeiProgram",
     "PeiCohort",
     "PeiResource",
+    "PeiLaureateType",
+    "PeiPartnerFamily",
+    "PeiLaureate",
+    "PeiPartner",
     # Short Links
     "ShortLink",
     "AllowedDomain",

@@ -1,9 +1,10 @@
 -- ============================================================================
 -- SERVICE: ENTREPRENEURSHIP (Pôle Entrepreneuriat et Innovation — PEI)
 -- ============================================================================
--- Tables: pei_programs, pei_cohorts, pei_resources
--- Dépendances externes: IDENTITY (users), MEDIA (media — référence sans FK)
--- Spec: specs/021-pei-entrepreneurship-core/
+-- Tables: pei_programs, pei_cohorts, pei_resources, pei_laureates, pei_partners
+-- Dépendances externes: IDENTITY (users), MEDIA (media — référence sans FK),
+--                       PARTNER (partners — FK avec cascade, pei_partners)
+-- Spec: specs/021-pei-entrepreneurship-core/, specs/022-pei-laureates-partners/
 -- Convention trilingue additive : champ (FR), champ_en, champ_ar ;
 -- rich text : champ_html / champ_md + champ_en_html / champ_en_md / champ_ar_*
 -- ============================================================================
@@ -110,9 +111,67 @@ CREATE TABLE IF NOT EXISTS pei_resources (
 
 CREATE INDEX IF NOT EXISTS idx_pei_resources_published_order ON pei_resources (is_published, display_order);
 
+CREATE TYPE pei_laureate_type  AS ENUM ('fse_laureate', 'student_entrepreneur');
+CREATE TYPE pei_partner_family AS ENUM ('academic', 'support', 'international');
+
+-- Portraits : lauréats du FSE et étudiants-entrepreneurs (spec 022)
+CREATE TABLE IF NOT EXISTS pei_laureates (
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    cohort_id           UUID NOT NULL REFERENCES pei_cohorts(id) ON DELETE RESTRICT,
+    type                pei_laureate_type NOT NULL,
+    full_name           VARCHAR(200) NOT NULL,
+    project_name        VARCHAR(200) NOT NULL,
+    department_label    VARCHAR(200),
+    department_label_en VARCHAR(200),
+    department_label_ar VARCHAR(200),
+    quote               TEXT,
+    quote_en            TEXT,
+    quote_ar            TEXT,
+    photo_external_id   UUID,                          -- → MEDIA.media.id (sans FK)
+    website_url         VARCHAR(500),
+    linkedin_url        VARCHAR(500),
+    instagram_url       VARCHAR(500),
+    facebook_url        VARCHAR(500),
+    video_url           VARCHAR(500),
+    grant_amount        NUMERIC(10,2),                 -- euros
+    is_featured         BOOLEAN      NOT NULL DEFAULT FALSE,
+    is_published        BOOLEAN      NOT NULL DEFAULT FALSE,
+    published_at        TIMESTAMPTZ,
+    display_order       INTEGER      NOT NULL DEFAULT 0,   -- relatif à la cohorte
+    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    created_by          UUID REFERENCES users(id) ON DELETE SET NULL,
+    updated_by          UUID REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT chk_pei_laureates_full_name    CHECK (char_length(full_name) >= 2),
+    CONSTRAINT chk_pei_laureates_project_name CHECK (char_length(project_name) >= 2),
+    CONSTRAINT chk_pei_laureates_quote_len    CHECK (
+        (quote    IS NULL OR char_length(quote)    <= 600) AND
+        (quote_en IS NULL OR char_length(quote_en) <= 600) AND
+        (quote_ar IS NULL OR char_length(quote_ar) <= 600)),
+    CONSTRAINT chk_pei_laureates_grant        CHECK (grant_amount IS NULL OR grant_amount >= 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pei_laureates_cohort_order   ON pei_laureates (cohort_id, display_order);
+CREATE INDEX IF NOT EXISTS idx_pei_laureates_published_type ON pei_laureates (is_published, type);
+
+-- Partenaires du pôle : rattachement + famille (les partenaires vivent dans partners)
+CREATE TABLE IF NOT EXISTS pei_partners (
+    partner_id     UUID PRIMARY KEY REFERENCES partners(id) ON DELETE CASCADE,
+    family         pei_partner_family NOT NULL,
+    display_order  INTEGER     NOT NULL DEFAULT 0,       -- relatif à la famille
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_by     UUID REFERENCES users(id) ON DELETE SET NULL,
+    updated_by     UUID REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pei_partners_family_order ON pei_partners (family, display_order);
+
 COMMENT ON TABLE pei_programs  IS '[PEI] Dispositifs du parcours entrepreneurial (OSER, SEE, MTI, Senghor''Innov, FSE).';
-COMMENT ON TABLE pei_cohorts   IS '[PEI] Cohortes de lauréats FSE / étudiants-entrepreneurs SEE (lauréats en feature 022).';
+COMMENT ON TABLE pei_cohorts   IS '[PEI] Cohortes de lauréats FSE / étudiants-entrepreneurs SEE.';
 COMMENT ON TABLE pei_resources IS '[PEI] Boîte à outils : documents de la médiathèque, liens, vidéos.';
+COMMENT ON TABLE pei_laureates IS '[PEI] Portraits de lauréats FSE et d''étudiants-entrepreneurs (ordre relatif à la cohorte).';
+COMMENT ON TABLE pei_partners  IS '[PEI] Rattachement d''un partenaire (table partners) à une famille du pôle (ordre relatif à la famille).';
 COMMENT ON COLUMN pei_programs.color IS 'Couleur nommée de la charte : blue | blue_dark | red | amber | teal.';
 
 -- Les triggers `update_*_updated_at` sont créés automatiquement par 99_functions.sql.

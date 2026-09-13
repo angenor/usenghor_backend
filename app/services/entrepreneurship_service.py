@@ -3,7 +3,8 @@ Service Entrepreneuriat (PEI)
 =============================
 
 Logique métier du Pôle Entrepreneuriat et Innovation : dispositifs, cohortes,
-ressources (CRUD admin, réordonnancement, activation / publication, traduction
+ressources, portraits (lauréats FSE / étudiants-entrepreneurs) et partenaires du
+pôle (CRUD admin, réordonnancement, activation / publication, traduction
 automatique FR → EN/AR, tableau de bord) et lecture publique.
 
 Toute écriture produit une entrée ``audit_logs`` explicite (``_audit``), avec
@@ -14,9 +15,10 @@ import enum
 import time
 from types import SimpleNamespace
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import exists, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import (
@@ -28,6 +30,10 @@ from app.core.media_utils import resolve_media_url
 from app.models.entrepreneurship import (
     PeiCohort,
     PeiCohortType,
+    PeiLaureate,
+    PeiLaureateType,
+    PeiPartner,
+    PeiPartnerFamily,
     PeiProgram,
     PeiProgramPhase,
     PeiResource,
@@ -35,10 +41,13 @@ from app.models.entrepreneurship import (
 )
 from app.models.media import Media
 from app.models.organization import Service
+from app.models.partner import Partner
 from app.schemas.entrepreneurship import (
     MSG_DOCUMENT_REQUIRED,
     MSG_URL_REQUIRED,
+    QUOTE_MAX_LEN,
     ActiveStatus,
+    FeaturedStatus,
     PeiActiveCount,
     PeiCohortAdmin,
     PeiCohortCreate,
@@ -49,6 +58,23 @@ from app.schemas.entrepreneurship import (
     PeiCohortUpdate,
     PeiDashboardStats,
     PeiDdeService,
+    PeiLaureateAdmin,
+    PeiLaureateCohortRef,
+    PeiLaureateCreate,
+    PeiLaureateGroupPublic,
+    PeiLaureatePublic,
+    PeiLaureatesAdminPage,
+    PeiLaureatesPublic,
+    PeiLaureateStatsPublic,
+    PeiLaureateTranslateRequest,
+    PeiLaureateTranslateResponse,
+    PeiLaureateUpdate,
+    PeiPartnerAvailable,
+    PeiPartnerEmbedded,
+    PeiPartnerFamilyPublic,
+    PeiPartnerLinkAdmin,
+    PeiPartnerLinkCreate,
+    PeiPartnerPublic,
     PeiProgramAdmin,
     PeiProgramCreate,
     PeiProgramPublic,
@@ -95,6 +121,29 @@ _RESOURCE_TRANSLATABLE = [
     ("description", "text"),
     ("category", "text"),
 ]
+_LAUREATE_TRANSLATABLE = [
+    ("department_label", "text"),
+    ("quote", "text"),
+]
+
+# Ordre fixe des familles de partenaires (= ordre de déclaration de l'ENUM SQL).
+PARTNER_FAMILY_ORDER = [
+    PeiPartnerFamily.ACADEMIC,
+    PeiPartnerFamily.SUPPORT,
+    PeiPartnerFamily.INTERNATIONAL,
+]
+
+# Type de cohorte attendu pour chaque type de portrait (research R3).
+_LAUREATE_COHORT_TYPE = {
+    PeiLaureateType.FSE_LAUREATE.value: (
+        PeiCohortType.FSE.value,
+        "Un lauréat FSE doit appartenir à une cohorte FSE",
+    ),
+    PeiLaureateType.STUDENT_ENTREPRENEUR.value: (
+        PeiCohortType.SEE.value,
+        "Un étudiant-entrepreneur doit appartenir à une cohorte SEE",
+    ),
+}
 
 DDE_SERVICE_KEY = "entrepreneurship.dde_service_id"
 
@@ -120,11 +169,36 @@ def _jsonable(value):
         return value.value
     if isinstance(value, (datetime, date)):
         return value.isoformat()
+    if isinstance(value, Decimal):
+        return f"{value:.2f}"
     return value
 
 
 def _clamp_page(page: int, page_size: int) -> tuple[int, int]:
     return max(1, page), max(1, min(page_size, 100))
+
+
+def _enum_value(value):
+    return value.value if isinstance(value, enum.Enum) else value
+
+
+def _format_amount(value) -> str | None:
+    return None if value is None else f"{value:.2f}"
+
+
+def _clamp_text(value: str | None, max_len: int = QUOTE_MAX_LEN) -> str | None:
+    """Tronque proprement un texte trop long (coupure au dernier espace + « … »)."""
+    if value is None or len(value) <= max_len:
+        return value
+    cut = value[: max_len - 1]
+    space = cut.rfind(" ")
+    if space > max_len // 2:
+        cut = cut[:space]
+    return cut.rstrip() + "…"
+
+
+def _scope_conditions(model, scope: dict | None) -> list:
+    return [getattr(model, key) == value for key, value in (scope or {}).items()]
 
 
 def _translated_attrs(fields) -> list[str]:
@@ -167,11 +241,27 @@ class EntrepreneurshipService:
             user_agent=user_agent,
         )
 
-    async def _next_display_order(self, model) -> int:
-        """``MAX(display_order) + 1`` (0 sur une table vide)."""
-        result = await self.db.execute(select(func.max(model.display_order)))
+    async def _next_display_order(self, model, **scope) -> int:
+        """``MAX(display_order) + 1`` dans la portée (0 si elle est vide)."""
+        result = await self.db.execute(
+            select(func.max(model.display_order)).where(*_scope_conditions(model, scope))
+        )
         current = result.scalar()
         return 0 if current is None else current + 1
+
+    async def _renumber(self, model, **scope) -> None:
+        """Renumérote ``display_order`` 0..n-1 dans une portée (sans commit)."""
+        pk = model.__mapper__.primary_key[0]
+        result = await self.db.execute(
+            select(pk, model.display_order)
+            .where(*_scope_conditions(model, scope))
+            .order_by(model.display_order.asc(), model.created_at.asc())
+        )
+        for index, (row_id, order) in enumerate(result.all()):
+            if order != index:
+                await self.db.execute(
+                    update(model).where(pk == row_id).values(display_order=index)
+                )
 
     async def _reorder(
         self,
@@ -182,18 +272,28 @@ class EntrepreneurshipService:
         user_id: str | None,
         ip_address: str | None = None,
         user_agent: str | None = None,
+        *,
+        scope: dict | None = None,
     ) -> ReorderResponse:
-        """Renumérote ``display_order = index`` (0..n-1) à partir d'une liste complète."""
+        """Renumérote ``display_order = index`` (0..n-1) à partir d'une liste complète.
+
+        ``scope`` (ex. ``{"cohort_id": …}`` ou ``{"family": …}``) restreint la
+        liste attendue aux lignes de cette portée ; sans portée, toute la table.
+        """
         if len(set(ids)) != len(ids):
             raise ValidationException("Liste invalide : identifiants en double")
 
-        result = await self.db.execute(select(model.id, model.display_order))
+        pk = model.__mapper__.primary_key[0]
+        result = await self.db.execute(
+            select(pk, model.display_order).where(*_scope_conditions(model, scope))
+        )
         current = {str(row_id): order for row_id, order in result.all()}
 
         unknown = [i for i in ids if i not in current]
         if unknown:
+            label = "inconnu(s) ou hors portée" if scope else "inconnu(s)"
             raise ValidationException(
-                f"Identifiant(s) inconnu(s) : {', '.join(unknown)}"
+                f"Identifiant(s) {label} : {', '.join(unknown)}"
             )
         missing = [i for i in current if i not in set(ids)]
         if missing:
@@ -205,16 +305,17 @@ class EntrepreneurshipService:
         for index, item_id in enumerate(ids):
             if current[item_id] != index:
                 await self.db.execute(
-                    update(model).where(model.id == item_id).values(display_order=index)
+                    update(model).where(pk == item_id).values(display_order=index)
                 )
                 updated += 1
 
+        scope_values = {key: _jsonable(value) for key, value in (scope or {}).items()}
         await self._audit(
             action,
             user_id=user_id,
             record_id=None,
             table_name=table_name,
-            new_values={"ids": ids},
+            new_values={**scope_values, "ids": ids},
             ip_address=ip_address,
             user_agent=user_agent,
         )
@@ -601,13 +702,14 @@ class EntrepreneurshipService:
         return PeiCohortAdmin.model_validate(cohort)
 
     async def _assert_cohort_deletable(self, cohort: PeiCohort) -> None:
-        """Point d'extension de la suppression d'une cohorte.
-
-        No-op dans la feature 021. Feature 022 : compter les lauréats rattachés
-        (``pei_laureates.cohort_id``) et, s'il y en a, lever
-        ``ConflictException(f"Cohorte utilisée par {n} lauréats")``.
-        """
-        return None
+        """Refuse (409) la suppression d'une cohorte référencée par des portraits."""
+        count = (
+            await self.db.execute(
+                select(func.count(PeiLaureate.id)).where(PeiLaureate.cohort_id == cohort.id)
+            )
+        ).scalar() or 0
+        if count > 0:
+            raise ConflictException(f"Cohorte utilisée par {count} lauréats")
 
     async def delete_cohort(
         self,
@@ -962,6 +1064,620 @@ class EntrepreneurshipService:
         return [self._resource_public(r, m) for r, m in result.all()]
 
     # ======================================================================
+    # Portraits : lauréats FSE et étudiants-entrepreneurs (pei_laureates)
+    # ======================================================================
+
+    @staticmethod
+    def _clamp_quote(obj) -> None:
+        """Tronque les verbatims (FR / EN / AR) à ``QUOTE_MAX_LEN`` caractères."""
+        for attr in ("quote", "quote_en", "quote_ar"):
+            value = getattr(obj, attr, None)
+            clamped = _clamp_text(value)
+            if clamped != value:
+                setattr(obj, attr, clamped)
+
+    @staticmethod
+    def _assert_laureate_cohort(laureate_type, cohort) -> None:
+        """Cohérence type de portrait ↔ type de cohorte (422 sinon)."""
+        expected = _LAUREATE_COHORT_TYPE.get(_enum_value(laureate_type))
+        if expected is None:
+            raise ValidationException("Type de portrait inconnu")
+        cohort_type, message = expected
+        if _enum_value(cohort.type) != cohort_type:
+            raise ValidationException(message)
+
+    def _laureate_admin(
+        self, laureate: PeiLaureate, cohort: PeiCohort, media: Media | None
+    ) -> PeiLaureateAdmin:
+        data = {
+            column.key: getattr(laureate, column.key)
+            for column in PeiLaureate.__table__.columns
+        }
+        data["grant_amount"] = _format_amount(laureate.grant_amount)
+        return PeiLaureateAdmin(
+            **data,
+            photo_url=self._media_url(media),
+            cohort=PeiLaureateCohortRef(
+                id=cohort.id,
+                code=cohort.code,
+                label=cohort.label,
+                type=cohort.type,
+                year=cohort.year,
+                active=cohort.active,
+            ),
+        )
+
+    @staticmethod
+    def _laureate_select():
+        return (
+            select(PeiLaureate, PeiCohort, Media)
+            .join(PeiCohort, PeiLaureate.cohort_id == PeiCohort.id)
+            .outerjoin(Media, PeiLaureate.photo_external_id == Media.id)
+        )
+
+    async def list_laureates(
+        self,
+        q: str | None = None,
+        cohort_id: str | None = None,
+        type: PeiLaureateType | None = None,  # noqa: A002
+        is_published: bool | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> PeiLaureatesAdminPage:
+        page, page_size = _clamp_page(page, page_size)
+        conditions = []
+        if q:
+            conditions.append(
+                or_(
+                    PeiLaureate.full_name.ilike(f"%{q}%"),
+                    PeiLaureate.project_name.ilike(f"%{q}%"),
+                )
+            )
+        if cohort_id:
+            if not _is_uuid(cohort_id):
+                return PeiLaureatesAdminPage(items=[], total=0, page=page, page_size=page_size)
+            conditions.append(PeiLaureate.cohort_id == cohort_id)
+        if type is not None:
+            conditions.append(PeiLaureate.type == type)
+        if is_published is not None:
+            conditions.append(PeiLaureate.is_published.is_(is_published))
+
+        total = (
+            await self.db.execute(select(func.count(PeiLaureate.id)).where(*conditions))
+        ).scalar() or 0
+        result = await self.db.execute(
+            self._laureate_select()
+            .where(*conditions)
+            .order_by(
+                PeiCohort.display_order.asc(),
+                PeiCohort.created_at.asc(),
+                PeiLaureate.display_order.asc(),
+                PeiLaureate.created_at.asc(),
+            )
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        items = [self._laureate_admin(lau, c, m) for lau, c, m in result.all()]
+        return PeiLaureatesAdminPage(
+            items=items, total=total, page=page, page_size=page_size
+        )
+
+    async def get_laureate(self, laureate_id: str) -> PeiLaureateAdmin:
+        if not _is_uuid(laureate_id):
+            raise NotFoundException("Portrait introuvable")
+        row = (
+            await self.db.execute(
+                self._laureate_select().where(PeiLaureate.id == laureate_id)
+            )
+        ).first()
+        if row is None:
+            raise NotFoundException("Portrait introuvable")
+        return self._laureate_admin(row[0], row[1], row[2])
+
+    async def create_laureate(
+        self,
+        data: PeiLaureateCreate,
+        user_id: str | None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> PeiLaureateAdmin:
+        cohort = await self._get_or_404(PeiCohort, data.cohort_id, "Cohorte introuvable")
+        self._assert_laureate_cohort(data.type, cohort)
+
+        laureate = PeiLaureate(
+            **data.model_dump(),
+            display_order=await self._next_display_order(PeiLaureate, cohort_id=cohort.id),
+            created_by=user_id,
+            updated_by=user_id,
+        )
+        if laureate.is_published:
+            laureate.published_at = datetime.now(timezone.utc)
+        await translation_service.autofill_translations(laureate, _LAUREATE_TRANSLATABLE)
+        self._clamp_quote(laureate)
+        self.db.add(laureate)
+        await self.db.flush()
+
+        await self._audit(
+            "entrepreneurship.laureate.create",
+            user_id=user_id,
+            record_id=laureate.id,
+            table_name="pei_laureates",
+            new_values=data.model_dump(mode="json"),
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        await self.db.commit()
+        return await self.get_laureate(laureate.id)
+
+    async def update_laureate(
+        self,
+        laureate_id: str,
+        data: PeiLaureateUpdate,
+        user_id: str | None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> PeiLaureateAdmin:
+        laureate = await self._get_or_404(PeiLaureate, laureate_id, "Portrait introuvable")
+        changes = data.model_dump(exclude_unset=True)
+
+        old_cohort_id = str(laureate.cohort_id)
+        new_cohort_id = str(changes.get("cohort_id", old_cohort_id))
+        cohort_changed = new_cohort_id != old_cohort_id
+        if cohort_changed or "type" in changes:
+            cohort = await self._get_or_404(PeiCohort, new_cohort_id, "Cohorte introuvable")
+            self._assert_laureate_cohort(changes.get("type", laureate.type), cohort)
+
+        new_order = (
+            await self._next_display_order(PeiLaureate, cohort_id=new_cohort_id)
+            if cohort_changed
+            else None
+        )
+        old = await self._apply_update(laureate, changes, _LAUREATE_TRANSLATABLE, user_id)
+        self._clamp_quote(laureate)
+        if new_order is not None:
+            old["display_order"] = laureate.display_order
+            laureate.display_order = new_order
+        if laureate.is_published and laureate.published_at is None:
+            laureate.published_at = datetime.now(timezone.utc)
+        await self.db.flush()
+        if cohort_changed:
+            await self._renumber(PeiLaureate, cohort_id=old_cohort_id)
+
+        await self._audit(
+            "entrepreneurship.laureate.update",
+            user_id=user_id,
+            record_id=laureate.id,
+            table_name="pei_laureates",
+            old_values=old,
+            new_values=data.model_dump(mode="json", exclude_unset=True),
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        await self.db.commit()
+        return await self.get_laureate(laureate.id)
+
+    async def delete_laureate(
+        self,
+        laureate_id: str,
+        user_id: str | None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> None:
+        laureate = await self._get_or_404(PeiLaureate, laureate_id, "Portrait introuvable")
+        old = {
+            "full_name": laureate.full_name,
+            "project_name": laureate.project_name,
+            "type": _jsonable(laureate.type),
+            "cohort_id": str(laureate.cohort_id),
+        }
+        record_id = laureate.id
+        cohort_id = laureate.cohort_id
+        await self.db.delete(laureate)
+        await self.db.flush()
+        await self._renumber(PeiLaureate, cohort_id=cohort_id)
+        await self._audit(
+            "entrepreneurship.laureate.delete",
+            user_id=user_id,
+            record_id=record_id,
+            table_name="pei_laureates",
+            old_values=old,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        await self.db.commit()
+
+    async def set_laureate_published(
+        self,
+        laureate_id: str,
+        is_published: bool,
+        user_id: str | None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> PublishStatus:
+        laureate = await self._get_or_404(PeiLaureate, laureate_id, "Portrait introuvable")
+        old_status = laureate.is_published
+        if is_published and laureate.published_at is None:
+            laureate.published_at = datetime.now(timezone.utc)
+        laureate.is_published = is_published
+        laureate.updated_by = user_id
+        await self.db.flush()
+        await self._audit(
+            "entrepreneurship.laureate.publish"
+            if is_published
+            else "entrepreneurship.laureate.unpublish",
+            user_id=user_id,
+            record_id=laureate.id,
+            table_name="pei_laureates",
+            old_values={"is_published": old_status},
+            new_values={"is_published": is_published},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        await self.db.commit()
+        await self.db.refresh(laureate)
+        return PublishStatus.model_validate(laureate)
+
+    async def set_laureate_featured(
+        self,
+        laureate_id: str,
+        is_featured: bool,
+        user_id: str | None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> FeaturedStatus:
+        laureate = await self._get_or_404(PeiLaureate, laureate_id, "Portrait introuvable")
+        old_status = laureate.is_featured
+        laureate.is_featured = is_featured
+        laureate.updated_by = user_id
+        await self.db.flush()
+        await self._audit(
+            "entrepreneurship.laureate.feature"
+            if is_featured
+            else "entrepreneurship.laureate.unfeature",
+            user_id=user_id,
+            record_id=laureate.id,
+            table_name="pei_laureates",
+            old_values={"is_featured": old_status},
+            new_values={"is_featured": is_featured},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        await self.db.commit()
+        await self.db.refresh(laureate)
+        return FeaturedStatus.model_validate(laureate)
+
+    async def reorder_laureates(
+        self,
+        cohort_id: str,
+        ids: list[str],
+        user_id: str | None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> ReorderResponse:
+        if not _is_uuid(cohort_id):
+            raise ValidationException("Identifiant de cohorte invalide")
+        return await self._reorder(
+            PeiLaureate,
+            ids,
+            "pei_laureates",
+            "entrepreneurship.laureate.reorder",
+            user_id,
+            ip_address,
+            user_agent,
+            scope={"cohort_id": cohort_id},
+        )
+
+    async def translate_laureate_fields(
+        self, data: PeiLaureateTranslateRequest
+    ) -> PeiLaureateTranslateResponse:
+        out = await self._translate_request(data, _LAUREATE_TRANSLATABLE)
+        for key in ("quote_en", "quote_ar"):
+            if key in out:
+                out[key] = _clamp_text(out[key])
+        return PeiLaureateTranslateResponse(**out)
+
+    async def list_public_laureates(
+        self, type: PeiLaureateType | None = None  # noqa: A002
+    ) -> PeiLaureatesPublic:
+        stmt = self._laureate_select().where(
+            PeiLaureate.is_published.is_(True), PeiCohort.active.is_(True)
+        )
+        if type is not None:
+            stmt = stmt.where(PeiLaureate.type == type)
+        result = await self.db.execute(
+            stmt.order_by(
+                PeiCohort.display_order.asc(),
+                PeiCohort.created_at.asc(),
+                PeiLaureate.display_order.asc(),
+                PeiLaureate.created_at.asc(),
+            )
+        )
+
+        groups: dict[str, PeiLaureateGroupPublic] = {}
+        count = 0
+        max_grant = None
+        for laureate, cohort, media in result.all():
+            group = groups.get(cohort.id)
+            if group is None:
+                group = PeiLaureateGroupPublic(
+                    cohort=PeiCohortPublic.model_validate(cohort), laureates=[]
+                )
+                groups[cohort.id] = group
+            group.laureates.append(
+                PeiLaureatePublic(
+                    id=laureate.id,
+                    type=laureate.type,
+                    full_name=laureate.full_name,
+                    project_name=laureate.project_name,
+                    department_label=laureate.department_label,
+                    department_label_en=laureate.department_label_en,
+                    department_label_ar=laureate.department_label_ar,
+                    quote=laureate.quote,
+                    quote_en=laureate.quote_en,
+                    quote_ar=laureate.quote_ar,
+                    photo_url=self._media_url(media),
+                    website_url=laureate.website_url,
+                    linkedin_url=laureate.linkedin_url,
+                    instagram_url=laureate.instagram_url,
+                    facebook_url=laureate.facebook_url,
+                    video_url=laureate.video_url,
+                    is_featured=laureate.is_featured,
+                    cohort_label=cohort.label,
+                    cohort_label_en=cohort.label_en,
+                    cohort_label_ar=cohort.label_ar,
+                    display_order=laureate.display_order,
+                )
+            )
+            count += 1
+            if laureate.grant_amount is not None and (
+                max_grant is None or laureate.grant_amount > max_grant
+            ):
+                max_grant = laureate.grant_amount
+
+        return PeiLaureatesPublic(
+            groups=list(groups.values()),
+            stats=PeiLaureateStatsPublic(
+                laureates=count,
+                cohorts=len(groups),
+                max_grant_amount=_format_amount(max_grant),
+            ),
+        )
+
+    # ======================================================================
+    # Partenaires du pôle (pei_partners)
+    # ======================================================================
+
+    @staticmethod
+    def _partner_link_select():
+        return (
+            select(PeiPartner, Partner, Media)
+            .join(Partner, Partner.id == PeiPartner.partner_id)
+            .outerjoin(Media, Partner.logo_external_id == Media.id)
+        )
+
+    def _partner_link_admin(
+        self, link: PeiPartner, partner: Partner, media: Media | None
+    ) -> PeiPartnerLinkAdmin:
+        return PeiPartnerLinkAdmin(
+            partner_id=link.partner_id,
+            family=link.family,
+            display_order=link.display_order,
+            created_at=link.created_at,
+            updated_at=link.updated_at,
+            partner=PeiPartnerEmbedded(
+                id=partner.id,
+                name=partner.name,
+                type=_enum_value(partner.type),
+                active=bool(partner.active),
+                website=partner.website,
+                logo_url=self._media_url(media),
+                description=partner.description,
+            ),
+        )
+
+    async def _get_partner_link_or_404(self, partner_id: str) -> PeiPartner:
+        if not _is_uuid(partner_id):
+            raise NotFoundException("Partenaire non rattaché au pôle")
+        link = (
+            await self.db.execute(select(PeiPartner).where(PeiPartner.partner_id == partner_id))
+        ).scalar_one_or_none()
+        if link is None:
+            raise NotFoundException("Partenaire non rattaché au pôle")
+        return link
+
+    async def get_partner_link(self, partner_id: str) -> PeiPartnerLinkAdmin:
+        row = (
+            await self.db.execute(
+                self._partner_link_select().where(PeiPartner.partner_id == partner_id)
+            )
+        ).first()
+        if row is None:
+            raise NotFoundException("Partenaire non rattaché au pôle")
+        return self._partner_link_admin(row[0], row[1], row[2])
+
+    async def list_partner_links(
+        self, family: PeiPartnerFamily | None = None
+    ) -> list[PeiPartnerLinkAdmin]:
+        stmt = self._partner_link_select()
+        if family is not None:
+            stmt = stmt.where(PeiPartner.family == family)
+        # Un ENUM PostgreSQL se trie dans l'ordre de déclaration (= PARTNER_FAMILY_ORDER).
+        result = await self.db.execute(
+            stmt.order_by(
+                PeiPartner.family.asc(),
+                PeiPartner.display_order.asc(),
+                PeiPartner.created_at.asc(),
+            )
+        )
+        return [self._partner_link_admin(link, p, m) for link, p, m in result.all()]
+
+    async def list_available_partners(
+        self, q: str | None = None, limit: int = 20
+    ) -> list[PeiPartnerAvailable]:
+        limit = max(1, min(limit, 50))
+        stmt = (
+            select(Partner, Media)
+            .outerjoin(Media, Partner.logo_external_id == Media.id)
+            .where(~exists().where(PeiPartner.partner_id == Partner.id))
+        )
+        if q:
+            stmt = stmt.where(
+                or_(Partner.name.ilike(f"%{q}%"), Partner.description.ilike(f"%{q}%"))
+            )
+        result = await self.db.execute(
+            stmt.order_by(Partner.active.desc(), Partner.name.asc()).limit(limit)
+        )
+        return [
+            PeiPartnerAvailable(
+                id=partner.id,
+                name=partner.name,
+                type=_enum_value(partner.type),
+                active=bool(partner.active),
+                logo_url=self._media_url(media),
+            )
+            for partner, media in result.all()
+        ]
+
+    async def link_partner(
+        self,
+        data: PeiPartnerLinkCreate,
+        user_id: str | None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> PeiPartnerLinkAdmin:
+        partner = await self._get_or_404(Partner, data.partner_id, "Partenaire introuvable")
+        existing = (
+            await self.db.execute(
+                select(PeiPartner.partner_id).where(PeiPartner.partner_id == partner.id)
+            )
+        ).first()
+        if existing is not None:
+            raise ConflictException("Ce partenaire est déjà rattaché au pôle")
+
+        link = PeiPartner(
+            partner_id=partner.id,
+            family=data.family,
+            display_order=await self._next_display_order(PeiPartner, family=data.family),
+            created_by=user_id,
+            updated_by=user_id,
+        )
+        self.db.add(link)
+        await self.db.flush()
+        await self._audit(
+            "entrepreneurship.partner.link",
+            user_id=user_id,
+            record_id=partner.id,
+            table_name="pei_partners",
+            new_values={"family": data.family.value, "display_order": link.display_order},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        await self.db.commit()
+        return await self.get_partner_link(partner.id)
+
+    async def update_partner_family(
+        self,
+        partner_id: str,
+        family: PeiPartnerFamily,
+        user_id: str | None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> PeiPartnerLinkAdmin:
+        link = await self._get_partner_link_or_404(partner_id)
+        old_family = PeiPartnerFamily(_enum_value(link.family))
+        if old_family == family:
+            return await self.get_partner_link(link.partner_id)
+
+        old = {"family": old_family.value, "display_order": link.display_order}
+        link.display_order = await self._next_display_order(PeiPartner, family=family)
+        link.family = family
+        link.updated_by = user_id
+        await self.db.flush()
+        await self._renumber(PeiPartner, family=old_family)
+        await self._audit(
+            "entrepreneurship.partner.update",
+            user_id=user_id,
+            record_id=link.partner_id,
+            table_name="pei_partners",
+            old_values=old,
+            new_values={"family": family.value, "display_order": link.display_order},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        await self.db.commit()
+        return await self.get_partner_link(link.partner_id)
+
+    async def unlink_partner(
+        self,
+        partner_id: str,
+        user_id: str | None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> None:
+        link = await self._get_partner_link_or_404(partner_id)
+        family = PeiPartnerFamily(_enum_value(link.family))
+        old = {"family": family.value, "display_order": link.display_order}
+        record_id = link.partner_id
+        await self.db.delete(link)
+        await self.db.flush()
+        await self._renumber(PeiPartner, family=family)
+        await self._audit(
+            "entrepreneurship.partner.unlink",
+            user_id=user_id,
+            record_id=record_id,
+            table_name="pei_partners",
+            old_values=old,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        await self.db.commit()
+
+    async def reorder_partner_links(
+        self,
+        family: PeiPartnerFamily,
+        ids: list[str],
+        user_id: str | None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> ReorderResponse:
+        return await self._reorder(
+            PeiPartner,
+            ids,
+            "pei_partners",
+            "entrepreneurship.partner.reorder",
+            user_id,
+            ip_address,
+            user_agent,
+            scope={"family": family},
+        )
+
+    async def list_public_partners(self) -> list[PeiPartnerFamilyPublic]:
+        result = await self.db.execute(
+            self._partner_link_select()
+            .where(Partner.active.is_(True))
+            .order_by(PeiPartner.display_order.asc(), PeiPartner.created_at.asc())
+        )
+        groups = {family: [] for family in PARTNER_FAMILY_ORDER}
+        for link, partner, media in result.all():
+            groups[PeiPartnerFamily(_enum_value(link.family))].append(
+                PeiPartnerPublic(
+                    id=partner.id,
+                    name=partner.name,
+                    description=partner.description,
+                    description_en=partner.description_en,
+                    description_ar=partner.description_ar,
+                    website=partner.website,
+                    logo_url=self._media_url(media),
+                    type=_enum_value(partner.type),
+                    display_order=link.display_order,
+                )
+            )
+        return [
+            PeiPartnerFamilyPublic(family=family, partners=partners)
+            for family, partners in groups.items()
+        ]
+
+    # ======================================================================
     # Tableau de bord et traduction en lot
     # ======================================================================
 
@@ -991,6 +1707,25 @@ class EntrepreneurshipService:
             )
         ).one()
 
+        laureates = (
+            await self.db.execute(
+                select(
+                    func.count(PeiLaureate.id),
+                    func.count(PeiLaureate.id).filter(PeiLaureate.is_published.is_(True)),
+                )
+            )
+        ).one()
+        partners = (
+            await self.db.execute(
+                select(
+                    func.count(PeiPartner.partner_id),
+                    func.count(PeiPartner.partner_id).filter(Partner.active.is_(True)),
+                )
+                .select_from(PeiPartner)
+                .join(Partner, Partner.id == PeiPartner.partner_id)
+            )
+        ).one()
+
         dde = PeiDdeService()
         content = await EditorialService(self.db).get_content_by_key(DDE_SERVICE_KEY)
         service_id = (content.value or "").strip() if content else ""
@@ -1008,6 +1743,8 @@ class EntrepreneurshipService:
             cohorts=PeiActiveCount(total=cohorts[0], active=cohorts[1]),
             resources=PeiPublishedCount(total=resources[0], published=resources[1]),
             dde_service=dde,
+            laureates=PeiPublishedCount(total=laureates[0], published=laureates[1]),
+            partners=PeiActiveCount(total=partners[0], active=partners[1]),
         )
 
     async def _translate_missing_for(self, model, fields, deadline: float) -> tuple[int, bool]:
@@ -1023,6 +1760,8 @@ class EntrepreneurshipService:
                 return changed, False
             before = tuple(getattr(obj, a) for a in attrs)
             await translation_service.autofill_translations(obj, fields, force=False)
+            if isinstance(obj, PeiLaureate):
+                self._clamp_quote(obj)
             if tuple(getattr(obj, a) for a in attrs) != before:
                 changed += 1
         return changed, True
@@ -1044,6 +1783,7 @@ class EntrepreneurshipService:
             ("programs", PeiProgram, _PROGRAM_TRANSLATABLE),
             ("cohorts", PeiCohort, _COHORT_TRANSLATABLE),
             ("resources", PeiResource, _RESOURCE_TRANSLATABLE),
+            ("laureates", PeiLaureate, _LAUREATE_TRANSLATABLE),
         ):
             if not complete:
                 counts[key] = 0

@@ -12,6 +12,7 @@ rich text ``champ_html`` / ``champ_md`` + ``champ_en_html`` / ``champ_ar_md``…
 
 import enum
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
@@ -20,11 +21,12 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models.base import TimestampMixin, UUIDMixin
@@ -54,6 +56,21 @@ class PeiResourceType(str, enum.Enum):
     DOCUMENT = "document"
     LINK = "link"
     VIDEO = "video"
+
+
+class PeiLaureateType(str, enum.Enum):
+    """Type de portrait (ENUM ``pei_laureate_type``)."""
+
+    FSE_LAUREATE = "fse_laureate"
+    STUDENT_ENTREPRENEUR = "student_entrepreneur"
+
+
+class PeiPartnerFamily(str, enum.Enum):
+    """Famille de partenaires du pôle (ENUM ``pei_partner_family``), ordre fixe."""
+
+    ACADEMIC = "academic"
+    SUPPORT = "support"
+    INTERNATIONAL = "international"
 
 
 def _enum_values(enum_cls):
@@ -197,3 +214,97 @@ class PeiResource(Base, UUIDMixin, TimestampMixin):
             name="chk_pei_resources_source",
         ),
     )
+
+
+class PeiLaureate(Base, UUIDMixin, TimestampMixin):
+    """Portrait d'un lauréat FSE ou d'un étudiant-entrepreneur (spec 022).
+
+    ``display_order`` est relatif à la cohorte.
+    """
+
+    __tablename__ = "pei_laureates"
+
+    cohort_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("pei_cohorts.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    type: Mapped[PeiLaureateType] = mapped_column(
+        Enum(
+            PeiLaureateType,
+            name="pei_laureate_type",
+            create_type=False,
+            values_callable=_enum_values,
+        ),
+        nullable=False,
+    )
+    full_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    project_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    department_label: Mapped[str | None] = mapped_column(String(200))
+    department_label_en: Mapped[str | None] = mapped_column(String(200))
+    department_label_ar: Mapped[str | None] = mapped_column(String(200))
+    quote: Mapped[str | None] = mapped_column(Text)
+    quote_en: Mapped[str | None] = mapped_column(Text)
+    quote_ar: Mapped[str | None] = mapped_column(Text)
+    # Référence inter-service vers media.id (sans FK)
+    photo_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    website_url: Mapped[str | None] = mapped_column(String(500))
+    linkedin_url: Mapped[str | None] = mapped_column(String(500))
+    instagram_url: Mapped[str | None] = mapped_column(String(500))
+    facebook_url: Mapped[str | None] = mapped_column(String(500))
+    video_url: Mapped[str | None] = mapped_column(String(500))
+    grant_amount: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_by: Mapped[str | None] = _audit_user_fk()
+    updated_by: Mapped[str | None] = _audit_user_fk()
+
+    cohort: Mapped[PeiCohort] = relationship("PeiCohort", lazy="raise")
+
+    __table_args__ = (
+        CheckConstraint("char_length(full_name) >= 2", name="chk_pei_laureates_full_name"),
+        CheckConstraint(
+            "char_length(project_name) >= 2", name="chk_pei_laureates_project_name"
+        ),
+        CheckConstraint(
+            "(quote IS NULL OR char_length(quote) <= 600) AND "
+            "(quote_en IS NULL OR char_length(quote_en) <= 600) AND "
+            "(quote_ar IS NULL OR char_length(quote_ar) <= 600)",
+            name="chk_pei_laureates_quote_len",
+        ),
+        CheckConstraint(
+            "grant_amount IS NULL OR grant_amount >= 0", name="chk_pei_laureates_grant"
+        ),
+    )
+
+
+class PeiPartner(Base, TimestampMixin):
+    """Rattachement d'un partenaire (table ``partners``) à une famille du pôle.
+
+    Clé primaire = ``partner_id`` (un partenaire, une famille) ; suppression en
+    cascade avec le partenaire. ``display_order`` est relatif à la famille.
+    """
+
+    __tablename__ = "pei_partners"
+
+    partner_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("partners.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    family: Mapped[PeiPartnerFamily] = mapped_column(
+        Enum(
+            PeiPartnerFamily,
+            name="pei_partner_family",
+            create_type=False,
+            values_callable=_enum_values,
+        ),
+        nullable=False,
+    )
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_by: Mapped[str | None] = _audit_user_fk()
+    updated_by: Mapped[str | None] = _audit_user_fk()
+
+    partner = relationship("Partner", lazy="raise", passive_deletes=True)

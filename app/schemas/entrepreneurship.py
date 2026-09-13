@@ -4,12 +4,14 @@ Schémas Entrepreneuriat (PEI)
 
 Schémas Pydantic du Pôle Entrepreneuriat et Innovation (admin + public).
 
-Spec : specs/021-pei-entrepreneurship-core/contracts/admin-api.md et public-api.md
+Spec : specs/021-pei-entrepreneurship-core/contracts/admin-api.md et public-api.md,
+specs/022-pei-laureates-partners/contracts/ (portraits et partenaires du pôle)
 Convention trilingue additive : ``title`` (FR), ``title_en``, ``title_ar`` ;
 rich text ``content_html`` / ``content_md`` + ``content_en_html``…
 """
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -22,11 +24,15 @@ from pydantic import (
     HttpUrl,
     TypeAdapter,
     ValidationError,
+    ValidationInfo,
+    field_validator,
     model_validator,
 )
 
 from app.models.entrepreneurship import (
     PeiCohortType,
+    PeiLaureateType,
+    PeiPartnerFamily,
     PeiProgramPhase,
     PeiResourceType,
 )
@@ -35,6 +41,8 @@ __all__ = [
     "PeiProgramPhase",
     "PeiCohortType",
     "PeiResourceType",
+    "PeiLaureateType",
+    "PeiPartnerFamily",
     "PeiColor",
 ]
 
@@ -113,6 +121,20 @@ class ReorderResponse(BaseModel):
     updated: int
 
 
+class PeiLaureateReorderRequest(BaseModel):
+    """Tous les portraits d'une cohorte, dans l'ordre voulu."""
+
+    cohort_id: str
+    ids: list[str] = Field(..., min_length=1)
+
+
+class PeiPartnerReorderRequest(BaseModel):
+    """Tous les partenaires rattachés à une famille, dans l'ordre voulu."""
+
+    family: PeiPartnerFamily
+    ids: list[str] = Field(..., min_length=1)
+
+
 class ActiveRequest(BaseModel):
     active: bool
 
@@ -138,6 +160,18 @@ class PublishStatus(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class FeaturedRequest(BaseModel):
+    is_featured: bool
+
+
+class FeaturedStatus(BaseModel):
+    id: str
+    is_featured: bool
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class PeiActiveCount(BaseModel):
     active: int
     total: int
@@ -158,12 +192,15 @@ class PeiDashboardStats(BaseModel):
     cohorts: PeiActiveCount
     resources: PeiPublishedCount
     dde_service: PeiDdeService
+    laureates: PeiPublishedCount
+    partners: PeiActiveCount
 
 
 class PeiTranslateMissingResponse(BaseModel):
     programs: int
     cohorts: int
     resources: int
+    laureates: int = 0
     # Faux si le budget de temps est épuisé avant la fin : relancer l'action.
     complete: bool = True
 
@@ -554,3 +591,260 @@ class PeiResourceTranslateResponse(BaseModel):
     description_ar: str | None = None
     category_en: str | None = None
     category_ar: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Portraits : lauréats FSE et étudiants-entrepreneurs (pei_laureates)
+# ---------------------------------------------------------------------------
+
+QUOTE_MAX_LEN = 600
+MSG_QUOTE_TOO_LONG = f"Le verbatim ne doit pas dépasser {QUOTE_MAX_LEN} caractères"
+_LAUREATE_URL_FIELDS = (
+    "website_url",
+    "linkedin_url",
+    "instagram_url",
+    "facebook_url",
+    "video_url",
+)
+_LAUREATE_QUOTE_FIELDS = ("quote", "quote_en", "quote_ar")
+
+
+class _LaureateValidators(BaseModel):
+    """Validateurs partagés par la création et la mise à jour d'un portrait."""
+
+    @field_validator(*_LAUREATE_URL_FIELDS, mode="before", check_fields=False)
+    @classmethod
+    def _check_urls(cls, value, info: ValidationInfo):
+        value = _blank_to_none(value)
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise ValueError(f"Adresse web invalide : {info.field_name}")
+        try:
+            return _check_http_url(value)
+        except ValueError as exc:
+            raise ValueError(f"Adresse web invalide : {info.field_name}") from exc
+
+    @field_validator(*_LAUREATE_QUOTE_FIELDS, mode="after", check_fields=False)
+    @classmethod
+    def _check_quote_len(cls, value: str | None):
+        if value is not None and len(value) > QUOTE_MAX_LEN:
+            raise ValueError(MSG_QUOTE_TOO_LONG)
+        return value
+
+
+class PeiLaureateCreate(_LaureateValidators):
+    cohort_id: str
+    type: PeiLaureateType
+    full_name: str = Field(..., min_length=2, max_length=200)
+    project_name: str = Field(..., min_length=2, max_length=200)
+    department_label: str | None = Field(None, max_length=200)
+    department_label_en: str | None = Field(None, max_length=200)
+    department_label_ar: str | None = Field(None, max_length=200)
+    quote: str | None = None
+    quote_en: str | None = None
+    quote_ar: str | None = None
+    photo_external_id: MediaUuid = None
+    website_url: str | None = None
+    linkedin_url: str | None = None
+    instagram_url: str | None = None
+    facebook_url: str | None = None
+    video_url: str | None = None
+    grant_amount: Decimal | None = Field(None, ge=0, max_digits=10, decimal_places=2)
+    is_featured: bool = False
+    is_published: bool = False
+
+
+class PeiLaureateUpdate(_LaureateValidators):
+    """Tous champs optionnels ; la cohérence type / cohorte est revérifiée par le
+    service sur les valeurs fusionnées."""
+
+    cohort_id: str | None = None
+    type: PeiLaureateType | None = None
+    full_name: str | None = Field(None, min_length=2, max_length=200)
+    project_name: str | None = Field(None, min_length=2, max_length=200)
+    department_label: str | None = Field(None, max_length=200)
+    department_label_en: str | None = Field(None, max_length=200)
+    department_label_ar: str | None = Field(None, max_length=200)
+    quote: str | None = None
+    quote_en: str | None = None
+    quote_ar: str | None = None
+    photo_external_id: MediaUuid = None
+    website_url: str | None = None
+    linkedin_url: str | None = None
+    instagram_url: str | None = None
+    facebook_url: str | None = None
+    video_url: str | None = None
+    grant_amount: Decimal | None = Field(None, ge=0, max_digits=10, decimal_places=2)
+    is_featured: bool | None = None
+    is_published: bool | None = None
+
+    @model_validator(mode="after")
+    def _no_null_on_required(self):
+        _reject_explicit_nulls(
+            self,
+            ("cohort_id", "type", "full_name", "project_name", "is_featured", "is_published"),
+        )
+        return self
+
+
+class PeiLaureateCohortRef(BaseModel):
+    id: str
+    code: str
+    label: str
+    type: PeiCohortType
+    year: int
+    active: bool
+
+
+class PeiLaureateAdmin(BaseModel):
+    id: str
+    cohort_id: str
+    type: PeiLaureateType
+    full_name: str
+    project_name: str
+    department_label: str | None
+    department_label_en: str | None
+    department_label_ar: str | None
+    quote: str | None
+    quote_en: str | None
+    quote_ar: str | None
+    photo_external_id: str | None
+    photo_url: str | None = None
+    website_url: str | None
+    linkedin_url: str | None
+    instagram_url: str | None
+    facebook_url: str | None
+    video_url: str | None
+    # Chaîne décimale (« 5000.00 ») pour éviter toute perte de précision côté client
+    grant_amount: str | None
+    is_featured: bool
+    is_published: bool
+    published_at: datetime | None
+    display_order: int
+    cohort: PeiLaureateCohortRef
+    created_at: datetime
+    updated_at: datetime
+    created_by: str | None
+    updated_by: str | None
+
+
+class PeiLaureatesAdminPage(BaseModel):
+    items: list[PeiLaureateAdmin]
+    total: int
+    page: int
+    page_size: int
+
+
+class PeiLaureateTranslateRequest(BaseModel):
+    department_label: str | None = None
+    quote: str | None = None
+
+
+class PeiLaureateTranslateResponse(BaseModel):
+    department_label_en: str | None = None
+    department_label_ar: str | None = None
+    quote_en: str | None = None
+    quote_ar: str | None = None
+
+
+class PeiLaureatePublic(BaseModel):
+    """Portrait public : photo résolue, sans montant individuel ni auteurs."""
+
+    id: str
+    type: PeiLaureateType
+    full_name: str
+    project_name: str
+    department_label: str | None
+    department_label_en: str | None
+    department_label_ar: str | None
+    quote: str | None
+    quote_en: str | None
+    quote_ar: str | None
+    photo_url: str | None = None
+    website_url: str | None
+    linkedin_url: str | None
+    instagram_url: str | None
+    facebook_url: str | None
+    video_url: str | None
+    is_featured: bool
+    cohort_label: str
+    cohort_label_en: str | None
+    cohort_label_ar: str | None
+    display_order: int
+
+
+class PeiLaureateGroupPublic(BaseModel):
+    cohort: PeiCohortPublic
+    laureates: list[PeiLaureatePublic]
+
+
+class PeiLaureateStatsPublic(BaseModel):
+    laureates: int
+    cohorts: int
+    max_grant_amount: str | None = None
+
+
+class PeiLaureatesPublic(BaseModel):
+    groups: list[PeiLaureateGroupPublic]
+    stats: PeiLaureateStatsPublic
+
+
+# ---------------------------------------------------------------------------
+# Partenaires du pôle (pei_partners)
+# ---------------------------------------------------------------------------
+
+
+class PeiPartnerLinkCreate(BaseModel):
+    partner_id: str
+    family: PeiPartnerFamily
+
+
+class PeiPartnerLinkUpdate(BaseModel):
+    family: PeiPartnerFamily
+
+
+class PeiPartnerEmbedded(BaseModel):
+    id: str
+    name: str
+    type: str
+    active: bool
+    website: str | None
+    logo_url: str | None = None
+    description: str | None
+
+
+class PeiPartnerLinkAdmin(BaseModel):
+    partner_id: str
+    family: PeiPartnerFamily
+    display_order: int
+    created_at: datetime
+    updated_at: datetime
+    partner: PeiPartnerEmbedded
+
+
+class PeiPartnerAvailable(BaseModel):
+    id: str
+    name: str
+    type: str
+    active: bool
+    logo_url: str | None = None
+
+
+class PeiPartnerPublic(BaseModel):
+    """Partenaire public : logo résolu, sans UUID de média ni réseau social."""
+
+    id: str
+    name: str
+    description: str | None
+    description_en: str | None
+    description_ar: str | None
+    website: str | None
+    logo_url: str | None = None
+    type: str
+    display_order: int
+
+
+class PeiPartnerFamilyPublic(BaseModel):
+    family: PeiPartnerFamily
+    partners: list[PeiPartnerPublic]

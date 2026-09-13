@@ -3,14 +3,16 @@ Router Admin - Entrepreneuriat (PEI)
 ====================================
 
 Endpoints d'administration du Pôle Entrepreneuriat et Innovation :
-tableau de bord, dispositifs, cohortes et ressources (boîte à outils).
+tableau de bord, dispositifs, cohortes, ressources (boîte à outils), portraits
+(lauréats / étudiants-entrepreneurs) et partenaires du pôle.
 
 Permissions : ``entrepreneurship.view|create|edit|delete``.
 Toutes les écritures sont auditées explicitement par le service.
 Routes statiques (``/dashboard``, ``/translate-missing``, ``/reorder``,
-``/translate``, ``/categories``) déclarées AVANT les routes ``/{id}``.
+``/translate``, ``/categories``, ``/available``) déclarées AVANT les routes ``/{id}``.
 
-Spec : specs/021-pei-entrepreneurship-core/contracts/admin-api.md
+Spec : specs/021-pei-entrepreneurship-core/contracts/admin-api.md,
+specs/022-pei-laureates-partners/contracts/admin-api.md
 """
 
 import ipaddress
@@ -18,10 +20,18 @@ import ipaddress
 from fastapi import APIRouter, Depends, Query, Request, status
 
 from app.core.dependencies import CurrentUser, DbSession, PermissionChecker
-from app.models.entrepreneurship import PeiCohortType, PeiProgramPhase, PeiResourceType
+from app.models.entrepreneurship import (
+    PeiCohortType,
+    PeiLaureateType,
+    PeiPartnerFamily,
+    PeiProgramPhase,
+    PeiResourceType,
+)
 from app.schemas.entrepreneurship import (
     ActiveRequest,
     ActiveStatus,
+    FeaturedRequest,
+    FeaturedStatus,
     PeiCohortAdmin,
     PeiCohortCreate,
     PeiCohortsAdminPage,
@@ -29,6 +39,18 @@ from app.schemas.entrepreneurship import (
     PeiCohortTranslateResponse,
     PeiCohortUpdate,
     PeiDashboardStats,
+    PeiLaureateAdmin,
+    PeiLaureateCreate,
+    PeiLaureateReorderRequest,
+    PeiLaureatesAdminPage,
+    PeiLaureateTranslateRequest,
+    PeiLaureateTranslateResponse,
+    PeiLaureateUpdate,
+    PeiPartnerAvailable,
+    PeiPartnerLinkAdmin,
+    PeiPartnerLinkCreate,
+    PeiPartnerLinkUpdate,
+    PeiPartnerReorderRequest,
     PeiProgramAdmin,
     PeiProgramCreate,
     PeiProgramsAdminPage,
@@ -312,7 +334,7 @@ async def delete_cohort(
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker(DELETE)),
 ) -> None:
-    """Supprime une cohorte (409 réservé à la feature 022 : lauréats rattachés)."""
+    """Supprime une cohorte (409 si des portraits y sont rattachés)."""
     ip, ua = _client_meta(request)
     await EntrepreneurshipService(db).delete_cohort(
         cohort_id, user_id=current_user.id, ip_address=ip, user_agent=ua
@@ -467,4 +489,247 @@ async def set_resource_published(
         user_id=current_user.id,
         ip_address=ip,
         user_agent=ua,
+    )
+
+
+# ===========================================================================
+# Portraits (lauréats FSE / étudiants-entrepreneurs)
+# ===========================================================================
+
+
+@router.get("/laureates", response_model=PeiLaureatesAdminPage)
+async def list_laureates(
+    db: DbSession,
+    current_user: CurrentUser,
+    q: str | None = Query(None, description="Recherche sur le nom ou le projet"),
+    cohort_id: str | None = Query(None),
+    type: PeiLaureateType | None = Query(None),  # noqa: A002
+    is_published: bool | None = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    _: bool = Depends(PermissionChecker(VIEW)),
+) -> PeiLaureatesAdminPage:
+    return await EntrepreneurshipService(db).list_laureates(
+        q=q,
+        cohort_id=cohort_id,
+        type=type,
+        is_published=is_published,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.post(
+    "/laureates", response_model=PeiLaureateAdmin, status_code=status.HTTP_201_CREATED
+)
+async def create_laureate(
+    data: PeiLaureateCreate,
+    request: Request,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker(CREATE)),
+) -> PeiLaureateAdmin:
+    ip, ua = _client_meta(request)
+    return await EntrepreneurshipService(db).create_laureate(
+        data, user_id=current_user.id, ip_address=ip, user_agent=ua
+    )
+
+
+@router.patch("/laureates/reorder", response_model=ReorderResponse)
+async def reorder_laureates(
+    payload: PeiLaureateReorderRequest,
+    request: Request,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker(EDIT)),
+) -> ReorderResponse:
+    """Réordonne tous les portraits d'une cohorte."""
+    ip, ua = _client_meta(request)
+    return await EntrepreneurshipService(db).reorder_laureates(
+        payload.cohort_id,
+        payload.ids,
+        user_id=current_user.id,
+        ip_address=ip,
+        user_agent=ua,
+    )
+
+
+@router.post("/laureates/translate", response_model=PeiLaureateTranslateResponse)
+async def translate_laureate(
+    data: PeiLaureateTranslateRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker(VIEW)),
+) -> PeiLaureateTranslateResponse:
+    """Traduit FR → EN/AR sans persistance."""
+    return await EntrepreneurshipService(db).translate_laureate_fields(data)
+
+
+@router.get("/laureates/{laureate_id}", response_model=PeiLaureateAdmin)
+async def get_laureate(
+    laureate_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker(VIEW)),
+) -> PeiLaureateAdmin:
+    return await EntrepreneurshipService(db).get_laureate(laureate_id)
+
+
+@router.patch("/laureates/{laureate_id}", response_model=PeiLaureateAdmin)
+async def update_laureate(
+    laureate_id: str,
+    data: PeiLaureateUpdate,
+    request: Request,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker(EDIT)),
+) -> PeiLaureateAdmin:
+    ip, ua = _client_meta(request)
+    return await EntrepreneurshipService(db).update_laureate(
+        laureate_id, data, user_id=current_user.id, ip_address=ip, user_agent=ua
+    )
+
+
+@router.delete("/laureates/{laureate_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_laureate(
+    laureate_id: str,
+    request: Request,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker(DELETE)),
+) -> None:
+    ip, ua = _client_meta(request)
+    await EntrepreneurshipService(db).delete_laureate(
+        laureate_id, user_id=current_user.id, ip_address=ip, user_agent=ua
+    )
+
+
+@router.patch("/laureates/{laureate_id}/publish", response_model=PublishStatus)
+async def set_laureate_published(
+    laureate_id: str,
+    payload: PublishRequest,
+    request: Request,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker(EDIT)),
+) -> PublishStatus:
+    ip, ua = _client_meta(request)
+    return await EntrepreneurshipService(db).set_laureate_published(
+        laureate_id,
+        payload.is_published,
+        user_id=current_user.id,
+        ip_address=ip,
+        user_agent=ua,
+    )
+
+
+@router.patch("/laureates/{laureate_id}/featured", response_model=FeaturedStatus)
+async def set_laureate_featured(
+    laureate_id: str,
+    payload: FeaturedRequest,
+    request: Request,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker(EDIT)),
+) -> FeaturedStatus:
+    ip, ua = _client_meta(request)
+    return await EntrepreneurshipService(db).set_laureate_featured(
+        laureate_id,
+        payload.is_featured,
+        user_id=current_user.id,
+        ip_address=ip,
+        user_agent=ua,
+    )
+
+
+# ===========================================================================
+# Partenaires du pôle (rattachement de partenaires existants)
+# ===========================================================================
+
+
+@router.get("/partners", response_model=list[PeiPartnerLinkAdmin])
+async def list_partner_links(
+    db: DbSession,
+    current_user: CurrentUser,
+    family: PeiPartnerFamily | None = Query(None),
+    _: bool = Depends(PermissionChecker(VIEW)),
+) -> list[PeiPartnerLinkAdmin]:
+    return await EntrepreneurshipService(db).list_partner_links(family=family)
+
+
+@router.post(
+    "/partners", response_model=PeiPartnerLinkAdmin, status_code=status.HTTP_201_CREATED
+)
+async def link_partner(
+    data: PeiPartnerLinkCreate,
+    request: Request,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker(CREATE)),
+) -> PeiPartnerLinkAdmin:
+    """Rattache un partenaire existant à une famille du pôle (aucune création)."""
+    ip, ua = _client_meta(request)
+    return await EntrepreneurshipService(db).link_partner(
+        data, user_id=current_user.id, ip_address=ip, user_agent=ua
+    )
+
+
+@router.patch("/partners/reorder", response_model=ReorderResponse)
+async def reorder_partner_links(
+    payload: PeiPartnerReorderRequest,
+    request: Request,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker(EDIT)),
+) -> ReorderResponse:
+    """Réordonne tous les partenaires d'une famille."""
+    ip, ua = _client_meta(request)
+    return await EntrepreneurshipService(db).reorder_partner_links(
+        payload.family,
+        payload.ids,
+        user_id=current_user.id,
+        ip_address=ip,
+        user_agent=ua,
+    )
+
+
+@router.get("/partners/available", response_model=list[PeiPartnerAvailable])
+async def list_available_partners(
+    db: DbSession,
+    current_user: CurrentUser,
+    q: str | None = Query(None, description="Recherche sur le nom ou la description"),
+    limit: int = Query(20, ge=1, le=50),
+    _: bool = Depends(PermissionChecker(VIEW)),
+) -> list[PeiPartnerAvailable]:
+    """Partenaires non rattachés au pôle (actifs d'abord)."""
+    return await EntrepreneurshipService(db).list_available_partners(q=q, limit=limit)
+
+
+@router.patch("/partners/{partner_id}", response_model=PeiPartnerLinkAdmin)
+async def update_partner_family(
+    partner_id: str,
+    data: PeiPartnerLinkUpdate,
+    request: Request,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker(EDIT)),
+) -> PeiPartnerLinkAdmin:
+    ip, ua = _client_meta(request)
+    return await EntrepreneurshipService(db).update_partner_family(
+        partner_id, data.family, user_id=current_user.id, ip_address=ip, user_agent=ua
+    )
+
+
+@router.delete("/partners/{partner_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def unlink_partner(
+    partner_id: str,
+    request: Request,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker(DELETE)),
+) -> None:
+    """Retire le rattachement ; le partenaire reste dans le backoffice Partenaires."""
+    ip, ua = _client_meta(request)
+    await EntrepreneurshipService(db).unlink_partner(
+        partner_id, user_id=current_user.id, ip_address=ip, user_agent=ua
     )

@@ -3,18 +3,23 @@ Router Public - Entrepreneuriat (PEI)
 =====================================
 
 Lecture seule, sans authentification : dispositifs et cohortes actifs,
-ressources publiées, triés par ``display_order, created_at``.
-Les UUID de média ne sont pas exposés (``cover_image_url`` / ``media_url``).
+ressources publiées, portraits publiés (cohortes actives) et partenaires du pôle
+actifs, triés par ``display_order, created_at``.
+Les UUID de média ne sont pas exposés (``cover_image_url`` / ``media_url`` /
+``photo_url`` / ``logo_url``). Routes statiques avant les routes ``/{code}``.
 
-Spec : specs/021-pei-entrepreneurship-core/contracts/public-api.md
+Spec : specs/021-pei-entrepreneurship-core/contracts/public-api.md,
+specs/022-pei-laureates-partners/contracts/public-api.md
 """
 
 from fastapi import APIRouter, Query, Response
 
 from app.core.dependencies import DbSession
-from app.models.entrepreneurship import PeiCohortType, PeiResourceType
+from app.models.entrepreneurship import PeiCohortType, PeiLaureateType, PeiResourceType
 from app.schemas.entrepreneurship import (
     PeiCohortPublic,
+    PeiLaureatesPublic,
+    PeiPartnerFamilyPublic,
     PeiProgramPublic,
     PeiResourcePublic,
 )
@@ -25,6 +30,29 @@ router = APIRouter(prefix="/entrepreneurship", tags=["Entrepreneurship"])
 
 def _cache(response: Response) -> None:
     response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=300"
+
+
+# ---------------------------------------------------------------------------
+# Portraits et partenaires du pôle (routes statiques, avant tout ``/{code}``)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/laureates", response_model=PeiLaureatesPublic)
+async def list_laureates(
+    db: DbSession,
+    response: Response,
+    type: PeiLaureateType | None = Query(None),  # noqa: A002
+) -> PeiLaureatesPublic:
+    """Portraits publiés des cohortes actives, groupés par cohorte, avec chiffres."""
+    _cache(response)
+    return await EntrepreneurshipService(db).list_public_laureates(type=type)
+
+
+@router.get("/partners", response_model=list[PeiPartnerFamilyPublic])
+async def list_partners(db: DbSession, response: Response) -> list[PeiPartnerFamilyPublic]:
+    """Partenaires actifs du pôle, groupés en trois familles (ordre fixe)."""
+    _cache(response)
+    return await EntrepreneurshipService(db).list_public_partners()
 
 
 # ---------------------------------------------------------------------------
