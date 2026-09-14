@@ -6,6 +6,7 @@ Endpoints publics pour les événements.
 """
 
 from datetime import datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
 
@@ -39,6 +40,8 @@ async def list_events(
     to_date: datetime | None = Query(None, description="Date de fin"),
     campus_id: str | None = Query(None, description="Filtrer par campus"),
     upcoming: bool = Query(False, description="Seulement les événements à venir"),
+    service_id: str | None = Query(None, description="Filtrer par service (UUID)"),
+    order: Literal["asc", "desc"] = Query("desc", description="Tri sur la date de début"),
 ) -> dict:
     """Liste les événements publiés."""
     service = ContentService(db)
@@ -52,6 +55,8 @@ async def list_events(
         from_date=from_date,
         to_date=to_date,
         campus_id=campus_id,
+        service_id=service_id,
+        order=order,
     )
     return await paginate(db, query, pagination, Event, schema_class=EventPublic)
 

@@ -333,6 +333,8 @@ class ContentService:
         from_date: datetime | None = None,
         to_date: datetime | None = None,
         campus_id: str | None = None,
+        service_id: str | None = None,
+        order: str = "desc",
     ) -> select:
         """Construit une requête pour lister les événements."""
         query = select(Event).options(selectinload(Event.registrations))
@@ -362,7 +364,12 @@ class ContentService:
         if campus_id:
             query = query.where(Event.campus_external_id == campus_id)
 
-        query = query.order_by(Event.start_date.desc())
+        if service_id:
+            query = query.where(Event.service_external_id == service_id)
+
+        query = query.order_by(
+            Event.start_date.asc() if order == "asc" else Event.start_date.desc()
+        )
         return query
 
     async def get_event_by_id(self, event_id: str) -> Event | None:
