@@ -201,6 +201,8 @@ class PeiTranslateMissingResponse(BaseModel):
     cohorts: int
     resources: int
     laureates: int = 0
+    # Entrées FAQ publiées des catégories see-* complétées (spec 025).
+    faq_see: int = 0
     # Faux si le budget de temps est épuisé avant la fin : relancer l'action.
     complete: bool = True
 

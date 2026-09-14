@@ -39,6 +39,7 @@ from app.models.entrepreneurship import (
     PeiResource,
     PeiResourceType,
 )
+from app.models.faq import FaqCategory, FaqEntry
 from app.models.media import Media
 from app.models.organization import Service
 from app.models.partner import Partner
@@ -96,6 +97,7 @@ from app.schemas.entrepreneurship import (
 )
 from app.services import translation_service
 from app.services.editorial_service import EditorialService
+from app.services.faq_service import FaqService
 from app.services.identity_service import IdentityService
 
 # Budget (secondes) d'un appel « Traduire les champs manquants », sous le
@@ -1766,6 +1768,40 @@ class EntrepreneurshipService:
                 changed += 1
         return changed, True
 
+    async def _translate_missing_faq_see(self, deadline: float) -> tuple[int, bool]:
+        """Complète les traductions vides des entrées FAQ **publiées** des catégories
+        ``see-*`` (page Statut Étudiant-Entrepreneur, spec 025) ; s'arrête à ``deadline``.
+
+        Les brouillons (réponses provisoires) sont exclus : ils sont traduits à leur
+        enregistrement dans le backoffice FAQ.
+        """
+        attrs = [
+            f"{field}_{lang}{suffix}"
+            for lang in ("en", "ar")
+            for field, suffix in (("question", ""), ("answer", "_html"), ("answer", "_md"))
+        ]
+        stmt = (
+            select(FaqEntry)
+            .join(FaqCategory, FaqEntry.category_id == FaqCategory.id)
+            .where(
+                FaqEntry.is_published.is_(True),
+                FaqCategory.code.startswith("see-", autoescape=True),
+                or_(*(or_(getattr(FaqEntry, a).is_(None), getattr(FaqEntry, a) == "") for a in attrs)),
+            )
+            .order_by(FaqCategory.display_order, FaqEntry.display_order, FaqEntry.created_at)
+        )
+        entries = (await self.db.execute(stmt)).scalars().all()
+        faq_service = FaqService(self.db)
+        changed = 0
+        for entry in entries:
+            if time.monotonic() >= deadline:
+                return changed, False
+            before = tuple(getattr(entry, a) for a in attrs)
+            await faq_service.autofill_entry_translations(entry)
+            if tuple(getattr(entry, a) for a in attrs) != before:
+                changed += 1
+        return changed, True
+
     async def translate_missing(
         self,
         user_id: str | None,
@@ -1789,6 +1825,10 @@ class EntrepreneurshipService:
                 counts[key] = 0
                 continue
             counts[key], complete = await self._translate_missing_for(model, fields, deadline)
+        if complete:
+            counts["faq_see"], complete = await self._translate_missing_faq_see(deadline)
+        else:
+            counts["faq_see"] = 0
         result = PeiTranslateMissingResponse(**counts, complete=complete)
         await self.db.flush()
         await self._audit(

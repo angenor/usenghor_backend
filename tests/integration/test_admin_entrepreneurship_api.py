@@ -24,6 +24,7 @@ from app.models.entrepreneurship import (
     PeiResource,
     PeiResourceType,
 )
+from app.models.faq import FaqCategory, FaqEntry
 from app.models.identity import AuditLog, Permission, Role, RolePermission, User, UserRole
 from app.models.media import Media
 from app.models.base import MediaType
@@ -687,16 +688,16 @@ async def test_translate_missing_is_idempotent(
 
     first = await authenticated_client.post(f"{BASE}/translate-missing")
     assert first.status_code == 200, first.text
-    assert first.json() == {"programs": 2, "cohorts": 1, "resources": 0, "laureates": 0, "complete": True}
+    assert first.json() == {"programs": 2, "cohorts": 1, "resources": 0, "laureates": 0, "faq_see": 0, "complete": True}
 
     logs = await _audits(db_session, "entrepreneurship.translate_missing")
     assert len(logs) == 1
     assert logs[0].record_id is None
     assert logs[0].table_name is None
-    assert logs[0].new_values == {"programs": 2, "cohorts": 1, "resources": 0, "laureates": 0, "complete": True}
+    assert logs[0].new_values == {"programs": 2, "cohorts": 1, "resources": 0, "laureates": 0, "faq_see": 0, "complete": True}
 
     second = await authenticated_client.post(f"{BASE}/translate-missing")
-    assert second.json() == {"programs": 0, "cohorts": 0, "resources": 0, "laureates": 0, "complete": True}
+    assert second.json() == {"programs": 0, "cohorts": 0, "resources": 0, "laureates": 0, "faq_see": 0, "complete": True}
 
     program = (
         await db_session.execute(
@@ -723,10 +724,76 @@ async def test_translate_missing_stops_at_time_budget(
     await db_session.commit()
 
     partial = await EntrepreneurshipService(db_session).translate_missing(user_id=None, time_budget=0)
-    assert partial.model_dump() == {"programs": 0, "cohorts": 0, "resources": 0, "laureates": 0, "complete": False}
+    assert partial.model_dump() == {"programs": 0, "cohorts": 0, "resources": 0, "laureates": 0, "faq_see": 0, "complete": False}
 
     full = await EntrepreneurshipService(db_session).translate_missing(user_id=None)
-    assert full.model_dump() == {"programs": 1, "cohorts": 1, "resources": 0, "laureates": 0, "complete": True}
+    assert full.model_dump() == {"programs": 1, "cohorts": 1, "resources": 0, "laureates": 0, "faq_see": 0, "complete": True}
+
+
+@pytest.mark.asyncio
+async def test_translate_missing_translates_published_see_faq_entries(
+    authenticated_client: AsyncClient,
+    db_session: AsyncSession,
+    entrepreneurship_permissions,
+    monkeypatch,
+):
+    """Étape faq_see (spec 025) : seules les entrées publiées des catégories see-*."""
+    from app.services import faq_service
+
+    async def fake_translate(src, lang, source=None):
+        if not src or not str(src).strip():
+            return None
+        return f"[{lang}] {src}"
+
+    monkeypatch.setattr(faq_service, "translate_text", fake_translate)
+    monkeypatch.setattr(faq_service, "translate_html", fake_translate)
+
+    see = FaqCategory(id=str(uuid4()), code="see-t", label_fr="SEE", is_active=True)
+    general = FaqCategory(id=str(uuid4()), code="general", label_fr="Général", is_active=True)
+    db_session.add_all([see, general])
+    await db_session.flush()
+
+    def _entry(category_id: str, slug: str, published: bool) -> FaqEntry:
+        return FaqEntry(
+            id=str(uuid4()),
+            category_id=category_id,
+            slug=slug,
+            question_fr=f"Question {slug} ?",
+            answer_fr_md="Réponse",
+            answer_fr_html="<p>Réponse</p>",
+            is_published=published,
+            published_at=datetime.now(timezone.utc) if published else None,
+        )
+
+    db_session.add_all(
+        [
+            _entry(see.id, "see-publiee", True),
+            _entry(see.id, "see-brouillon", False),
+            _entry(general.id, "general-publiee", True),
+        ]
+    )
+    await db_session.commit()
+
+    response = await authenticated_client.post(f"{BASE}/translate-missing")
+    assert response.status_code == 200, response.text
+    assert response.json()["faq_see"] == 1
+    assert response.json()["complete"] is True
+
+    entries = {
+        e.slug: e
+        for e in (
+            await db_session.execute(select(FaqEntry).execution_options(populate_existing=True))
+        ).scalars().all()
+    }
+    assert entries["see-publiee"].question_en == "[en] Question see-publiee ?"
+    assert entries["see-publiee"].answer_ar_html == "[ar] <p>Réponse</p>"
+    assert entries["see-publiee"].answer_en_md == "[en] Réponse"
+    for slug in ("see-brouillon", "general-publiee"):
+        assert entries[slug].question_en is None
+        assert entries[slug].answer_ar_html is None
+
+    second = await authenticated_client.post(f"{BASE}/translate-missing")
+    assert second.json()["faq_see"] == 0
 
 
 @pytest.mark.asyncio

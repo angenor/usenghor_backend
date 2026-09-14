@@ -200,3 +200,88 @@ async def test_get_public_faq_no_markdown_in_response(
     assert "answer_en_md" not in e
     assert "answer_ar_md" not in e
     assert "**source markdown**" not in str(e)
+
+
+# ---------------------------------------------------------------------------
+# Filtre category_prefix (spec 025-pei-see-status-page)
+# ---------------------------------------------------------------------------
+
+
+async def _seed_prefix_fixture(db_session: AsyncSession) -> None:
+    see_a = FaqCategory(id=str(uuid4()), code="see-a", label_fr="SEE A", display_order=0, is_active=True)
+    see_b = FaqCategory(id=str(uuid4()), code="see-b", label_fr="SEE B", display_order=1, is_active=False)
+    seex = FaqCategory(id=str(uuid4()), code="seex", label_fr="SEEX", display_order=2, is_active=True)
+    general = FaqCategory(id=str(uuid4()), code="general", label_fr="Général", display_order=3, is_active=True)
+    db_session.add_all([see_a, see_b, seex, general])
+    await db_session.flush()
+    db_session.add_all(
+        [
+            FaqEntry(
+                id=str(uuid4()),
+                category_id=see_a.id,
+                slug="see-a-publiee",
+                question_fr="Publiée ?",
+                answer_fr_md="md",
+                answer_fr_html="<p>html</p>",
+                is_published=True,
+                published_at=datetime.now(timezone.utc),
+            ),
+            FaqEntry(
+                id=str(uuid4()),
+                category_id=see_a.id,
+                slug="see-a-brouillon",
+                question_fr="Brouillon ?",
+                answer_fr_md="md",
+                answer_fr_html="<p>html</p>",
+                is_published=False,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+
+@pytest.mark.asyncio
+async def test_get_public_faq_category_prefix_filters_active_categories(
+    client: AsyncClient, db_session: AsyncSession
+):
+    """Préfixe see- : seules les catégories actives correspondantes, entrées publiées."""
+    await _seed_prefix_fixture(db_session)
+
+    response = await client.get("/api/public/faq", params={"category_prefix": "see-"})
+    assert response.status_code == 200
+    categories = response.json()["categories"]
+    assert [c["code"] for c in categories] == ["see-a"]
+    assert [e["slug"] for e in categories[0]["entries"]] == ["see-a-publiee"]
+    assert "max-age=60" in response.headers["cache-control"]
+
+
+@pytest.mark.asyncio
+async def test_get_public_faq_category_prefix_is_literal(
+    client: AsyncClient, db_session: AsyncSession
+):
+    """« _ » est comparé littéralement (pas de joker LIKE) : see_ ne capture pas seex."""
+    await _seed_prefix_fixture(db_session)
+
+    response = await client.get("/api/public/faq", params={"category_prefix": "see_"})
+    assert response.status_code == 200
+    assert response.json()["categories"] == []
+
+
+@pytest.mark.asyncio
+async def test_get_public_faq_without_prefix_is_unchanged(
+    client: AsyncClient, db_session: AsyncSession
+):
+    """Sans paramètre : toutes les catégories actives (non-régression)."""
+    await _seed_prefix_fixture(db_session)
+
+    response = await client.get("/api/public/faq")
+    assert response.status_code == 200
+    codes = [c["code"] for c in response.json()["categories"]]
+    assert codes == ["see-a", "seex", "general"]
+
+
+@pytest.mark.asyncio
+async def test_get_public_faq_invalid_prefix_returns_422(client: AsyncClient):
+    """Préfixe hors motif ^[a-z0-9_-]{1,60}$ → 422."""
+    response = await client.get("/api/public/faq?category_prefix=SEE%25")
+    assert response.status_code == 422

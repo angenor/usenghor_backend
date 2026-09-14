@@ -167,11 +167,15 @@ class FaqService:
     # Public
     # ------------------------------------------------------------------
 
-    async def get_public_tree(self) -> FaqTreePublic:
+    async def get_public_tree(
+        self, category_prefix: str | None = None
+    ) -> FaqTreePublic:
         """
         Récupère l'arborescence publique (catégories actives + entrées publiées).
 
         Applique le tri (display_order ASC, label_fr ASC) et le repli silencieux FR.
+        ``category_prefix`` restreint aux catégories dont le code commence par la
+        valeur (comparaison littérale : ``_`` et ``%`` échappés) — spec 025.
         """
         stmt = (
             select(FaqCategory)
@@ -179,6 +183,10 @@ class FaqService:
             .options(selectinload(FaqCategory.entries))
             .order_by(FaqCategory.display_order.asc(), FaqCategory.label_fr.asc())
         )
+        if category_prefix:
+            stmt = stmt.where(
+                FaqCategory.code.startswith(category_prefix, autoescape=True)
+            )
         result = await self.db.execute(stmt)
         categories = result.scalars().all()
 
@@ -235,6 +243,14 @@ class FaqService:
     # ------------------------------------------------------------------
     # Traduction automatique (FR -> EN/AR)
     # ------------------------------------------------------------------
+
+    async def autofill_entry_translations(self, entry: FaqEntry) -> None:
+        """Remplit les champs EN/AR **vides** d'une entrée (sans ``force``).
+
+        Point d'entrée public utilisé par « Traduire les champs manquants » du
+        pôle Entrepreneuriat pour les entrées FAQ ``see-*`` (spec 025).
+        """
+        await self._autofill_entry_translations(entry)
 
     async def _autofill_entry_translations(
         self, entry: FaqEntry, *, force: bool = False
