@@ -45,7 +45,4 @@ async def get_sector_by_code(
         raise NotFoundException("Secteur non trouvé")
     if not sector.active:
         raise NotFoundException("Secteur non trouvé")
-    # Filtrer les services inactifs
-    sector.services = [s for s in sector.services if s.active]
-    sector.services.sort(key=lambda s: (s.display_order, s.name))
-    return sector
+    return service.build_public_sector(sector)

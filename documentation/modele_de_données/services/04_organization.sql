@@ -73,6 +73,9 @@ CREATE TABLE services (
     -- Références INTER-SERVICE (pas de FK)
     head_external_id UUID,   -- → IDENTITY.users.id
     album_external_id UUID,  -- → MEDIA.albums.id
+    -- Niveau « pôle » (migration 050) : un seul niveau, même secteur que le parent (trigger)
+    parent_id UUID REFERENCES services(id) ON DELETE SET NULL,
+    landing_path VARCHAR(255),  -- page dédiée interne sans préfixe de langue, ex. /entrepreneuriat
     email VARCHAR(255),
     phone VARCHAR(30),
     display_order INT DEFAULT 0,
@@ -82,6 +85,48 @@ CREATE TABLE services (
 );
 
 CREATE INDEX idx_services_sector ON services(sector_id);
+
+ALTER TABLE services ADD CONSTRAINT services_parent_not_self CHECK (parent_id IS NULL OR parent_id <> id);
+ALTER TABLE services ADD CONSTRAINT services_landing_path_format
+    CHECK (landing_path IS NULL OR (landing_path ~ '^/' AND landing_path !~ '^//' AND landing_path !~ '\s'));
+CREATE INDEX idx_services_parent ON services(parent_id) WHERE parent_id IS NOT NULL;
+
+-- Hiérarchie des pôles : parent existant et de premier niveau, service sans pôles
+-- pour être rattaché, même secteur, pas de changement de secteur d'un parent (050)
+CREATE OR REPLACE FUNCTION services_check_hierarchy() RETURNS TRIGGER AS $$
+DECLARE
+    parent_row RECORD;
+    n_children INTEGER;
+BEGIN
+    SELECT count(*) INTO n_children FROM services WHERE parent_id = NEW.id AND id <> NEW.id;
+
+    IF NEW.parent_id IS NOT NULL THEN
+        SELECT id, parent_id, sector_id INTO parent_row FROM services WHERE id = NEW.parent_id;
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'Service parent introuvable' USING ERRCODE = 'check_violation';
+        END IF;
+        IF parent_row.parent_id IS NOT NULL THEN
+            RAISE EXCEPTION 'Le service parent est lui-même un pôle (un seul niveau)' USING ERRCODE = 'check_violation';
+        END IF;
+        IF n_children > 0 THEN
+            RAISE EXCEPTION 'Ce service a % pôle(s) : il ne peut pas être rattaché', n_children USING ERRCODE = 'check_violation';
+        END IF;
+        IF parent_row.sector_id IS DISTINCT FROM NEW.sector_id THEN
+            RAISE EXCEPTION 'Le service parent doit appartenir au même secteur' USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+
+    IF TG_OP = 'UPDATE' AND n_children > 0 AND NEW.sector_id IS DISTINCT FROM OLD.sector_id THEN
+        RAISE EXCEPTION 'Déplacez ou détachez d''abord ses % pôle(s)', n_children USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER services_check_hierarchy
+    BEFORE INSERT OR UPDATE OF parent_id, sector_id ON services
+    FOR EACH ROW EXECUTE FUNCTION services_check_hierarchy();
 
 -- Objectifs d'un service
 CREATE TABLE service_objectives (

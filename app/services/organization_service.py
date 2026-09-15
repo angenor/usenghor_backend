@@ -6,13 +6,18 @@ Logique métier pour la gestion de la structure organisationnelle.
 """
 
 from types import SimpleNamespace
-from uuid import uuid4
+from uuid import UUID, uuid4
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.exceptions import ConflictException, NotFoundException
+from app.core.exceptions import (
+    ConflictException,
+    NotFoundException,
+    ValidationException,
+)
 from app.models.organization import (
     Sector,
     Service,
@@ -23,7 +28,12 @@ from app.models.organization import (
     ServiceTeam,
 )
 from app.schemas.organization import (
+    SectorPublic,
+    SectorPublicWithServices,
     SectorTranslateRequest,
+    ServicePublic,
+    ServicePublicWithChildren,
+    ServiceRelativePublic,
     SectorTranslateResponse,
     ServiceAchievementTranslateRequest,
     ServiceAchievementTranslateResponse,
@@ -57,6 +67,22 @@ _SERVICE_SUBTABLE_TRANSLATABLE = [
     ("description_html", "html"),
     ("description_md", "text"),
 ]
+
+
+def _is_uuid(value: str | None) -> bool:
+    try:
+        UUID(str(value))
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def _check_violation_message(exc: DBAPIError) -> str | None:
+    """Message d'une violation CHECK / trigger (SQLSTATE 23514), sinon None."""
+    for candidate in (exc.orig, getattr(exc.orig, "__cause__", None)):
+        if getattr(candidate, "sqlstate", None) == "23514":
+            return getattr(candidate, "message", None) or str(candidate)
+    return None
 
 
 class OrganizationService:
@@ -421,7 +447,39 @@ class OrganizationService:
         )
         return list(result.scalars().all())
 
-    async def get_active_sectors_with_active_services(self) -> list[Sector]:
+    @staticmethod
+    def build_public_sector(sector: Sector) -> SectorPublicWithServices:
+        """Construit la réponse publique d'un secteur avec ses services actifs.
+
+        Lecture pure : ne jamais réaffecter ``sector.services`` (relation en
+        ``delete-orphan``), sinon les services écartés seraient supprimés au
+        commit de la requête.
+        """
+        active = sorted(
+            (s for s in sector.services if s.active),
+            key=lambda s: (s.display_order, s.name),
+        )
+        # Pôles imbriqués sous leur parent actif de premier niveau ; un pôle dont
+        # le parent est inactif ou hors secteur n'apparaît pas.
+        return SectorPublicWithServices(
+            **SectorPublic.model_validate(sector).model_dump(),
+            services=[
+                ServicePublicWithChildren(
+                    **ServicePublic.model_validate(top).model_dump(),
+                    children=[
+                        ServicePublic.model_validate(child)
+                        for child in active
+                        if child.parent_id == top.id
+                    ],
+                )
+                for top in active
+                if top.parent_id is None
+            ],
+        )
+
+    async def get_active_sectors_with_active_services(
+        self,
+    ) -> list[SectorPublicWithServices]:
         """Récupère les secteurs actifs avec uniquement leurs services actifs."""
         result = await self.db.execute(
             select(Sector)
@@ -429,16 +487,23 @@ class OrganizationService:
             .where(Sector.active == True)
             .order_by(Sector.display_order, Sector.name)
         )
-        sectors = list(result.scalars().all())
-        # Filtrer pour ne garder que les services actifs
-        for sector in sectors:
-            sector.services = [s for s in sector.services if s.active]
-            sector.services.sort(key=lambda s: (s.display_order, s.name))
-        return sectors
+        return [self.build_public_sector(s) for s in result.scalars().all()]
 
     # =========================================================================
     # SERVICES
     # =========================================================================
+
+    async def get_children_counts(self, service_ids: list[str]) -> dict[str, int]:
+        """Nombre de pôles (tous statuts) par service parent, en une requête."""
+        ids = [i for i in service_ids if _is_uuid(i)]
+        if not ids:
+            return {}
+        result = await self.db.execute(
+            select(Service.parent_id, func.count())
+            .where(Service.parent_id.in_(ids))
+            .group_by(Service.parent_id)
+        )
+        return {parent_id: count for parent_id, count in result.all()}
 
     async def get_services(
         self,
@@ -497,6 +562,57 @@ class OrganizationService:
         )
         return result.scalar_one_or_none()
 
+    async def _validate_hierarchy(
+        self,
+        service_id: str | None,
+        sector_id: str | None,
+        parent_id: str | None,
+        sector_changed: bool,
+    ) -> None:
+        """Règles du niveau « pôle » : un seul niveau, même secteur que le parent.
+
+        Raises:
+            ValidationException: parent introuvable ou auto-référence (422).
+            ConflictException: hiérarchie ou secteur incohérents (409).
+        """
+        n_children = 0
+        if service_id:
+            n_children = (await self.get_children_counts([service_id])).get(service_id, 0)
+
+        if parent_id is not None:
+            if service_id and parent_id == service_id:
+                raise ValidationException("Un service ne peut pas être son propre parent")
+            parent = None
+            if _is_uuid(parent_id):
+                parent = (
+                    await self.db.execute(select(Service).where(Service.id == parent_id))
+                ).scalar_one_or_none()
+            if parent is None:
+                raise ValidationException("Service parent introuvable")
+            if parent.parent_id is not None:
+                raise ConflictException(
+                    "Le service parent est lui-même un pôle : un seul niveau est autorisé"
+                )
+            if n_children > 0:
+                raise ConflictException(
+                    f"Ce service a {n_children} pôle(s) : il ne peut pas être rattaché"
+                )
+            if parent.sector_id != sector_id:
+                raise ConflictException("Le service parent doit appartenir au même secteur")
+
+        if sector_changed and n_children > 0:
+            raise ConflictException(f"Déplacez ou détachez d'abord ses {n_children} pôle(s)")
+
+    async def _flush_hierarchy(self) -> None:
+        """Flush en convertissant un refus du trigger de hiérarchie en 409."""
+        try:
+            await self.db.flush()
+        except DBAPIError as exc:
+            message = _check_violation_message(exc)
+            if message is None:
+                raise
+            raise ConflictException(message) from exc
+
     async def create_service(
         self,
         name: str,
@@ -522,6 +638,10 @@ class OrganizationService:
             if not sector:
                 raise NotFoundException("Secteur non trouvé")
 
+        await self._validate_hierarchy(
+            None, sector_id, kwargs.get("parent_id"), sector_changed=False
+        )
+
         service = Service(
             id=str(uuid4()),
             name=name,
@@ -531,7 +651,7 @@ class OrganizationService:
         # Remplissage auto des traductions EN/AR vides (non bloquant).
         await autofill_translations(service, _SERVICE_TRANSLATABLE)
         self.db.add(service)
-        await self.db.flush()
+        await self._flush_hierarchy()
         return service
 
     async def update_service(self, service_id: str, **kwargs) -> Service:
@@ -558,12 +678,27 @@ class OrganizationService:
             if not sector:
                 raise NotFoundException("Secteur non trouvé")
 
+        if "parent_id" in kwargs or "sector_id" in kwargs:
+            new_sector_id = kwargs.get("sector_id", service.sector_id)
+            await self._validate_hierarchy(
+                service_id,
+                new_sector_id,
+                kwargs.get("parent_id", service.parent_id),
+                sector_changed=new_sector_id != service.sector_id,
+            )
+
         # Remplissage auto des traductions EN/AR encore vides (non bloquant).
         await self._autofill_into_kwargs(service, kwargs, _SERVICE_TRANSLATABLE)
 
-        await self.db.execute(
-            update(Service).where(Service.id == service_id).values(**kwargs)
-        )
+        try:
+            await self.db.execute(
+                update(Service).where(Service.id == service_id).values(**kwargs)
+            )
+        except DBAPIError as exc:
+            message = _check_violation_message(exc)
+            if message is None:
+                raise
+            raise ConflictException(message) from exc
         await self.db.flush()
         return await self.get_service_by_id(service_id)
 
@@ -644,6 +779,10 @@ class OrganizationService:
         new_service = Service(
             id=str(uuid4()),
             sector_id=service.sector_id,
+            # La copie reste un pôle du même parent ; pas de page dédiée (évite
+            # deux cartes vers la même page).
+            parent_id=service.parent_id,
+            landing_path=None,
             name=new_name,
             description_html=service.description_html,
             description_md=service.description_md,
@@ -735,6 +874,30 @@ class OrganizationService:
             .where(Service.id == service_id, Service.active == True)
         )
         return result.scalar_one_or_none()
+
+    async def get_service_relatives(
+        self, service: Service
+    ) -> tuple[ServiceRelativePublic | None, list[ServiceRelativePublic]]:
+        """Parent actif et pôles actifs d'un service (fiche publique)."""
+        parent = None
+        if service.parent_id:
+            row = (
+                await self.db.execute(
+                    select(Service).where(
+                        Service.id == service.parent_id, Service.active == True
+                    )
+                )
+            ).scalar_one_or_none()
+            if row:
+                parent = ServiceRelativePublic.model_validate(row)
+
+        result = await self.db.execute(
+            select(Service)
+            .where(Service.parent_id == service.id, Service.active == True)
+            .order_by(Service.display_order, Service.name)
+        )
+        children = [ServiceRelativePublic.model_validate(c) for c in result.scalars()]
+        return parent, children
 
     # =========================================================================
     # SERVICE OBJECTIVES

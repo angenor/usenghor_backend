@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 from sqlalchemy import delete, or_, select, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundException, ValidationException
@@ -16,6 +17,19 @@ from app.models.short_links import AllowedDomain, ShortLink
 
 BASE36_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
 MAX_COUNTER = 1_679_615  # zzzz en base 36
+MAX_CODE_ATTEMPTS = 20  # tirages successifs pour sauter les codes déjà pris (ex. « pei » saisi à la main)
+CAPACITY_MESSAGE = (
+    "Capacité maximale atteinte (1 679 616 liens). "
+    "Impossible de créer de nouveaux liens courts."
+)
+
+
+def _is_sequence_exhausted(exc: DBAPIError) -> bool:
+    """Vrai si l'erreur est l'épuisement de la séquence (SQLSTATE 2200H)."""
+    return any(
+        getattr(candidate, "sqlstate", None) == "2200H"
+        for candidate in (exc.orig, getattr(exc.orig, "__cause__", None))
+    )
 
 
 def int_to_base36(n: int) -> str:
@@ -104,24 +118,29 @@ class ShortLinkService:
         # Valider l'URL
         await self.validate_target_url(target_url)
 
-        # Obtenir le prochain compteur
-        try:
-            result = await self.db.execute(text("SELECT nextval('short_link_counter_seq')"))
+        # Prochain code libre : un code déjà pris (lien saisi à la main) est sauté
+        code = None
+        for _ in range(MAX_CODE_ATTEMPTS):
+            try:
+                result = await self.db.execute(text("SELECT nextval('short_link_counter_seq')"))
+            except DBAPIError as exc:
+                if _is_sequence_exhausted(exc):
+                    raise ValidationException(CAPACITY_MESSAGE) from exc
+                raise
             counter = result.scalar()
-        except Exception:
-            raise ValidationException(
-                "Capacité maximale atteinte (1 679 616 liens). "
-                "Impossible de créer de nouveaux liens courts."
-            )
+            if counter > MAX_COUNTER:
+                raise ValidationException(CAPACITY_MESSAGE)
 
-        if counter > MAX_COUNTER:
-            raise ValidationException(
-                "Capacité maximale atteinte (1 679 616 liens). "
-                "Impossible de créer de nouveaux liens courts."
+            candidate = int_to_base36(counter)
+            taken = await self.db.execute(
+                select(ShortLink.id).where(ShortLink.code == candidate)
             )
+            if taken.first() is None:
+                code = candidate
+                break
 
-        # Convertir en base 36
-        code = int_to_base36(counter)
+        if code is None:
+            raise ValidationException("Impossible de générer un code court libre, réessayez")
 
         # Créer le lien
         short_link = ShortLink(

@@ -98,6 +98,16 @@ class Service(Base, UUIDMixin, TimestampMixin):
     head_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     album_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
+    # Niveau « pôle » (migration 050) : un seul niveau, même secteur que le parent.
+    # Pas de relation ORM parent/children (pas de cascade ni de chargement récursif).
+    parent_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("services.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # Page dédiée interne sans préfixe de langue (ex. /entrepreneuriat)
+    landing_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     email: Mapped[str | None] = mapped_column(String(255))
     phone: Mapped[str | None] = mapped_column(String(30))
 

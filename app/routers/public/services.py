@@ -21,6 +21,7 @@ from app.schemas.organization import (
     ServiceProjectRead,
     ServicePublic,
     ServicePublicWithDetails,
+    ServiceRelativePublic,
 )
 from app.services.organization_service import OrganizationService
 
@@ -64,6 +65,8 @@ class ServicePublicWithDetailsEnriched(ServicePublic):
     projects: list[ServiceProjectRead] = []
     team: list[ServiceTeamMemberPublic] = []
     album_ids: list[str] = []
+    parent: ServiceRelativePublic | None = None  # parent actif seulement
+    children: list[ServiceRelativePublic] = []  # pôles actifs, (display_order, name)
 
 
 # =============================================================================
@@ -133,6 +136,7 @@ async def get_service(
 
     # Récupérer les albums associés via service_media_library
     album_ids = await org_service.get_service_albums(service_id)
+    parent, children = await org_service.get_service_relatives(svc)
 
     return ServicePublicWithDetailsEnriched(
         id=svc.id,
@@ -155,7 +159,11 @@ async def get_service(
         sector_id=svc.sector_id,
         head_external_id=svc.head_external_id,
         album_external_id=svc.album_external_id,
+        parent_id=svc.parent_id,
+        landing_path=svc.landing_path,
         display_order=svc.display_order,
+        parent=parent,
+        children=children,
         objectives=svc.objectives,
         achievements=svc.achievements,
         projects=svc.projects,

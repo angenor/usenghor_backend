@@ -5,11 +5,33 @@ Schémas Organization
 Schémas Pydantic pour la gestion de la structure organisationnelle.
 """
 
+import re
 from datetime import date, datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.models.organization import ProjectStatus
+
+# Page dédiée d'un service : chemin interne, sans préfixe de langue ni /r/, sans ? ni #
+LANDING_PATH_RE = r"^/(?!/)(?!(?:en|ar)(?:/|$))(?!r/)[^\s?#]*$"
+_LANDING_PATH_PATTERN = re.compile(LANDING_PATH_RE)
+
+
+def _normalize_landing_path(value):
+    """Ramène une valeur vide à None et valide la forme du chemin."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("La page dédiée doit être une chaîne de caractères")
+    value = value.strip()
+    if not value:
+        return None
+    if not _LANDING_PATH_PATTERN.match(value):
+        raise ValueError(
+            "La page dédiée doit être un chemin interne du site commençant par / "
+            "(ex. /entrepreneuriat), sans préfixe de langue"
+        )
+    return value
 
 
 # =============================================================================
@@ -256,7 +278,13 @@ class ServiceBase(BaseModel):
     phone: str | None = Field(None, max_length=30, description="Téléphone du service")
     head_external_id: str | None = Field(None, description="ID du responsable")
     album_external_id: str | None = Field(None, description="ID de l'album")
+    parent_id: str | None = Field(None, description="ID du service parent (pôle)")
+    landing_path: str | None = Field(
+        None, max_length=255, description="Page dédiée interne (ex. /entrepreneuriat)"
+    )
     display_order: int = Field(0, ge=0, description="Ordre d'affichage")
+
+    _landing_path = field_validator("landing_path", mode="before")(_normalize_landing_path)
 
 
 class ServiceCreate(ServiceBase):
@@ -292,8 +320,12 @@ class ServiceUpdate(BaseModel):
     sector_id: str | None = None
     head_external_id: str | None = None
     album_external_id: str | None = None
+    parent_id: str | None = None
+    landing_path: str | None = Field(None, max_length=255)
     display_order: int | None = Field(None, ge=0)
     active: bool | None = None
+
+    _landing_path = field_validator("landing_path", mode="before")(_normalize_landing_path)
 
 
 class ServiceRead(ServiceBase):
@@ -462,9 +494,32 @@ class ServicePublic(BaseModel):
     sector_id: str | None
     head_external_id: str | None
     album_external_id: str | None
+    parent_id: str | None = None
+    landing_path: str | None = None
     display_order: int
 
     model_config = {"from_attributes": True}
+
+
+class ServiceRelativePublic(BaseModel):
+    """Parent ou pôle d'un service (fiche publique)."""
+
+    id: str
+    name: str
+    name_en: str | None = None
+    name_ar: str | None = None
+    sigle: str | None = None
+    color: str | None = None
+    landing_path: str | None = None
+    display_order: int = 0
+
+    model_config = {"from_attributes": True}
+
+
+class ServicePublicWithChildren(ServicePublic):
+    """Service de premier niveau avec ses pôles actifs."""
+
+    children: list[ServicePublic] = []
 
 
 class ServicePublicWithDetails(ServicePublic):
@@ -477,9 +532,9 @@ class ServicePublicWithDetails(ServicePublic):
 
 
 class SectorPublicWithServices(SectorPublic):
-    """Schéma public pour un secteur avec ses services."""
+    """Schéma public pour un secteur avec ses services de premier niveau."""
 
-    services: list[ServicePublic] = []
+    services: list[ServicePublicWithChildren] = []
 
 
 # =============================================================================
