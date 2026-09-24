@@ -115,6 +115,7 @@ class ApplicationCall(Base, UUIDMixin, TimestampMixin):
     country_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     created_by_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
     project_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
+    service_external_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False))
 
     location_address: Mapped[str | None] = mapped_column(Text)
 

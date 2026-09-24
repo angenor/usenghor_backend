@@ -5,6 +5,8 @@ Router Admin - Appels à candidature
 Endpoints CRUD pour la gestion des appels à candidature.
 """
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.dependencies import CurrentUser, DbSession, PermissionChecker
@@ -126,6 +128,7 @@ async def list_calls(
     publication_status: PublicationStatus | None = Query(None, description="Filtrer par statut de publication"),
     program_id: str | None = Query(None, description="Filtrer par programme"),
     campus_external_id: str | None = Query(None, description="Filtrer par campus"),
+    service_id: UUID | None = Query(None, description="Filtrer par service (organisation)"),
     _: bool = Depends(PermissionChecker("applications.view")),
 ) -> dict:
     """Liste les appels à candidature avec pagination et filtres."""
@@ -137,6 +140,7 @@ async def list_calls(
         publication_status=publication_status,
         program_id=program_id,
         campus_id=campus_external_id,
+        service_id=str(service_id) if service_id else None,
     )
     return await paginate(db, query, pagination, ApplicationCall, ApplicationCallRead)
 

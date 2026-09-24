@@ -232,6 +232,7 @@ class ApplicationCallBase(BaseModel):
     campus_external_id: str | None = Field(None, description="ID du campus")
     country_external_id: str | None = Field(None, description="ID du pays du lieu de formation/exercice")
     project_external_id: str | None = Field(None, description="ID du projet institutionnel associé")
+    service_external_id: str | None = Field(None, description="ID du service (organisation) associé")
     location_address: str | None = Field(None, description="Adresse exacte du lieu de formation/exercice")
     type: CallType = Field(..., description="Type d'appel")
     status: CallStatus = Field(CallStatus.UPCOMING, description="Statut de l'appel")
@@ -278,6 +279,7 @@ class ApplicationCallUpdate(BaseModel):
     campus_external_id: str | None = None
     country_external_id: str | None = None
     project_external_id: str | None = None
+    service_external_id: str | None = None
     location_address: str | None = None
     type: CallType | None = None
     status: CallStatus | None = None
@@ -385,6 +387,7 @@ class ApplicationCallPublic(BaseModel):
     campus_external_id: str | None
     country_external_id: str | None
     project_external_id: str | None
+    service_external_id: str | None = None
     location_address: str | None
     type: CallType
     status: CallStatus

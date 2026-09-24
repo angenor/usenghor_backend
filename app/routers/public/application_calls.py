@@ -5,6 +5,8 @@ Router Public - Appels à candidature
 Endpoints publics pour consulter les appels à candidature.
 """
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import DbSession
@@ -34,6 +36,7 @@ async def list_calls(
     call_status: CallStatus | None = Query(None, description="Filtrer par statut"),
     program_id: str | None = Query(None, description="Filtrer par programme"),
     campus_external_id: str | None = Query(None, description="Filtrer par campus"),
+    service_id: UUID | None = Query(None, description="Filtrer par service (organisation)"),
 ) -> dict:
     """Liste les appels à candidature publiés avec pagination et filtres."""
     service = ApplicationService(db)
@@ -43,6 +46,7 @@ async def list_calls(
         call_status=call_status,
         program_id=program_id,
         campus_id=campus_external_id,
+        service_id=str(service_id) if service_id else None,
     )
     return await paginate(db, query, pagination, ApplicationCall, ApplicationCallPublic)
 
