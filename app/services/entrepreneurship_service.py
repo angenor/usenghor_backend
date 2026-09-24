@@ -148,6 +148,8 @@ _LAUREATE_COHORT_TYPE = {
 }
 
 DDE_SERVICE_KEY = "entrepreneurship.dde_service_id"
+# Page dédiée du pôle PEI (spec 026) : son service parent est la DDE.
+POLE_LANDING_PATH = "/entrepreneuriat"
 
 
 # ---------------------------------------------------------------------------
@@ -1683,6 +1685,46 @@ class EntrepreneurshipService:
     # Tableau de bord et traduction en lot
     # ======================================================================
 
+    async def _resolve_dde_service(self) -> PeiDdeService:
+        """Service DDE, même règle que le site public (``usePeiBreadcrumb``) :
+        parent actif du pôle actif de page dédiée ``/entrepreneuriat``, sinon le
+        service désigné par la clé ``entrepreneurship.dde_service_id``, sinon vide.
+        """
+        pole_parent_id = (
+            await self.db.execute(
+                select(Service.parent_id)
+                .where(
+                    Service.landing_path == POLE_LANDING_PATH,
+                    Service.active.is_(True),
+                    Service.parent_id.is_not(None),
+                )
+                .order_by(Service.display_order, Service.name)
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if pole_parent_id is not None:
+            parent = (
+                await self.db.execute(
+                    select(Service.id, Service.name).where(
+                        Service.id == pole_parent_id, Service.active.is_(True)
+                    )
+                )
+            ).first()
+            if parent is not None:
+                return PeiDdeService(id=str(parent[0]), name=parent[1])
+
+        content = await EditorialService(self.db).get_content_by_key(DDE_SERVICE_KEY)
+        service_id = (content.value or "").strip() if content else ""
+        if _is_uuid(service_id):
+            row = (
+                await self.db.execute(
+                    select(Service.id, Service.name).where(Service.id == service_id)
+                )
+            ).first()
+            if row is not None:
+                return PeiDdeService(id=str(row[0]), name=row[1])
+        return PeiDdeService()
+
     async def get_dashboard_stats(self) -> PeiDashboardStats:
         programs = (
             await self.db.execute(
@@ -1728,17 +1770,7 @@ class EntrepreneurshipService:
             )
         ).one()
 
-        dde = PeiDdeService()
-        content = await EditorialService(self.db).get_content_by_key(DDE_SERVICE_KEY)
-        service_id = (content.value or "").strip() if content else ""
-        if _is_uuid(service_id):
-            row = (
-                await self.db.execute(
-                    select(Service.id, Service.name).where(Service.id == service_id)
-                )
-            ).first()
-            if row is not None:
-                dde = PeiDdeService(id=str(row[0]), name=row[1])
+        dde = await self._resolve_dde_service()
 
         return PeiDashboardStats(
             programs=PeiActiveCount(total=programs[0], active=programs[1]),

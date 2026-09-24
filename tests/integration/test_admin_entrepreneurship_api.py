@@ -671,6 +671,52 @@ async def test_dashboard_counts_and_dde_service(
 
 
 @pytest.mark.asyncio
+async def test_dashboard_dde_is_parent_of_pole_before_editorial_key(
+    authenticated_client: AsyncClient,
+    db_session: AsyncSession,
+    entrepreneurship_permissions,
+):
+    """Même règle que le site public : parent du pôle `/entrepreneuriat`, sinon la clé."""
+    keyed = Service(id=str(uuid4()), name="Service désigné par la clé", name_en="k", name_ar="k", active=True)
+    parent = Service(id=str(uuid4()), name="Direction parente du pôle", name_en="p", name_ar="p", active=True)
+    db_session.add_all([keyed, parent])
+    db_session.add(
+        EditorialContent(
+            key="entrepreneurship.dde_service_id",
+            value=keyed.id,
+            value_type=EditorialValueType.TEXT,
+        )
+    )
+    await db_session.flush()
+    pole = Service(
+        id=str(uuid4()),
+        name="Pôle Entrepreneuriat et Innovation",
+        name_en="PEI",
+        name_ar="PEI",
+        active=True,
+        parent_id=parent.id,
+        landing_path="/entrepreneuriat",
+    )
+    db_session.add(pole)
+    await db_session.commit()
+
+    body = (await authenticated_client.get(f"{BASE}/dashboard")).json()
+    assert body["dde_service"] == {"id": parent.id, "name": "Direction parente du pôle"}
+
+    # Pôle détaché (ou inactif) : repli sur la clé éditoriale
+    pole.parent_id = None
+    await db_session.commit()
+    body = (await authenticated_client.get(f"{BASE}/dashboard")).json()
+    assert body["dde_service"] == {"id": keyed.id, "name": "Service désigné par la clé"}
+
+    pole.parent_id = parent.id
+    pole.active = False
+    await db_session.commit()
+    body = (await authenticated_client.get(f"{BASE}/dashboard")).json()
+    assert body["dde_service"]["id"] == keyed.id
+
+
+@pytest.mark.asyncio
 async def test_translate_missing_is_idempotent(
     authenticated_client: AsyncClient,
     db_session: AsyncSession,
