@@ -19,8 +19,10 @@ from app.schemas.organization import (
     ServiceAchievementTranslateResponse,
     ServiceAchievementUpdate,
     ServiceCreate,
+    ServiceListItem,
     ServiceObjectiveCreate,
     ServiceObjectiveRead,
+    ServiceObjectiveReorder,
     ServiceObjectiveTranslateRequest,
     ServiceObjectiveTranslateResponse,
     ServiceObjectiveUpdate,
@@ -33,6 +35,7 @@ from app.schemas.organization import (
     ServiceReorder,
     ServiceTeamCreate,
     ServiceTeamRead,
+    ServiceTeamReorder,
     ServiceTeamUpdate,
     ServiceTranslateRequest,
     ServiceTranslateResponse,
@@ -108,12 +111,28 @@ async def list_services(
     active: bool | None = Query(None, description="Filtrer par statut actif"),
     _: bool = Depends(PermissionChecker("organization.view")),
 ) -> dict:
-    """Liste les services avec pagination et filtres."""
+    """Liste les services avec pagination et filtres.
+
+    Chaque élément porte les compteurs ``objectives_count``,
+    ``achievements_count``, ``projects_count``, ``team_count`` et
+    ``albums_count`` (calculés en une requête pour la page courante).
+    """
     service = OrganizationService(db)
     query = await service.get_services(
         search=search, sector_id=sector_id, active=active
     )
-    return await paginate(db, query, pagination, Service, ServiceRead)
+    page = await paginate(db, query, pagination, Service)
+    counts = await service.get_services_counts([svc.id for svc in page["items"]])
+    page["items"] = [
+        ServiceListItem.model_validate(
+            {
+                **ServiceRead.model_validate(svc).model_dump(),
+                **counts.get(svc.id, {}),
+            }
+        )
+        for svc in page["items"]
+    ]
+    return page
 
 
 # NOTE: /reorder DOIT être avant /{service_id} pour éviter que FastAPI
@@ -248,6 +267,24 @@ async def create_service_objective(
     return await org_service.create_service_objective(
         service_id=service_id,
         **objective_data.model_dump(exclude_unset=True),
+    )
+
+
+# NOTE: /objectives/reorder DOIT être avant /objectives/{objective_id}.
+@router.put(
+    "/{service_id}/objectives/reorder", response_model=list[ServiceObjectiveRead]
+)
+async def reorder_service_objectives(
+    service_id: str,
+    reorder_data: ServiceObjectiveReorder,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.edit")),
+) -> list:
+    """Réordonne les objectifs d'un service (liste complète, display_order 0..n-1)."""
+    org_service = OrganizationService(db)
+    return await org_service.reorder_service_objectives(
+        service_id, reorder_data.objective_ids
     )
 
 
@@ -506,17 +543,29 @@ async def create_service_team_member(
     current_user: CurrentUser,
     _: bool = Depends(PermissionChecker("organization.edit")),
 ):
-    """Ajoute un membre à l'équipe d'un service."""
+    """Ajoute un membre à l'équipe d'un service.
+
+    Sans ``display_order`` dans le corps, le membre est placé en fin de liste.
+    """
     org_service = OrganizationService(db)
     return await org_service.create_service_team_member(
         service_id=service_id,
-        user_external_id=member_data.user_external_id,
-        position=member_data.position,
-        display_order=member_data.display_order,
-        start_date=member_data.start_date,
-        end_date=member_data.end_date,
-        active=member_data.active,
+        **member_data.model_dump(exclude_unset=True),
     )
+
+
+# NOTE: /team/reorder DOIT être avant /team/{member_id}.
+@router.put("/{service_id}/team/reorder", response_model=list[ServiceTeamRead])
+async def reorder_service_team(
+    service_id: str,
+    reorder_data: ServiceTeamReorder,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.edit")),
+) -> list:
+    """Réordonne les membres de l'équipe d'un service (liste complète, display_order 0..n-1)."""
+    org_service = OrganizationService(db)
+    return await org_service.reorder_service_team(service_id, reorder_data.member_ids)
 
 
 @router.put("/{service_id}/team/{member_id}", response_model=ServiceTeamRead)

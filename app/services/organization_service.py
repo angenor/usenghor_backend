@@ -8,10 +8,10 @@ Logique métier pour la gestion de la structure organisationnelle.
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import case, delete, func, or_, select, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import noload, selectinload
 
 from app.core.exceptions import (
     ConflictException,
@@ -522,11 +522,14 @@ class OrganizationService:
         Returns:
             Requête SQLAlchemy Select.
         """
+        # Les relations sont en lazy="selectin" sur le modèle : sans noload, la
+        # liste chargerait tous les objectifs / réalisations / projets / membres
+        # alors qu'elle n'expose que des compteurs (voir get_services_counts).
         query = select(Service).options(
-            selectinload(Service.objectives),
-            selectinload(Service.achievements),
-            selectinload(Service.projects),
-            selectinload(Service.team),
+            noload(Service.objectives),
+            noload(Service.achievements),
+            noload(Service.projects),
+            noload(Service.team),
         )
 
         if search:
@@ -547,6 +550,135 @@ class OrganizationService:
 
         query = query.order_by(Service.display_order, Service.name)
         return query
+
+    async def get_services_counts(
+        self, service_ids: list[str]
+    ) -> dict[str, dict[str, int]]:
+        """Compteurs des sous-éléments par service, en une seule requête.
+
+        Renvoie ``{service_id: {"objectives_count": n, "achievements_count": n,
+        "projects_count": n, "team_count": n, "albums_count": n}}`` (albums =
+        lignes de ``service_media_library``).
+        """
+        ids = [i for i in service_ids if _is_uuid(i)]
+        if not ids:
+            return {}
+
+        def _count(model):
+            return (
+                select(func.count())
+                .select_from(model)
+                .where(model.service_id == Service.id)
+                .correlate(Service)
+                .scalar_subquery()
+            )
+
+        result = await self.db.execute(
+            select(
+                Service.id,
+                _count(ServiceObjective).label("objectives_count"),
+                _count(ServiceAchievement).label("achievements_count"),
+                _count(ServiceProject).label("projects_count"),
+                _count(ServiceTeam).label("team_count"),
+                _count(ServiceMediaLibrary).label("albums_count"),
+            ).where(Service.id.in_(ids))
+        )
+        return {
+            row.id: {
+                "objectives_count": row.objectives_count,
+                "achievements_count": row.achievements_count,
+                "projects_count": row.projects_count,
+                "team_count": row.team_count,
+                "albums_count": row.albums_count,
+            }
+            for row in result.all()
+        }
+
+    async def _ensure_service_exists(self, service_id: str) -> None:
+        """Lève une 404 si le service n'existe pas (sans charger ses relations)."""
+        exists = None
+        if _is_uuid(service_id):
+            exists = (
+                await self.db.execute(
+                    select(Service.id).where(Service.id == service_id)
+                )
+            ).scalar_one_or_none()
+        if not exists:
+            raise NotFoundException("Service non trouvé")
+
+    async def _next_display_order(self, model, service_id: str) -> int:
+        """Prochain display_order (max + 1) parmi les éléments d'un service."""
+        result = await self.db.execute(
+            select(func.coalesce(func.max(model.display_order), -1) + 1).where(
+                model.service_id == service_id
+            )
+        )
+        return int(result.scalar_one())
+
+    async def _reorder_service_items(
+        self,
+        model,
+        service_id: str,
+        item_ids: list[str],
+        label: str,
+    ) -> list:
+        """Réaffecte display_order = 0..n-1 aux éléments d'un service.
+
+        La liste doit couvrir exactement les éléments du service (ni ID étranger,
+        ni doublon, ni oubli) ; sinon ``ValidationException`` (422).
+        """
+        await self._ensure_service_exists(service_id)
+
+        normalized = [str(UUID(i)) if _is_uuid(i) else i for i in item_ids]
+        if len(set(normalized)) != len(normalized):
+            raise ValidationException(
+                f"La liste des {label} contient des doublons"
+            )
+
+        existing = set(
+            (
+                await self.db.execute(
+                    select(model.id).where(model.service_id == service_id)
+                )
+            ).scalars()
+        )
+        foreign = [i for i in normalized if i not in existing]
+        if foreign:
+            raise ValidationException(
+                f"Ces {label} n'appartiennent pas au service : {', '.join(foreign)}"
+            )
+        missing = existing - set(normalized)
+        if missing:
+            raise ValidationException(
+                f"La liste doit contenir tous les {label} du service "
+                f"({len(missing)} manquant(s))"
+            )
+
+        await self.db.execute(
+            update(model)
+            .where(model.service_id == service_id, model.id.in_(normalized))
+            .values(
+                # Conditions « id == … » (et non case(value=…)) : les paramètres
+                # prennent le type UUID de la colonne (sinon uuid = varchar).
+                display_order=case(
+                    *[
+                        (model.id == item_id, index)
+                        for index, item_id in enumerate(normalized)
+                    ],
+                    else_=model.display_order,
+                )
+            )
+            .execution_options(synchronize_session=False)
+        )
+        await self.db.flush()
+
+        result = await self.db.execute(
+            select(model)
+            .where(model.service_id == service_id)
+            .order_by(model.display_order)
+            .execution_options(populate_existing=True)
+        )
+        return list(result.scalars().all())
 
     async def get_service_by_id(self, service_id: str) -> Service | None:
         """Récupère un service par son ID."""
@@ -642,6 +774,18 @@ class OrganizationService:
             None, sector_id, kwargs.get("parent_id"), sector_changed=False
         )
 
+        # Sans ordre explicite : en fin de liste parmi ses frères (même secteur,
+        # même parent), comme les objectifs et l'équipe.
+        if kwargs.get("display_order") is None:
+            parent_id = kwargs.get("parent_id")
+            result = await self.db.execute(
+                select(func.coalesce(func.max(Service.display_order), -1) + 1).where(
+                    Service.sector_id == sector_id if sector_id else Service.sector_id.is_(None),
+                    Service.parent_id == parent_id if parent_id else Service.parent_id.is_(None),
+                )
+            )
+            kwargs["display_order"] = int(result.scalar_one())
+
         service = Service(
             id=str(uuid4()),
             name=name,
@@ -715,6 +859,23 @@ class OrganizationService:
         service = await self.get_service_by_id(service_id)
         if not service:
             raise NotFoundException("Service non trouvé")
+
+        # Garde serveur : la suppression part en cascade sur le contenu du
+        # service ; on l'interdit tant qu'il reste des objectifs, réalisations
+        # ou projets (le backoffice le vérifie aussi, sans en dépendre).
+        counts = (await self.get_services_counts([service_id])).get(service_id, {})
+        blocking = [
+            (counts.get("objectives_count", 0), "objectif(s)"),
+            (counts.get("achievements_count", 0), "réalisation(s)"),
+            (counts.get("projects_count", 0), "projet(s)"),
+        ]
+        remaining = [f"{n} {label}" for n, label in blocking if n]
+        if remaining:
+            raise ConflictException(
+                "Impossible de supprimer ce service : il contient encore "
+                + ", ".join(remaining)
+                + ". Supprimez-les d'abord."
+            )
 
         await self.db.execute(delete(Service).where(Service.id == service_id))
         await self.db.flush()
@@ -923,9 +1084,13 @@ class OrganizationService:
         **kwargs,
     ) -> ServiceObjective:
         """Crée un objectif pour un service."""
-        service = await self.get_service_by_id(service_id)
-        if not service:
-            raise NotFoundException("Service non trouvé")
+        await self._ensure_service_exists(service_id)
+
+        # Sans display_order explicite : placé en fin de liste (max + 1).
+        if kwargs.get("display_order") is None:
+            kwargs["display_order"] = await self._next_display_order(
+                ServiceObjective, service_id
+            )
 
         objective = ServiceObjective(
             id=str(uuid4()),
@@ -938,6 +1103,14 @@ class OrganizationService:
         self.db.add(objective)
         await self.db.flush()
         return objective
+
+    async def reorder_service_objectives(
+        self, service_id: str, objective_ids: list[str]
+    ) -> list[ServiceObjective]:
+        """Réordonne les objectifs d'un service (display_order = 0..n-1)."""
+        return await self._reorder_service_items(
+            ServiceObjective, service_id, objective_ids, "objectifs"
+        )
 
     async def update_service_objective(
         self, objective_id: str, **kwargs
@@ -1239,9 +1412,13 @@ class OrganizationService:
         **kwargs,
     ) -> ServiceTeam:
         """Ajoute un membre à l'équipe d'un service."""
-        service = await self.get_service_by_id(service_id)
-        if not service:
-            raise NotFoundException("Service non trouvé")
+        await self._ensure_service_exists(service_id)
+
+        # Sans display_order explicite : placé en fin de liste (max + 1).
+        if kwargs.get("display_order") is None:
+            kwargs["display_order"] = await self._next_display_order(
+                ServiceTeam, service_id
+            )
 
         member = ServiceTeam(
             id=str(uuid4()),
@@ -1253,6 +1430,14 @@ class OrganizationService:
         self.db.add(member)
         await self.db.flush()
         return member
+
+    async def reorder_service_team(
+        self, service_id: str, member_ids: list[str]
+    ) -> list[ServiceTeam]:
+        """Réordonne les membres de l'équipe d'un service (display_order = 0..n-1)."""
+        return await self._reorder_service_items(
+            ServiceTeam, service_id, member_ids, "membres"
+        )
 
     async def update_service_team_member(
         self, member_id: str, **kwargs

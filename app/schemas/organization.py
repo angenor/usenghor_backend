@@ -86,6 +86,14 @@ class ServiceObjectiveRead(ServiceObjectiveBase):
     model_config = {"from_attributes": True}
 
 
+class ServiceObjectiveReorder(BaseModel):
+    """Schéma pour le réordonnancement des objectifs d'un service."""
+
+    objective_ids: list[str] = Field(
+        ..., min_length=1, description="Liste ordonnée de tous les IDs d'objectifs du service"
+    )
+
+
 # =============================================================================
 # SERVICE ACHIEVEMENTS
 # =============================================================================
@@ -248,6 +256,14 @@ class ServiceTeamRead(ServiceTeamBase):
     model_config = {"from_attributes": True}
 
 
+class ServiceTeamReorder(BaseModel):
+    """Schéma pour le réordonnancement de l'équipe d'un service."""
+
+    member_ids: list[str] = Field(
+        ..., min_length=1, description="Liste ordonnée de tous les IDs de membres du service"
+    )
+
+
 # =============================================================================
 # SERVICES
 # =============================================================================
@@ -338,6 +354,16 @@ class ServiceRead(ServiceBase):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ServiceListItem(ServiceRead):
+    """Élément de la liste admin des services, avec compteurs des sous-éléments."""
+
+    objectives_count: int = Field(0, ge=0, description="Nombre d'objectifs")
+    achievements_count: int = Field(0, ge=0, description="Nombre de réalisations")
+    projects_count: int = Field(0, ge=0, description="Nombre de projets")
+    team_count: int = Field(0, ge=0, description="Nombre de membres d'équipe")
+    albums_count: int = Field(0, ge=0, description="Nombre d'albums de la médiathèque")
 
 
 class ServiceWithDetails(ServiceRead):

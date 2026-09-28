@@ -54,6 +54,20 @@ async def list_sectors(
     return await paginate(db, query, pagination, Sector, SectorRead)
 
 
+# NOTE : /reorder DOIT être déclaré avant /{sector_id}, sinon FastAPI
+# capte « reorder » comme identifiant de secteur (PUT /{sector_id}).
+@router.put("/reorder", response_model=list[SectorRead])
+async def reorder_sectors(
+    reorder_data: SectorReorder,
+    db: DbSession,
+    current_user: CurrentUser,
+    _: bool = Depends(PermissionChecker("organization.edit")),
+) -> list[Sector]:
+    """Réordonne les secteurs."""
+    service = OrganizationService(db)
+    return await service.reorder_sectors(reorder_data.sector_ids)
+
+
 @router.get("/{sector_id}", response_model=SectorWithServices)
 async def get_sector(
     sector_id: str,
@@ -135,18 +149,6 @@ async def duplicate_sector(
     service = OrganizationService(db)
     sector = await service.duplicate_sector(sector_id, new_code)
     return IdResponse(id=sector.id, message="Secteur dupliqué avec succès")
-
-
-@router.put("/reorder", response_model=list[SectorRead])
-async def reorder_sectors(
-    reorder_data: SectorReorder,
-    db: DbSession,
-    current_user: CurrentUser,
-    _: bool = Depends(PermissionChecker("organization.edit")),
-) -> list[Sector]:
-    """Réordonne les secteurs."""
-    service = OrganizationService(db)
-    return await service.reorder_sectors(reorder_data.sector_ids)
 
 
 @router.get("/{sector_id}/services", response_model=list[ServiceRead])
